@@ -1,0 +1,95 @@
+services:
+  api:
+    container_name: jabhub_evolution_api
+    image: evoapicloud/evolution-api:latest
+    restart: unless-stopped
+    # Image ENTRYPOINT ignores `command:`. Override entrypoint so Baileys
+    # rc13 (tctoken / 463 fix) is installed before every start. Stock image
+    # still pins baileys@7.0.0-rc.9 which cannot deliver 1:1 DMs.
+    # See: https://github.com/evolution-foundation/evolution-api/issues/2597
+    entrypoint:
+      [
+        "/bin/bash",
+        "-c",
+        "npm install baileys@7.0.0-rc13 --save-exact --no-fund --no-audit && . ./Docker/scripts/deploy_database.sh && npm run start:prod",
+      ]
+    depends_on:
+      redis:
+        condition: service_started
+      evolution-postgres:
+        condition: service_healthy
+    ports:
+      - "8080:8080"
+    volumes:
+      - evolution_instances:/evolution/instances
+    networks:
+      - jabhub-net
+    env_file:
+      - .env
+
+  # Separate evolution-manager image currently crash-loops (nginx Cache-Control bug).
+  # Use the built-in UI instead: http://localhost:8080/manager
+
+  redis:
+    container_name: jabhub_evolution_redis
+    image: redis:7-alpine
+    restart: unless-stopped
+    command: redis-server --appendonly yes
+    volumes:
+      - evolution_redis:/data
+    networks:
+      jabhub-net:
+        aliases:
+          - evolution-redis
+
+  evolution-postgres:
+    container_name: jabhub_evolution_postgres
+    image: postgres:15-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DATABASE}
+      POSTGRES_USER: ${POSTGRES_USERNAME}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - jabhub-net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USERNAME} -d ${POSTGRES_DATABASE}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  n8n:
+    container_name: jabhub_n8n
+    image: n8nio/n8n:latest
+    restart: unless-stopped
+    ports:
+      - "${N8N_PORT:-5678}:5678"
+    environment:
+      N8N_HOST: ${N8N_HOST:-localhost}
+      N8N_PORT: 5678
+      N8N_PROTOCOL: ${N8N_PROTOCOL:-http}
+      WEBHOOK_URL: ${N8N_WEBHOOK_URL:-http://localhost:5678/}
+      GENERIC_TIMEZONE: ${N8N_TIMEZONE:-Africa/Accra}
+      N8N_BASIC_AUTH_ACTIVE: ${N8N_BASIC_AUTH_ACTIVE:-true}
+      N8N_BASIC_AUTH_USER: ${N8N_BASIC_AUTH_USER:-admin}
+      N8N_BASIC_AUTH_PASSWORD: ${N8N_BASIC_AUTH_PASSWORD:-}
+      N8N_SECURE_COOKIE: ${N8N_SECURE_COOKIE:-false}
+      N8N_ENCRYPTION_KEY: ${N8N_ENCRYPTION_KEY:-}
+      GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+    volumes:
+      - n8n_data:/home/node/.n8n
+    networks:
+      - jabhub-net
+
+volumes:
+  evolution_instances:
+  evolution_redis:
+  postgres_data:
+  n8n_data:
+
+networks:
+  jabhub-net:
+    name: jabhub-net
+    driver: bridge

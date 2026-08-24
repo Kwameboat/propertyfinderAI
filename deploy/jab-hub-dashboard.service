@@ -1,0 +1,23 @@
+[Unit]
+Description=JAB Hub agency dashboard
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=jabhub
+Group=jabhub
+WorkingDirectory=/opt/jab-hub/apps/hub
+EnvironmentFile=/opt/jab-hub/.env
+Environment=JAB_HUB_DATA_DIR=/var/lib/jab-hub
+Environment=HOME=/home/jabhub
+Environment=NODE_ENV=production
+ExecStart=/usr/bin/node /opt/jab-hub/apps/hub/server.mjs
+Restart=always
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=jab-hub-dashboard
+
+[Install]
+WantedBy=multi-user.target

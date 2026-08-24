@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Dar Concierge — Listing Dashboard</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Playfair+Display:wght@600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/re-admin.css" />
+</head>
+<body class="ld-app">
+  <aside class="ld-sidebar" aria-label="Listing dashboard navigation">
+    <div class="ld-brand">
+      <img src="/dar-concierge-logo.png" alt="Dar Concierge" class="ld-logo" width="140" height="40" />
+      <p class="ld-brand-sub">Listing Dashboard</p>
+    </div>
+    <nav class="ld-nav">
+      <button type="button" class="ld-nav-item active" data-view="overview">
+        <span class="ld-nav-icon">◉</span> Overview
+      </button>
+      <button type="button" class="ld-nav-item" data-view="listings">
+        <span class="ld-nav-icon">▦</span> Listings
+      </button>
+      <button type="button" class="ld-nav-item" data-view="leads">
+        <span class="ld-nav-icon">◎</span> Leads
+      </button>
+      <button type="button" class="ld-nav-item" data-view="ingest">
+        <span class="ld-nav-icon">↓</span> Ingest
+      </button>
+      <button type="button" class="ld-nav-item" data-view="scrapes">
+        <span class="ld-nav-icon">⟳</span> Scrape runs
+      </button>
+    </nav>
+    <div class="ld-sidebar-foot">
+      <a href="/" class="ld-link">Agency console</a>
+      <a href="/rent" class="ld-link" target="_blank" rel="noopener">Open /rent PWA</a>
+      <button type="button" id="logout-btn" class="ld-link ld-link-btn">Log out</button>
+    </div>
+  </aside>
+
+  <div class="ld-main">
+    <header class="ld-topbar">
+      <div>
+        <p class="ld-eyebrow">Dar Concierge AI</p>
+        <h1 id="view-title">Overview</h1>
+      </div>
+      <div class="ld-topbar-actions">
+        <span id="store-badge" class="ld-badge">—</span>
+        <button type="button" id="refresh-btn" class="ld-btn ld-btn-gold">Refresh</button>
+      </div>
+    </header>
+
+    <main class="ld-content">
+      <!-- Overview -->
+      <section class="ld-view active" id="view-overview">
+        <div class="ld-kpi-row">
+          <article class="ld-kpi"><span>Listings</span><strong id="kpi-listings">—</strong></article>
+          <article class="ld-kpi"><span>Property Finder</span><strong id="kpi-pf">—</strong></article>
+          <article class="ld-kpi"><span>Leads</span><strong id="kpi-leads">—</strong></article>
+          <article class="ld-kpi"><span>New leads</span><strong id="kpi-new-leads">—</strong></article>
+          <article class="ld-kpi"><span>Puppeteer</span><strong id="kpi-puppeteer">—</strong></article>
+        </div>
+        <div class="ld-split">
+          <div class="ld-card">
+            <h2>Sources</h2>
+            <ul id="sources-list" class="ld-sources"></ul>
+          </div>
+          <div class="ld-card">
+            <h2>Quick actions</h2>
+            <div class="ld-actions">
+              <button type="button" id="btn-puppeteer" class="ld-btn ld-btn-gold">Run PF ingest</button>
+              <button type="button" id="btn-apify-pf" class="ld-btn ld-btn-gold">Apify PF scrape</button>
+              <button type="button" id="btn-stale" class="ld-btn ld-btn-ghost">Mark stale</button>
+            </div>
+            <p id="action-msg" class="ld-muted"></p>
+          </div>
+        </div>
+        <div class="ld-card">
+          <h2>Recent leads</h2>
+          <div id="recent-leads" class="ld-table-wrap"></div>
+        </div>
+      </section>
+
+      <!-- Listings grid -->
+      <section class="ld-view" id="view-listings" hidden>
+        <div class="ld-filters">
+          <input type="search" id="listing-q" placeholder="Search community, building…" class="ld-input" />
+          <select id="listing-source-filter" class="ld-select">
+            <option value="">All sources</option>
+            <option value="propertyfinder">Property Finder</option>
+            <option value="bayut">Bayut</option>
+            <option value="dubizzle">Dubizzle</option>
+            <option value="live_search">Live search</option>
+          </select>
+          <select id="listing-emirate-filter" class="ld-select">
+            <option value="">All emirates</option>
+            <option value="Dubai">Dubai</option>
+            <option value="Abu Dhabi">Abu Dhabi</option>
+            <option value="Sharjah">Sharjah</option>
+            <option value="Ajman">Ajman</option>
+            <option value="RAK">RAK</option>
+            <option value="Fujairah">Fujairah</option>
+            <option value="UAQ">UAQ</option>
+          </select>
+          <select id="listing-beds-filter" class="ld-select">
+            <option value="">Any beds</option>
+            <option value="0">Studio</option>
+            <option value="1">1 bed</option>
+            <option value="2">2 beds</option>
+            <option value="3">3 beds</option>
+            <option value="4">4+ beds</option>
+          </select>
+          <select id="listing-tx-filter" class="ld-select">
+            <option value="">Rent or buy</option>
+            <option value="rent">Rent</option>
+            <option value="sale">Sale</option>
+          </select>
+        </div>
+        <p id="listings-count" class="ld-muted ld-count"></p>
+        <div id="listings-grid" class="ld-grid"></div>
+        <div class="ld-pagination">
+          <button type="button" id="listings-prev" class="ld-btn ld-btn-ghost" disabled>Previous</button>
+          <span id="listings-page-label" class="ld-muted">Page 1</span>
+          <button type="button" id="listings-next" class="ld-btn ld-btn-ghost">Next</button>
+        </div>
+      </section>
+
+      <!-- Leads -->
+      <section class="ld-view" id="view-leads" hidden>
+        <div class="ld-card">
+          <div class="ld-toolbar">
+            <h2>Lead pipeline</h2>
+            <select id="lead-status-filter" class="ld-select">
+              <option value="">All statuses</option>
+              <option value="new">new</option>
+              <option value="contacted">contacted</option>
+              <option value="viewing_scheduled">viewing_scheduled</option>
+              <option value="viewed">viewed</option>
+              <option value="offer">offer</option>
+              <option value="closed">closed</option>
+              <option value="lost">lost</option>
+            </select>
+          </div>
+          <div id="leads-table" class="ld-table-wrap"></div>
+        </div>
+      </section>
+
+      <!-- Ingest -->
+      <section class="ld-view" id="view-ingest" hidden>
+        <div class="ld-card">
+          <h2>Pull from portal URL</h2>
+          <p class="ld-muted">Paste a Property Finder, Bayut, or Dubizzle search URL.</p>
+          <form id="pull-form" class="ld-form">
+            <label>
+              Portal search URL
+              <input id="pull-url" type="url" required class="ld-input" placeholder="https://www.propertyfinder.ae/en/rent/dubai/..." />
+            </label>
+            <div class="ld-form-row">
+              <label>
+                Max listings
+                <input id="pull-max" type="number" min="1" max="100" value="50" class="ld-input" />
+              </label>
+              <label>
+                Max pages
+                <input id="pull-pages" type="number" min="1" max="10" value="3" class="ld-input" />
+              </label>
+            </div>
+            <div class="ld-actions">
+              <button type="submit" class="ld-btn ld-btn-gold">Pull &amp; upsert</button>
+              <button type="button" id="pull-preview" class="ld-btn ld-btn-ghost">Preview only</button>
+            </div>
+          </form>
+          <pre id="pull-result" class="ld-json" hidden></pre>
+        </div>
+      </section>
+
+      <!-- Scrapes -->
+      <section class="ld-view" id="view-scrapes" hidden>
+        <div class="ld-card">
+          <h2>Scrape runs</h2>
+          <div id="scrapes-table" class="ld-table-wrap"></div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <!-- Listing detail drawer -->
+  <aside class="ld-drawer" id="listing-drawer" aria-hidden="true">
+    <div class="ld-drawer-head">
+      <h2 id="drawer-listing-title">Listing</h2>
+      <button type="button" id="close-listing-drawer" class="ld-drawer-close" aria-label="Close">×</button>
+    </div>
+    <div id="drawer-listing-body" class="ld-drawer-body"></div>
+  </aside>
+  <div class="ld-backdrop" id="drawer-backdrop" hidden></div>
+
+  <!-- Lead detail drawer -->
+  <aside class="ld-drawer ld-drawer-sm" id="lead-drawer" aria-hidden="true">
+    <div class="ld-drawer-head">
+      <h2>Lead detail</h2>
+      <button type="button" id="close-lead-drawer" class="ld-drawer-close" aria-label="Close">×</button>
+    </div>
+    <div id="drawer-lead-body" class="ld-drawer-body"></div>
+  </aside>
+
+  <script src="/re-admin.js"></script>
+</body>
+</html>

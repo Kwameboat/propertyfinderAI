@@ -1,0 +1,22 @@
+[Unit]
+Description=UAE Real Estate lead ops (Telegram approve to agent WA)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=jabhub
+Group=jabhub
+WorkingDirectory=/opt/jab-hub
+EnvironmentFile=/opt/jab-hub/.env
+Environment=HOME=/home/jabhub
+Environment=NODE_ENV=production
+ExecStart=/usr/bin/node /opt/jab-hub/scripts/proactive-re-leads-bot.mjs
+Restart=always
+RestartSec=8
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=jab-re-leads
+
+[Install]
+WantedBy=multi-user.target

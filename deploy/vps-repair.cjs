@@ -1,0 +1,9 @@
+const {Client}=require("ssh2");const {readFileSync,existsSync,writeFileSync}=require("fs");const {join}=require("path");const PW=process.env.VPS_PASSWORD;const REPO="C:/Users/DELL/jab-hub";
+function run(cmd,t=600000){return new Promise((res,rej)=>{const c=new Client();let out="";c.on("ready",()=>c.exec(cmd,(e,s)=>{s.on("data",d=>{out+=d;process.stdout.write(d);});s.on("close",code=>{c.end();res({code,out});});})).connect({host:"169.58.81.179",username:"root",password:PW});});}
+(async()=>{await run("rm -rf /opt/jab-hub/apps/hub/node_modules && chown -R jabhub:jabhub /opt/jab-hub/apps/hub");
+await run("sudo -u jabhub bash -lc \"cd /opt/jab-hub/apps/hub && npm install --omit=dev\"");
+const keys=["TELEGRAM_BOT_TOKEN","TELEGRAM_APPROVER_IDS","BRAVE_SEARCH_API_KEY","JAB_MARKETING_SEARCH_PROVIDER","GEMINI_API_KEY","GOOGLE_GENERATIVE_AI_API_KEY","JAB_MARKETING_DRY_RUN"];const merged=[];if(existsSync(join(REPO,".env"))){for(const line of readFileSync(join(REPO,".env"),"utf8").split(/\\r?\\n/)){const m=line.match(/^([A-Za-z_][A-Za-z0-9_]*)=(.*)$/);if(!m)continue;if(keys.includes(m[1])||m[1].startsWith("GEMINI_"))merged.push(m[1]);}}
+await run("systemctl restart jab-hub-dashboard jab-hub-marketing jab-openclaw-gateway");await run("sleep 8");
+await run("cd /opt/jab-hub && sudo -u jabhub bash deploy/create-instance.sh jab-whatsapp 2>&1",300000);await run("cd /opt/jab-hub && sudo -u jabhub bash deploy/get-qr.sh jab-whatsapp 2>&1",120000);
+const v=await run("cd /opt/jab-hub && bash deploy/verify.sh 2>&1");const st=await run("for u in jab-openclaw-gateway jab-hub-bridge jab-hub-dashboard jab-hub-marketing docker; do echo $u:$(systemctl is-active $u 2>/dev/null || echo inactive); done");
+const qr=await run("ls -la /tmp/jab-whatsapp-qr.png 2>&1");console.log(JSON.stringify({marketingKeys:merged,verifyCode:v.code,services:st.out.trim(),qr:qr.out.trim()},null,2));})();

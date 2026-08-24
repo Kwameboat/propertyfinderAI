@@ -1,0 +1,49 @@
+# JAB Hub — private SearXNG (JSON enabled, no rate limiter).
+# Mount at /etc/searxng/settings.yml in the container.
+# Set SEARXNG_SECRET_KEY in docker-compose (min 32 chars).
+
+use_default_settings: true
+
+general:
+  instance_name: "JAB Private Search"
+  debug: false
+
+brand:
+  new_issue_url: ""
+  public_instances: ""
+
+search:
+  safe_search: 0
+  autocomplete: ""
+  default_lang: "en"
+  formats:
+    - html
+    - json
+  ban_time_on_fail: 0
+  max_ban_time_on_fail: 0
+
+server:
+  port: 8080
+  bind_address: "0.0.0.0"
+  secret_key: "c692aac6dcf9e46e3862a76cc634cdc1ad1ecfef17309e5301120fb83440a0ac"
+  limiter: false
+  image_proxy: true
+  method: "GET"
+
+ui:
+  static_use_hash: true
+  infinite_scroll: false
+
+outgoing:
+  request_timeout: 10.0
+  max_request_timeout: 15.0
+  pool_connections: 100
+  pool_maxsize: 20
+
+engines:
+  - name: google
+    disabled: false
+  - name: bing
+    disabled: false
+  - name: duckduckgo
+    disabled: false

@@ -1,0 +1,22 @@
+[Unit]
+Description=OpenClaw gateway (required by jab-hub bridge agent turns)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=jabhub
+Group=jabhub
+WorkingDirectory=/home/jabhub
+Environment=HOME=/home/jabhub
+Environment=NODE_ENV=production
+Environment=PATH=/home/jabhub/.npm-global/bin:/usr/local/bin:/usr/bin:/bin
+ExecStart=/home/jabhub/.npm-global/bin/openclaw gateway
+Restart=always
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=jab-openclaw-gateway
+
+[Install]
+WantedBy=multi-user.target

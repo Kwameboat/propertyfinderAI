@@ -1,0 +1,42 @@
+# Production overlay for Linux VPS.
+# Usage (from repo root):
+#   docker compose -f docker-compose.yml -f deploy/docker-compose.prod.yml up -d
+#
+# Requires .env with:
+#   SERVER_URL=http://YOUR_VPS_IP:8080
+#   WEBHOOK_GLOBAL_URL=http://host.docker.internal:8787/evolution
+#   JAB_HUB_BRIDGE_URL=http://host.docker.internal:8787/evolution
+
+services:
+  api:
+    extra_hosts:
+      # Lets Evolution (in Docker) reach the bridge on the VPS host :8787
+      - "host.docker.internal:host-gateway"
+    restart: unless-stopped
+
+  redis:
+    restart: unless-stopped
+
+  evolution-postgres:
+    restart: unless-stopped
+
+  n8n:
+    extra_hosts:
+      # Lets n8n workflows reach Hub (:3000) and bridge (:8787) on the VPS host
+      - "host.docker.internal:host-gateway"
+    environment:
+      GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+    restart: unless-stopped
+
+  searxng:
+    container_name: jabhub_searxng
+    image: searxng/searxng:latest
+    restart: unless-stopped
+    volumes:
+      - ./deploy/searxng/settings.yml:/etc/searxng/settings.yml:ro
+    environment:
+      SEARXNG_BASE_URL: http://searxng:8080/
+      SEARXNG_SETTINGS_PATH: /etc/searxng/settings.yml
+    networks:
+      - jabhub-net
+    # No public ports — n8n only via jabhub-net

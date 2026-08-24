@@ -1,0 +1,186 @@
+{
+  "id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+  "name": "UAE RE — Apify portals → Supabase",
+  "active": true,
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "manual-trigger",
+      "name": "Manual Run",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [240, 200]
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [{ "field": "hours", "hoursInterval": 24 }]
+        }
+      },
+      "id": "schedule-trigger",
+      "name": "Every 24 hours",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [240, 520]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://host.docker.internal:3000/api/rent/ingest/scrape",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "Content-Type", "value": "application/json" },
+            { "name": "X-Ingest-Token", "value": "REPLACE_WITH_JAB_RE_INGEST_TOKEN" }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\"source\":\"emaar\"}",
+        "options": { "timeout": 300000 }
+      },
+      "id": "scrape-emaar",
+      "name": "1 HTML Emaar",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [560, 80],
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://host.docker.internal:3000/api/rent/ingest/scrape",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "Content-Type", "value": "application/json" },
+            { "name": "X-Ingest-Token", "value": "REPLACE_WITH_JAB_RE_INGEST_TOKEN" }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\"source\":\"damac\"}",
+        "options": { "timeout": 300000 }
+      },
+      "id": "scrape-damac",
+      "name": "2 HTML Damac",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [560, 200],
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://host.docker.internal:3000/api/rent/ingest/apify",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "Content-Type", "value": "application/json" },
+            { "name": "X-Ingest-Token", "value": "REPLACE_WITH_JAB_RE_INGEST_TOKEN" }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\"source\":\"bayut\",\"emirates\":[\"Dubai\",\"Abu Dhabi\",\"Sharjah\",\"Ajman\",\"Ras Al Khaimah\",\"Fujairah\",\"Umm Al Quwain\"],\"purposes\":[\"rent\",\"sale\"],\"maxResults\":80}",
+        "options": { "timeout": 1800000 }
+      },
+      "id": "scrape-bayut",
+      "name": "3 Apify Bayut",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [560, 320],
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://host.docker.internal:3000/api/rent/ingest/apify",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "Content-Type", "value": "application/json" },
+            { "name": "X-Ingest-Token", "value": "REPLACE_WITH_JAB_RE_INGEST_TOKEN" }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\"source\":\"propertyfinder\",\"emirates\":[\"Dubai\",\"Abu Dhabi\",\"Sharjah\",\"Ajman\",\"Ras Al Khaimah\",\"Fujairah\",\"Umm Al Quwain\"],\"purposes\":[\"rent\",\"sale\"],\"maxResults\":80}",
+        "options": { "timeout": 1800000 }
+      },
+      "id": "scrape-pf",
+      "name": "4 Apify Property Finder",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [560, 440],
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://host.docker.internal:3000/api/rent/ingest/apify",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "Content-Type", "value": "application/json" },
+            { "name": "X-Ingest-Token", "value": "REPLACE_WITH_JAB_RE_INGEST_TOKEN" }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\"source\":\"dubizzle\",\"emirates\":[\"Dubai\",\"Abu Dhabi\",\"Sharjah\",\"Ajman\",\"Ras Al Khaimah\",\"Fujairah\",\"Umm Al Quwain\"],\"purposes\":[\"rent\",\"sale\"],\"maxResults\":80}",
+        "options": { "timeout": 1800000 }
+      },
+      "id": "scrape-dubizzle",
+      "name": "5 Apify Dubizzle",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [560, 560],
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://host.docker.internal:3000/api/rent/ingest/stale",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [{ "name": "X-Ingest-Token", "value": "REPLACE_WITH_JAB_RE_INGEST_TOKEN" }]
+        },
+        "options": { "timeout": 60000 }
+      },
+      "id": "stale-cleanup",
+      "name": "6 Mark stale listings",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [560, 680],
+      "continueOnFail": true
+    }
+  ],
+  "connections": {
+    "Manual Run": {
+      "main": [[{ "node": "1 HTML Emaar", "type": "main", "index": 0 }]]
+    },
+    "Every 24 hours": {
+      "main": [[{ "node": "1 HTML Emaar", "type": "main", "index": 0 }]]
+    },
+    "1 HTML Emaar": {
+      "main": [[{ "node": "2 HTML Damac", "type": "main", "index": 0 }]]
+    },
+    "2 HTML Damac": {
+      "main": [[{ "node": "3 Apify Bayut", "type": "main", "index": 0 }]]
+    },
+    "3 Apify Bayut": {
+      "main": [[{ "node": "4 Apify Property Finder", "type": "main", "index": 0 }]]
+    },
+    "4 Apify Property Finder": {
+      "main": [[{ "node": "5 Apify Dubizzle", "type": "main", "index": 0 }]]
+    },
+    "5 Apify Dubizzle": {
+      "main": [[{ "node": "6 Mark stale listings", "type": "main", "index": 0 }]]
+    }
+  },
+  "settings": { "executionOrder": "v1" },
+  "staticData": null,
+  "tags": [],
+  "meta": { "templateCredsSetupCompleted": true }
+}

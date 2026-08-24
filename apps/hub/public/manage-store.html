@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Manage store</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600&family=Outfit:wght@400;500;600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/manage-store.css" />
+</head>
+<body>
+  <header class="mg-top">
+    <div>
+      <p class="mg-kicker">Client store manager</p>
+      <h1 id="store-title">Your store</h1>
+      <p class="mg-muted">Add products and update stock anytime. No agency login needed.</p>
+    </div>
+    <a id="view-store" class="mg-link" href="#" target="_blank" rel="noopener">View storefront</a>
+  </header>
+
+  <main class="mg-layout">
+    <div class="stack">
+      <form id="shop-form" class="mg-card stack">
+        <h2>Shop location (Yango delivery)</h2>
+        <p class="mg-muted">Used to quote delivery from your shop to the buyer.</p>
+        <label>Shop address<input name="shopAddress" required placeholder="e.g. Madina Market, Accra" /></label>
+        <div class="row" style="gap:12px">
+          <label style="flex:1">Latitude (optional)<input name="shopLat" type="number" step="any" placeholder="auto from address" /></label>
+          <label style="flex:1">Longitude (optional)<input name="shopLng" type="number" step="any" /></label>
+        </div>
+        <button type="submit">Save shop location</button>
+        <p id="shop-msg" class="mg-muted"></p>
+      </form>
+
+      <form id="product-form" class="mg-card stack">
+        <h2>Add a product</h2>
+        <input type="hidden" name="productId" value="" />
+        <label>Name<input name="name" required placeholder="e.g. Shea butter 250ml" /></label>
+        <label>Price (GHS)<input name="price" type="number" min="0" step="0.01" value="0" required /></label>
+        <label>Stock qty<input name="stock" type="number" min="0" placeholder="How many do you have?" /></label>
+        <label>Short description<textarea name="description" rows="3" placeholder="Optional details"></textarea></label>
+        <label>Photos (select multiple)<input name="images" type="file" accept="image/*" multiple /></label>
+        <label class="row"><input name="active" type="checkbox" checked /> Show on storefront</label>
+        <div class="row-actions">
+          <button type="submit">Save product</button>
+          <button type="button" id="clear-form" class="ghost">Clear</button>
+        </div>
+        <p id="msg" class="mg-muted"></p>
+      </form>
+    </div>
+
+    <section class="mg-card">
+      <h2>Your products</h2>
+      <div id="list" class="mg-list"></div>
+    </section>
+  </main>
+
+  <script>
+    const token = location.pathname.split("/").filter(Boolean).pop();
+    let productsCache = [];
+
+    function escapeHtml(v) {
+      return String(v)
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;");
+    }
+
+    async function load() {
+      const res = await fetch(`/api/manage/${encodeURIComponent(token)}`);
+      const data = await res.json();
+      if (!res.ok) {
+        document.getElementById("store-title").textContent = "Invalid link";
+        document.getElementById("msg").textContent = data.error || "Ask your agency for a new manage link.";
+        return;
+      }
+      document.getElementById("store-title").textContent = data.store.name;
+      document.getElementById("view-store").href = data.store.storefront;
+      const shopForm = document.getElementById("shop-form");
+      if (shopForm) {
+        shopForm.shopAddress.value = data.store.shopAddress || "";
+        shopForm.shopLat.value = data.store.shopLat ?? "";
+        shopForm.shopLng.value = data.store.shopLng ?? "";
+      }
+      productsCache = data.products || [];
+      renderList();
+    }
+
+    document.getElementById("shop-form")?.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const form = e.target;
+      const msg = document.getElementById("shop-msg");
+      msg.textContent = "Saving…";
+      try {
+        const res = await fetch(`/api/manage/${encodeURIComponent(token)}/shop`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            shopAddress: form.shopAddress.value,
+            shopLat: form.shopLat.value || null,
+            shopLng: form.shopLng.value || null
+          })
+        });
+        const raw = await res.text();
+        let data = {};
+        try {
+          data = JSON.parse(raw);
+        } catch {
+          throw new Error(
+            res.ok
+              ? "Server returned a non-JSON response. Restart the Hub and try again."
+              : `Save failed (${res.status}). Restart the Hub if this persists.`
+          );
+        }
+        if (!res.ok) throw new Error(data.error || "Save failed");
+        form.shopAddress.value = data.store.shopAddress || "";
+        form.shopLat.value = data.store.shopLat ?? "";
+        form.shopLng.value = data.store.shopLng ?? "";
+        msg.textContent =
+          data.store.shopLat != null
+            ? `Saved. Coords: ${data.store.shopLat}, ${data.store.shopLng}`
+            : "Saved address (coords not resolved — add lat/lng if quotes fail).";
+      } catch (err) {
+        msg.textContent = err.message;
+      }
+    });
+
+    function renderList() {
+      const list = document.getElementById("list");
+      list.innerHTML = "";
+      if (!productsCache.length) {
+        list.innerHTML = `<p class="mg-muted">No products yet. Add your first one on the left.</p>`;
+        return;
+      }
+      for (const p of productsCache) {
+        const row = document.createElement("div");
+        row.className = "mg-row";
+        const img = (p.images && p.images[0]) || p.image_path
+          ? `<img src="/uploads/${encodeURI((p.images && p.images[0]) || p.image_path)}" alt="" />`
+          : `<div class="thumb">${escapeHtml((p.name || "?").slice(0, 1))}</div>`;
+        const photoCount = p.images?.length || (p.image_path ? 1 : 0);
+        row.innerHTML = `
+          ${img}
+          <div class="grow">
+            <strong>${escapeHtml(p.name)}</strong>
+            <div class="mg-muted">GHS ${Number(p.price || 0).toFixed(2)} · ${p.active ? "live" : "hidden"}${photoCount ? ` · ${photoCount} photo${photoCount > 1 ? "s" : ""}` : ""}</div>
+            <div class="stock-row">
+              <label>Stock
+                <input type="number" min="0" value="${p.stock ?? ""}" data-stock="${p.id}" />
+              </label>
+              <button type="button" data-save-stock="${p.id}">Update stock</button>
+            </div>
+          </div>
+          <div class="col-actions">
+            <button type="button" class="ghost" data-edit="${p.id}">Edit</button>
+            <button type="button" class="ghost" data-del="${p.id}">Delete</button>
+          </div>
+        `;
+        list.appendChild(row);
+      }
+    }
+
+    document.getElementById("product-form").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const form = e.target;
+      const msg = document.getElementById("msg");
+      msg.textContent = "Saving…";
+      const fd = new FormData(form);
+      fd.set("active", form.active.checked ? "1" : "0");
+      fd.set("currency", "GHS");
+      const id = String(fd.get("productId") || "").trim();
+      try {
+        const url = id
+          ? `/api/manage/${encodeURIComponent(token)}/products/${id}`
+          : `/api/manage/${encodeURIComponent(token)}/products`;
+        const res = await fetch(url, { method: id ? "PATCH" : "POST", body: fd });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || "Save failed");
+        form.reset();
+        form.productId.value = "";
+        form.active.checked = true;
+        msg.textContent = "Saved.";
+        await load();
+      } catch (err) {
+        msg.textContent = err.message;
+      }
+    });
+
+    document.getElementById("clear-form").addEventListener("click", () => {
+      const form = document.getElementById("product-form");
+      form.reset();
+      form.productId.value = "";
+      form.active.checked = true;
+      document.getElementById("msg").textContent = "";
+    });
+
+    document.getElementById("list").addEventListener("click", async (e) => {
+      const editId = e.target.dataset.edit;
+      const delId = e.target.dataset.del;
+      const saveStock = e.target.dataset.saveStock;
+      if (editId) {
+        const p = productsCache.find((x) => String(x.id) === editId);
+        if (!p) return;
+        const form = document.getElementById("product-form");
+        form.productId.value = p.id;
+        form.name.value = p.name || "";
+        form.price.value = p.price ?? 0;
+        form.stock.value = p.stock ?? "";
+        form.description.value = p.description || "";
+        form.active.checked = Boolean(p.active);
+        document.getElementById("msg").textContent = `Editing ${p.name}`;
+        form.scrollIntoView({ behavior: "smooth" });
+        return;
+      }
+      if (delId) {
+        if (!confirm("Delete this product?")) return;
+        await fetch(`/api/manage/${encodeURIComponent(token)}/products/${delId}`, { method: "DELETE" });
+        await load();
+        return;
+      }
+      if (saveStock) {
+        const input = document.querySelector(`input[data-stock="${saveStock}"]`);
+        const res = await fetch(`/api/manage/${encodeURIComponent(token)}/stock/${saveStock}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ stock: input.value === "" ? null : Number(input.value) })
+        });
+        const data = await res.json();
+        if (!res.ok) {
+          alert(data.error || "Stock update failed");
+          return;
+        }
+        await load();
+      }
+    });
+
+    load();
+  </script>
+</body>
+</html>

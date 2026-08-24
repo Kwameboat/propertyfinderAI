@@ -1,0 +1,9 @@
+{
+  "name": "dar-concierge",
+  "private": true,
+  "type": "module",
+  "description": "DAR Concierge — UAE real-estate AI agent (PWA, listing dashboard, WhatsApp)",
+  "optionalDependencies": {
+    "puppeteer": "^24.43.1"
+  }
+}

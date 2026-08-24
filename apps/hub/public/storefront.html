@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Store</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,700&family=Outfit:wght@400;500;600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/storefront.css" />
+</head>
+<body>
+  <div class="sf-bg" aria-hidden="true"></div>
+
+  <header class="sf-hero">
+    <p class="sf-kicker">Shop with WhatsApp</p>
+    <h1 id="store-name">Store</h1>
+    <p id="store-tagline" class="sf-tagline"></p>
+    <a id="wa-cta" class="sf-cta" href="#" hidden>Order on WhatsApp</a>
+  </header>
+
+  <main class="sf-main">
+    <div class="sf-section-head">
+      <h2>Products</h2>
+      <p class="sf-muted">Tap a product to order on WhatsApp</p>
+    </div>
+    <div id="product-grid" class="sf-grid"></div>
+    <p id="empty-msg" class="sf-empty" hidden>No products listed yet. Check back soon.</p>
+  </main>
+
+  <footer class="sf-footer">
+    <span>Powered by JAB Hub</span>
+  </footer>
+
+  <script>
+    const slug = location.pathname.split("/").filter(Boolean).pop();
+
+    function escapeHtml(v) {
+      return String(v)
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;");
+    }
+
+    function waLink(phone, text) {
+      const n = String(phone || "").replace(/\D/g, "");
+      if (!n) return "#";
+      return `https://wa.me/${n}?text=${encodeURIComponent(text)}`;
+    }
+
+    async function boot() {
+      const res = await fetch(`/api/store/${encodeURIComponent(slug)}`);
+      const data = await res.json();
+      if (!res.ok) {
+        document.getElementById("store-name").textContent = "Store not found";
+        document.getElementById("empty-msg").hidden = false;
+        document.getElementById("empty-msg").textContent = data.error || "This store link is invalid.";
+        return;
+      }
+
+      document.title = data.store.name;
+      document.getElementById("store-name").textContent = data.store.name;
+      document.getElementById("store-tagline").textContent =
+        data.store.tagline || "Fresh stock. Order instantly on WhatsApp.";
+
+      const cta = document.getElementById("wa-cta");
+      if (data.store.whatsapp) {
+        cta.hidden = false;
+        cta.href = waLink(data.store.whatsapp, `Hi! I want to order from ${data.store.name}.`);
+      }
+
+      const grid = document.getElementById("product-grid");
+      const products = data.products || [];
+      if (!products.length) {
+        document.getElementById("empty-msg").hidden = false;
+        return;
+      }
+
+      for (const p of products) {
+        const price = `${escapeHtml(p.currency || "GHS")} ${Number(p.price || 0).toFixed(2)}`;
+        const stockLabel =
+          p.stock === null || p.stock === undefined
+            ? "Available"
+            : Number(p.stock) > 0
+              ? `${p.stock} in stock`
+              : "Out of stock";
+        const disabled = !p.inStock;
+        const orderText = `Hi! I want to order: ${p.name} (${price})`;
+        const href = disabled ? "#" : waLink(data.store.whatsapp, orderText);
+        const urls = (p.imageUrls && p.imageUrls.length)
+          ? p.imageUrls
+          : (p.imageUrl ? [p.imageUrl] : []);
+        const media = urls.length
+          ? `<div class="sf-gallery" data-count="${urls.length}">
+              ${urls.map((u, i) => `<img src="${escapeHtml(u)}" alt="" loading="lazy" class="${i === 0 ? "active" : ""}" data-idx="${i}" />`).join("")}
+              ${urls.length > 1 ? `<div class="sf-dots">${urls.map((_, i) => `<button type="button" class="sf-dot${i === 0 ? " on" : ""}" data-dot="${i}" aria-label="Photo ${i + 1}"></button>`).join("")}</div>` : ""}
+            </div>`
+          : `<div class="sf-placeholder">${escapeHtml(p.name.slice(0, 1))}</div>`;
+
+        const a = document.createElement("a");
+        a.className = `sf-item${disabled ? " sold" : ""}`;
+        a.href = href;
+        if (!disabled) a.target = "_blank";
+        a.rel = "noopener";
+        a.innerHTML = `
+          <div class="sf-media">${media}</div>
+          <div class="sf-copy">
+            <h3>${escapeHtml(p.name)}</h3>
+            <p>${escapeHtml(p.description || "")}</p>
+            <div class="sf-meta">
+              <strong>${price}</strong>
+              <span>${escapeHtml(stockLabel)}</span>
+            </div>
+          </div>
+        `;
+        a.querySelectorAll(".sf-dot").forEach((dot) => {
+          dot.addEventListener("click", (ev) => {
+            ev.preventDefault();
+            ev.stopPropagation();
+            const idx = Number(dot.dataset.dot);
+            const gallery = a.querySelector(".sf-gallery");
+            gallery.querySelectorAll("img").forEach((img) => img.classList.toggle("active", Number(img.dataset.idx) === idx));
+            gallery.querySelectorAll(".sf-dot").forEach((d) => d.classList.toggle("on", Number(d.dataset.dot) === idx));
+          });
+        });
+        grid.appendChild(a);
+      }
+    }
+
+    boot().catch(() => {
+      document.getElementById("store-name").textContent = "Unable to load store";
+    });
+  </script>
+</body>
+</html>

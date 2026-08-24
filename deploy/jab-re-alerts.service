@@ -1,0 +1,15 @@
+[Unit]
+Description=JAB Hub — RE saved-search WhatsApp alerts
+After=network.target jab-hub-dashboard.service
+
+[Service]
+Type=oneshot
+User=jabhub
+WorkingDirectory=/opt/jab-hub
+EnvironmentFile=-/opt/jab-hub/.env
+ExecStart=/usr/bin/node /opt/jab-hub/scripts/re-saved-search-alerts.mjs
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

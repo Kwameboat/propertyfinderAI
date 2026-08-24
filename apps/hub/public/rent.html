@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#0a0a0a" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="Dar Concierge" />
+  <meta name="application-name" content="Dar Concierge AI" />
+  <meta name="description" content="Dar Concierge AI — Your UAE AI Property Assistant. Powered by KeyFinder AI. Rent, buy, off-plan across the emirates." />
+  <title>Dar Concierge AI · KeyFinder AI</title>
+  <link rel="manifest" href="/manifest.webmanifest" />
+  <link rel="icon" type="image/png" href="/pwa-icon-192.png?v=logo" />
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png?v=logo" />
+  <script>
+    (function () {
+      window.__darPwa = window.__darPwa || { promptEvent: null };
+      window.addEventListener("beforeinstallprompt", function (e) {
+        e.preventDefault();
+        window.__darPwa.promptEvent = e;
+        window.dispatchEvent(new Event("dar-pwa-ready"));
+      });
+      if ("serviceWorker" in navigator && window.isSecureContext) {
+        navigator.serviceWorker.register("/sw.js", { scope: "/" }).catch(function () {
+          navigator.serviceWorker.register("/rent-sw.js", { scope: "/" });
+        });
+      }
+    })();
+  </script>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/rent.css" />
+</head>
+<body>
+  <div class="elite-app">
+    <header class="elite-header">
+      <button type="button" class="icon-btn" id="menu-btn" aria-label="Menu">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
+      </button>
+      <div class="logo-block">
+        <a href="/rent" class="logo-link" aria-label="Dar Concierge AI home">
+          <img src="/dar-concierge-logo.png" alt="Dar Concierge AI" class="brand-logo brand-logo--header" width="140" height="40" />
+        </a>
+      </div>
+      <button type="button" class="avatar-btn" id="profile-shortcut" aria-label="Profile">
+        <span class="avatar" id="header-avatar">DC</span>
+      </button>
+    </header>
+
+    <main class="elite-main">
+      <!-- Concierge -->
+      <section id="panel-concierge" class="panel active" aria-label="Concierge">
+        <div id="hero-card" class="hero-card">
+          <img src="/dar-concierge-logo.png" alt="Dar Concierge AI — Your UAE AI Property Assistant" class="brand-logo brand-logo--hero" width="240" height="320" />
+          <p class="hero-powered">Powered by <strong>KeyFinder AI</strong></p>
+          <p class="hero-greeting" id="hero-greeting">Welcome. Looking for a 4BR in Ajman or a villa in Dubai today?</p>
+          <div class="hero-suggestions">
+            <button type="button" class="pill" data-msg="Show me penthouses for rent in Dubai Marina">Marina Penthouses</button>
+            <button type="button" class="pill" data-msg="I'm looking for a villa to rent in JVC, 3 bed">JVC Villas</button>
+          </div>
+        </div>
+
+        <div class="quick-actions" id="quick-actions">
+          <h2 class="section-title">Quick Actions</h2>
+          <div class="action-grid">
+            <button type="button" class="action-card" data-msg="What are Dubai rent trends for 2 bedroom apartments right now?">
+              <span class="action-icon">📈</span>
+              <span>Rent Trends</span>
+            </button>
+            <button type="button" class="action-card" data-msg="Help me estimate monthly costs — rent, DEWA, and service charges for a Dubai apartment">
+              <span class="action-icon">🧮</span>
+              <span>Calculator</span>
+            </button>
+            <button type="button" class="action-card" data-msg="Move-in checklist: Ejari, DEWA, and utilities in Dubai">
+              <span class="action-icon">☑</span>
+              <span>Checklist</span>
+            </button>
+          </div>
+        </div>
+
+        <div id="chat" class="chat-thread" aria-live="polite">
+          <div id="chat-listings" class="chat-listings hidden"></div>
+        </div>
+      </section>
+
+      <!-- Explore -->
+      <section id="panel-explore" class="panel" aria-label="Explore" hidden>
+        <div class="explore-filters">
+          <button type="button" class="filter-pill active" data-filter="all">All</button>
+          <button type="button" class="filter-pill" data-filter="rent">Rent</button>
+          <button type="button" class="filter-pill" data-filter="sale">Buy</button>
+          <button type="button" class="filter-pill" data-filter="Dubai">Dubai</button>
+        </div>
+        <div id="explore-grid" class="explore-grid">
+          <p class="muted center">Loading properties…</p>
+        </div>
+      </section>
+
+      <!-- Saved -->
+      <section id="panel-saved" class="panel" aria-label="Saved" hidden>
+        <div class="saved-toolbar">
+          <h2 class="section-title pad">Saved Properties</h2>
+          <button type="button" id="saved-compare-btn" class="gold-btn inline hidden" disabled>Compare selected</button>
+        </div>
+        <div id="saved-grid" class="explore-grid">
+          <p class="muted center empty-hint">Tap ♡ on a property to save it here.</p>
+        </div>
+      </section>
+
+      <!-- Profile -->
+      <section id="panel-profile" class="panel" aria-label="Profile" hidden>
+        <div class="profile-card">
+          <div class="profile-avatar" id="profile-avatar-lg">DC</div>
+          <label class="profile-field">
+            Your name
+            <input id="profile-name" type="text" placeholder="Abdullah" autocomplete="name" />
+          </label>
+          <button type="button" class="gold-btn" id="save-profile">Save</button>
+          <div id="pwa-install-profile-card" class="pwa-profile-card hidden" hidden>
+            <p class="pwa-profile-title">Install the app</p>
+            <p class="muted">Use Dar Concierge like a native app — home screen icon, offline shell, no browser chrome.</p>
+            <p id="pwa-ios-hint" class="muted hidden" hidden>On iPhone: tap Share, then Add to Home Screen.</p>
+            <button type="button" class="gold-btn" id="pwa-install-profile-btn">Install now</button>
+          </div>
+          <p class="disclaimer">Dar Concierge AI connects you with listing agents across Bayut, Property Finder &amp; more. Powered by KeyFinder AI. We are not a broker.</p>
+        </div>
+      </section>
+    </main>
+
+    <div id="pwa-install-banner" class="pwa-install-banner hidden" hidden>
+      <div class="pwa-install-copy">
+        <strong>Install Dar Concierge</strong>
+        <span>Add to your home screen for faster access and a full-screen app.</span>
+      </div>
+      <button type="button" class="gold-btn inline" id="pwa-install-btn">Install now</button>
+      <button type="button" class="pwa-install-x" id="pwa-install-dismiss" aria-label="Dismiss">×</button>
+    </div>
+
+    <div class="composer-wrap" id="composer-wrap">
+      <p class="composer-ai-note" id="composer-ai-note">This is AI. AI can make mistakes.</p>
+      <div id="recording-bar" class="recording-bar hidden" aria-live="polite">
+        <span class="rec-dot"></span>
+        <span id="recording-label">Recording… tap mic to send</span>
+      </div>
+      <form id="form" class="composer">
+        <button type="button" id="mic-btn" class="mic-btn" aria-label="Record voice note">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 14a3 3 0 0 0 3-3V5a3 3 0 1 0-6 0v6a3 3 0 0 0 3 3z"/><path d="M19 11a7 7 0 0 1-14 0M12 18v3"/></svg>
+        </button>
+        <input id="input" type="text" autocomplete="off" placeholder="Ask Dar Concierge AI…" aria-label="Message" />
+        <button type="submit" id="send" class="send-btn" aria-label="Send">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M3.4 20.6 21 12 3.4 3.4l2.8 7.2L16 12l-9.8 1.4-2.8 7.2z"/></svg>
+        </button>
+      </form>
+    </div>
+
+    <nav class="bottom-nav" aria-label="Main">
+      <button type="button" class="nav-item active" data-tab="concierge">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 3l2.4 4.8L20 9l-4 3.9.9 5.6L12 16.8 7.1 18.5 8 12.9 4 9l5.6-1.2L12 3z"/></svg>
+        <span>Concierge</span>
+      </button>
+      <button type="button" class="nav-item" data-tab="explore">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><path d="M12 3v18M3 12h18"/></svg>
+        <span>Explore</span>
+      </button>
+      <button type="button" class="nav-item" data-tab="saved">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 21s-7-4.4-9.2-9.1C1.1 8.2 3.2 5 6.6 5c1.9 0 3.4 1 4.4 2.5C12 6 13.5 5 15.4 5c3.4 0 5.5 3.2 3.8 6.9C19 16.6 12 21 12 21z"/></svg>
+        <span>Saved</span>
+      </button>
+      <button type="button" class="nav-item" data-tab="profile">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="8" r="4"/><path d="M5 20c0-4 3.6-6 7-6s7 2 7 6"/></svg>
+        <span>Profile</span>
+      </button>
+    </nav>
+  </div>
+
+  <dialog id="photo-lightbox" class="photo-lightbox">
+    <button type="button" id="lightbox-close" class="lightbox-close" aria-label="Close">×</button>
+    <button type="button" id="lightbox-prev" class="lightbox-nav lightbox-prev" aria-label="Previous">‹</button>
+    <img id="lightbox-img" alt="" />
+    <button type="button" id="lightbox-next" class="lightbox-nav lightbox-next" aria-label="Next">›</button>
+    <span id="lightbox-counter" class="lightbox-counter"></span>
+  </dialog>
+
+  <dialog id="listing-dialog" class="listing-dialog">
+    <div class="listing-dialog-inner">
+      <button type="button" id="listing-close" class="listing-close" aria-label="Close">×</button>
+      <div id="listing-detail" class="listing-detail"></div>
+    </div>
+  </dialog>
+
+  <dialog id="compare-dialog" class="compare-dialog">
+    <div class="compare-dialog-inner">
+      <button type="button" id="compare-close" class="listing-close" aria-label="Close">×</button>
+      <h2 class="compare-title">Compare properties</h2>
+      <div id="compare-content" class="compare-content"></div>
+    </div>
+  </dialog>
+
+  <div id="menu-overlay" class="menu-overlay hidden" aria-hidden="true"></div>
+  <aside id="side-menu" class="side-menu" aria-label="Menu" aria-hidden="true">
+    <div class="side-menu-head">
+      <div class="side-menu-head-inner">
+      <div class="side-menu-brand-wrap">
+        <img src="/dar-concierge-logo.png" alt="Dar Concierge AI" class="brand-logo brand-logo--menu" width="220" height="220" />
+        <p class="side-menu-powered">Powered by KeyFinder AI</p>
+      </div>
+      <h2 class="side-menu-title">Menu</h2>
+      </div>
+      <button type="button" id="menu-close" class="icon-btn side-menu-close" aria-label="Close menu">×</button>
+    </div>
+
+    <button type="button" class="side-menu-primary" id="new-chat-btn">
+      <span class="side-menu-icon">＋</span>
+      New chat
+    </button>
+
+    <nav class="side-menu-nav" aria-label="Shortcuts">
+      <button type="button" class="side-menu-link" data-menu-tab="concierge">
+        <span>✦</span> Concierge
+      </button>
+      <button type="button" class="side-menu-link" data-menu-tab="explore">
+        <span>◎</span> Explore properties
+      </button>
+      <button type="button" class="side-menu-link" data-menu-tab="saved">
+        <span>♡</span> Saved properties
+      </button>
+      <button type="button" class="side-menu-link" data-menu-tab="profile">
+        <span>👤</span> Profile
+      </button>
+      <button type="button" class="side-menu-link hidden" id="pwa-install-menu-btn" hidden>
+        <span>⬇</span> Install now
+      </button>
+    </nav>
+
+    <div class="side-menu-section">
+      <div class="side-menu-section-head">
+        <h3>Recent chats</h3>
+        <span id="session-count" class="session-count"></span>
+      </div>
+      <div id="session-list" class="session-list">
+        <p class="muted session-empty">No previous chats yet.</p>
+      </div>
+    </div>
+
+    <div class="side-menu-foot">
+      <p class="side-menu-foot-brand">Powered by KeyFinder AI</p>
+      <button type="button" class="side-menu-muted" id="clear-sessions-btn">Clear chat history</button>
+    </div>
+  </aside>
+
+  <dialog id="lead-dialog" class="lead-dialog">
+    <form id="lead-form">
+      <h2 id="lead-title">Book a Viewing</h2>
+      <p id="lead-listing" class="lead-listing muted hidden"></p>
+      <p class="muted">We'll call you to confirm before contacting the agent.</p>
+      <label>Name<input name="name" required placeholder="Your name" /></label>
+      <label>UAE phone<input name="phone" required placeholder="+971 50 xxx xxxx" inputmode="tel" /></label>
+      <label>Preferred time (optional)<input name="viewing" placeholder="Tomorrow after 5pm" /></label>
+      <label class="checkbox">
+        <input name="consent" type="checkbox" required />
+        I agree to share my details with the listing agent
+      </label>
+      <div class="dialog-actions">
+        <button type="button" id="lead-cancel">Cancel</button>
+        <button type="submit" id="lead-submit" class="gold-btn inline">Book Viewing</button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog id="pwa-ios-dialog" class="lead-dialog pwa-ios-dialog">
+    <div class="pwa-ios-inner">
+      <h2>Install on iPhone</h2>
+      <ol class="pwa-ios-steps">
+        <li>Tap the <strong>Share</strong> button in Safari (square with an arrow).</li>
+        <li>Scroll and tap <strong>Add to Home Screen</strong>.</li>
+        <li>Tap <strong>Add</strong> — Dar Concierge opens like an app.</li>
+      </ol>
+      <button type="button" id="pwa-ios-close" class="gold-btn">Got it</button>
+    </div>
+  </dialog>
+
+  <script type="module" src="/rent.js"></script>
+</body>
+</html>

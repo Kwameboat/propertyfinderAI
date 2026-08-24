@@ -1,0 +1,3 @@
+﻿const fs=require("fs");const {Client}=require("ssh2");const PW=process.env.VPS_PASSWORD;const sh=fs.readFileSync(__dirname+"/vps-wa-ufw-remote.sh","utf8");
+function run(script){return new Promise((res,rej)=>{const c=new Client();let o="",e="";c.on("ready",()=>{c.exec("bash -s",(err,s)=>{if(err)return rej(err);s.on("close",()=>{c.end();res({o,e});});s.on("data",d=>o+=d.toString());s.stderr.on("data",d=>e+=d.toString());s.end(script);});}).on("error",rej).connect({host:"169.58.81.179",username:"root",password:PW,readyTimeout:60000});});}
+run(sh).then(r=>{console.log(r.o);if(r.e)console.error(r.e);}).catch(e=>console.error(e.message));

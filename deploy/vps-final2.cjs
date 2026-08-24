@@ -1,0 +1,8 @@
+const {Client}=require("ssh2");const {join}=require("path");const PW=process.env.VPS_PASSWORD;const REPO="C:/Users/DELL/jab-hub";
+function run(cmd,t=300000){return new Promise((res)=>{const c=new Client();let out="";c.on("ready",()=>c.exec(cmd,(e,s)=>{s.on("data",d=>{out+=d;process.stdout.write(d);});s.on("close",()=>{c.end();res(out);});})).connect({host:"169.58.81.179",username:"root",password:PW});});}
+function put(l,r){return new Promise((res,rej)=>{const c=new Client();c.on("ready",()=>c.sftp((e,s)=>{if(e){c.end();return rej(e);}s.fastPut(l,r,er=>{c.end();er?rej(er):res();});})).connect({host:"169.58.81.179",username:"root",password:PW});});}
+(async()=>{await put(join(REPO,"deploy",".marketing-merge.env"),"/tmp/marketing-merge.env");await put(join(REPO,"deploy","merge_env_on_server.py"),"/tmp/merge_env_on_server.py");await run("python3 /tmp/merge_env_on_server.py");
+await run("find /opt/jab-hub/deploy -type f -name *.sh -exec perl -pi -e \"s/\\r\\n/\\n/g\" {} +");
+await run("cd /opt/jab-hub && sudo -u jabhub bash deploy/get-qr.sh jab-whatsapp 2>&1",120000);
+await run("systemctl restart jab-hub-marketing jab-openclaw-gateway jab-hub-bridge jab-hub-dashboard");await run("sleep 6");
+const v=await run("cd /opt/jab-hub && bash deploy/verify.sh 2>&1");const st=await run("for u in jab-openclaw-gateway jab-hub-bridge jab-hub-dashboard jab-hub-marketing docker; do echo $u:$(systemctl is-active $u 2>/dev/null || echo inactive); done");const qr=await run("ls -la /tmp/jab-whatsapp-qr.png 2>&1");console.log(JSON.stringify({verifyHasFail:v.includes("failed"),services:st.trim(),qr:qr.trim()},null,2));})();

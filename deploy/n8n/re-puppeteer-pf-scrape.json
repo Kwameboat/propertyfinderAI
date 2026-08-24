@@ -1,0 +1,62 @@
+{
+  "id": "c3d4e5f6-a7b8-9012-cdef-123456789012",
+  "name": "UAE RE — Puppeteer PF → Supabase",
+  "active": true,
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "manual-trigger-puppeteer",
+      "name": "Manual Run",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [240, 280]
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [{ "field": "hours", "hoursInterval": 2 }]
+        }
+      },
+      "id": "schedule-puppeteer-2h",
+      "name": "Every 2 hours",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [240, 480]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://host.docker.internal:3000/api/rent/ingest/puppeteer",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "Content-Type", "value": "application/json" },
+            { "name": "X-Ingest-Token", "value": "REPLACE_WITH_JAB_RE_INGEST_TOKEN" }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\"source\":\"propertyfinder_puppeteer\",\"maxPages\":3}",
+        "options": { "timeout": 600000 }
+      },
+      "id": "puppeteer-pf-ingest",
+      "name": "Puppeteer Property Finder",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [560, 380],
+      "continueOnFail": true
+    }
+  ],
+  "connections": {
+    "Manual Run": {
+      "main": [[{ "node": "Puppeteer Property Finder", "type": "main", "index": 0 }]]
+    },
+    "Every 2 hours": {
+      "main": [[{ "node": "Puppeteer Property Finder", "type": "main", "index": 0 }]]
+    }
+  },
+  "settings": { "executionOrder": "v1" },
+  "staticData": null,
+  "tags": [],
+  "meta": { "templateCredsSetupCompleted": true }
+}

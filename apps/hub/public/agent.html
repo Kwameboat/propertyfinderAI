@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>JAB Hub — My leads</title>
+  <link rel="stylesheet" href="/styles.css" />
+</head>
+<body>
+  <header class="topbar">
+    <div>
+      <p class="eyebrow">JAB Hub · Agent</p>
+      <h1 id="agent-title">My leads</h1>
+    </div>
+    <button id="logout-btn" class="ghost" type="button">Log out</button>
+  </header>
+
+  <section class="banner warn">
+    Replies send from the <strong>client business WhatsApp</strong>, not your personal number. You also get lead alerts on your personal WhatsApp.
+  </section>
+
+  <div class="layout">
+    <aside class="panel">
+      <h2>Assigned leads</h2>
+      <ul id="lead-list" class="list"></ul>
+    </aside>
+    <main class="panel grow">
+      <div id="lead-empty" class="muted">Select a lead to reply.</div>
+      <div id="lead-detail" hidden>
+        <h2 id="lead-heading"></h2>
+        <p id="lead-meta" class="muted"></p>
+        <section class="briefing-card">
+          <h3>Lead digest</h3>
+          <p class="muted small">Full conversation is in Hub Inbox — reply there, not on WhatsApp.</p>
+          <p id="lead-score" class="score-line" hidden></p>
+          <p id="lead-hub-link" class="muted small" hidden></p>
+          <pre id="lead-summary" class="briefing"></pre>
+          <p id="lead-last" class="muted"></p>
+        </section>
+        <form id="reply-form" class="stack">
+          <label>Suggested first reply (edit then send)
+            <textarea name="text" rows="4" required placeholder="Type your reply…"></textarea>
+          </label>
+          <div class="toolbar">
+            <button type="submit">Send reply</button>
+            <button type="button" id="close-lead" class="ghost">Mark closed</button>
+          </div>
+          <p id="reply-msg" class="muted"></p>
+        </form>
+      </div>
+    </main>
+  </div>
+  <script src="/agent.js"></script>
+</body>
+</html>

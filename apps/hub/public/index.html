@@ -1,0 +1,646 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>JAB Hub</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=Outfit:wght@500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/styles.css" />
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <p class="eyebrow">JAB HUB</p>
+      <h1>Agency console</h1>
+    </div>
+    <div class="topbar-actions">
+      <button id="refresh-clients" class="btn-outline" type="button">
+        <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path fill="currentColor" d="M17.65 6.35A7.95 7.95 0 0 0 12 4V1L7 6l5 5V7c2.76 0 5 2.24 5 5a5 5 0 0 1-8.9 3.1L6.7 16.5A7.97 7.97 0 0 0 20 12c0-2.21-.9-4.21-2.35-5.65zM6 12c0-1.12.37-2.16 1-3L5.28 7.28A7.95 7.95 0 0 0 4 12c0 3.73 2.55 6.86 6 7.74V22l5-5-5-5v3.74c-2.33-.82-4-3.04-4-5.74z"/></svg>
+        Refresh
+      </button>
+      <button id="logout-btn" class="btn-solid" type="button">Log out</button>
+    </div>
+  </header>
+
+  <div class="shell">
+    <nav class="sidenav" aria-label="Main">
+      <button type="button" class="nav-item tab active" data-tab="contacts">
+        <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path fill="currentColor" d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>
+        <span class="nav-label">Contacts</span>
+      </button>
+      <button type="button" class="nav-item tab" data-tab="inbox">
+        <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path fill="currentColor" d="M20 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4-8 5-8-5V6l8 5 8-5v2z"/></svg>
+        <span class="nav-label">Inbox</span>
+      </button>
+      <button type="button" class="nav-item tab" data-tab="knowledge">
+        <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path fill="currentColor" d="M18 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zM6 4h5v8l-2.5-1.5L6 12V4z"/></svg>
+        <span class="nav-label">Knowledge</span>
+      </button>
+      <button type="button" class="nav-item tab" data-tab="campaigns">
+        <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path fill="currentColor" d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm0 14H5.17L4 17.17V4h16v12z"/></svg>
+        <span class="nav-label">Campaigns</span>
+      </button>
+      <button type="button" class="nav-item tab" data-tab="store">
+        <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path fill="currentColor" d="M20 4H4v2h16V4zm1 10v-2l-1-5H4l-1 5v2h1v6h10v-6h4v6h2v-6h1zm-9 4H6v-4h6v4z"/></svg>
+        <span class="nav-label">Store</span>
+      </button>
+      <button type="button" class="nav-item tab" data-tab="onboard">
+        <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path fill="currentColor" d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
+        <span class="nav-label">Onboard</span>
+      </button>
+      <button type="button" class="nav-item tab" data-tab="team">
+        <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path fill="currentColor" d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5s-3 1.34-3 3 1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/></svg>
+        <span class="nav-label">Team</span>
+      </button>
+      <button type="button" class="nav-item tab" data-tab="finance">
+        <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path fill="currentColor" d="M11.8 10.9c-2.27-.59-3-1.2-3-2.15 0-1.09 1.01-1.85 2.7-1.85 1.78 0 2.44.85 2.5 2.1h2.21c-.07-1.72-1.12-3.3-3.21-3.81V3h-3v2.16c-1.94.42-3.5 1.68-3.5 3.61 0 2.31 1.91 3.46 4.7 4.13 2.5.6 3 1.48 3 2.41 0 .69-.49 1.79-2.7 1.79-2.06 0-2.87-.92-2.98-2.1h-2.2c.12 2.19 1.76 3.42 3.68 3.83V21h3v-2.15c1.95-.37 3.5-1.5 3.5-3.55 0-2.84-2.43-3.81-4.7-4.4z"/></svg>
+        <span class="nav-label">Finance</span>
+      </button>
+      <button type="button" class="nav-item tab" data-tab="social">
+        <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path fill="currentColor" d="M18 16.08c-.76 0-1.44.3-1.96.77L8.91 12.7c.05-.23.09-.46.09-.7s-.04-.47-.09-.7l7.05-4.11c.54.5 1.25.81 2.04.81 1.66 0 3-1.34 3-3s-1.34-3-3-3-3 1.34-3 3c0 .24.04.47.09.7L8.04 9.81C7.5 9.31 6.79 9 6 9c-1.66 0-3 1.34-3 3s1.34 3 3 3c.79 0 1.5-.31 2.04-.81l7.12 4.16c-.05.21-.08.43-.08.65 0 1.61 1.31 2.92 2.92 2.92s2.92-1.31 2.92-2.92-1.31-2.92-2.92-2.92z"/></svg>
+        <span class="nav-label">Social</span>
+      </button>
+      <a href="/admin/re" class="nav-item nav-link-item">
+        <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path fill="currentColor" d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg>
+        <span class="nav-label">Listing dashboard</span>
+      </a>
+      <button type="button" class="nav-item tab nav-bottom" data-tab="settings">
+        <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path fill="currentColor" d="M19.14 12.94c.04-.31.06-.63.06-.94s-.02-.63-.06-.94l2.03-1.58a.49.49 0 0 0 .12-.61l-1.92-3.32a.49.49 0 0 0-.59-.22l-2.39.96a7.2 7.2 0 0 0-1.62-.94l-.36-2.54A.48.48 0 0 0 14 2h-4a.48.48 0 0 0-.48.41l-.36 2.54c-.59.24-1.13.55-1.62.94l-2.39-.96a.49.49 0 0 0-.59.22L2.65 8.87a.49.49 0 0 0 .12.61l2.03 1.58c-.04.31-.06.63-.06.94s.02.63.06.94l-2.03 1.58a.49.49 0 0 0-.12.61l1.92 3.32c.12.22.37.3.59.22l2.39-.96c.5.39 1.03.71 1.62.94l.36 2.54c.05.24.24.41.48.41h4c.24 0 .44-.17.48-.41l.36-2.54c.59-.24 1.13-.55 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32a.49.49 0 0 0-.12-.61l-2.03-1.58zM12 15.5A3.5 3.5 0 1 1 12 8a3.5 3.5 0 0 1 0 7.5z"/></svg>
+        <span class="nav-label">Settings</span>
+      </button>
+    </nav>
+
+    <div class="workspace">
+      <section class="banner warn" id="ops-banner">
+        <span class="warn-icon" aria-hidden="true">⚠</span>
+        Mass WhatsApp sends on Baileys can get numbers banned. Prefer small lists, high delay (4s+), and only messaged contacts who opted in.
+      </section>
+
+      <section class="hero-stream" id="hero-stream">
+        <div class="hero-label">
+          <span>Real-time data stream</span>
+          <div class="hero-meter" aria-hidden="true"><i></i></div>
+        </div>
+        <div class="orb-stage" aria-hidden="true">
+          <div class="orb-glow"></div>
+          <div class="orb-ring ring-a"></div>
+          <div class="orb-ring ring-b"></div>
+          <div class="orb-core"></div>
+          <div class="orb-node n1"></div>
+          <div class="orb-node n2"></div>
+          <div class="orb-node n3"></div>
+          <div class="orb-node n4"></div>
+        </div>
+        <div class="hero-stat">
+          <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path fill="currentColor" d="M2 17h2v4H2v-4zm4-6h2v10H6V11zm4-4h2v14h-2V7zm4-3h2v17h-2V4zm4 6h2v11h-2V10z"/></svg>
+          Network Latency <strong id="latency-label">24ms</strong>
+        </div>
+      </section>
+
+      <section class="quick-actions" id="quick-actions">
+        <button type="button" class="action-card" data-goto="campaigns">
+          <span class="action-icon">+</span>
+          <strong>New Campaign</strong>
+          <span>Initialize a manual broadcast.</span>
+        </button>
+        <button type="button" class="action-card" data-goto="store">
+          <span class="action-icon">▦</span>
+          <strong>Import Data</strong>
+          <span>Sync products &amp; catalog stock.</span>
+        </button>
+        <button type="button" class="action-card" data-goto="team">
+          <span class="action-icon">✦</span>
+          <strong>Auto-Response</strong>
+          <span>Configure AI worker nodes.</span>
+        </button>
+      </section>
+
+      <main class="panel main-panel grow">
+        <div id="tab-contacts" class="tab-pane">
+          <div class="panel-title-row">
+            <h2>Contacts</h2>
+            <p class="muted small">Scoped to the selected client — contacts never mix.</p>
+          </div>
+          <div class="toolbar">
+            <input id="contact-search" type="search" placeholder="Search name, phone, notes…" />
+            <form id="add-contact-form" class="inline-form">
+              <input name="phone" placeholder="Phone (with country code)" required />
+              <input name="pushName" placeholder="Name (optional)" />
+              <button type="submit">Add</button>
+            </form>
+          </div>
+          <div class="table-wrap">
+            <table class="table">
+              <thead>
+                <tr>
+                  <th>Name</th>
+                  <th>Phone</th>
+                  <th>Last inbound</th>
+                  <th>Notes</th>
+                  <th>Opt out</th>
+                </tr>
+              </thead>
+              <tbody id="contacts-body"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <div id="tab-inbox" class="tab-pane" hidden>
+          <div class="panel-title-row">
+            <h2>Inbox</h2>
+            <p class="muted small">Per selected client only — chats for this WhatsApp instance, not the whole agency.</p>
+          </div>
+          <p id="inbox-scope" class="muted small" style="margin-top:-8px"></p>
+          <div class="split">
+            <div class="card-block" style="max-width:320px">
+              <h3>Threads</h3>
+              <ul id="inbox-thread-list" class="list"></ul>
+            </div>
+            <div class="stack card-block grow">
+              <div class="panel-title-row">
+                <h3 id="inbox-thread-title">Select a chat</h3>
+                <div class="row" style="gap:8px">
+                  <button type="button" id="inbox-release-ai" class="btn-outline" hidden>Release to AI</button>
+                </div>
+              </div>
+              <div id="inbox-messages" class="detail" style="min-height:280px;max-height:420px;overflow:auto"></div>
+              <form id="inbox-reply-form" class="stack" hidden>
+                <label>Reply as human
+                  <textarea name="text" rows="3" required placeholder="Type a WhatsApp reply…"></textarea>
+                </label>
+                <button type="submit">Send</button>
+                <p id="inbox-reply-msg" class="muted"></p>
+              </form>
+            </div>
+          </div>
+        </div>
+
+        <div id="tab-knowledge" class="tab-pane" hidden>
+          <div class="panel-title-row">
+            <h2>Knowledge base</h2>
+            <p class="muted small">Docs for the selected client agent only. Other onboarded agents never see this.</p>
+          </div>
+          <p id="knowledge-scope" class="muted small" style="margin-top:-8px"></p>
+          <div class="split">
+            <form id="knowledge-form" class="stack card-block" style="max-width:420px">
+              <input type="hidden" name="id" value="" />
+              <label>Title<input name="title" required placeholder="e.g. Opening hours" /></label>
+              <label>Content<textarea name="content" rows="8" required placeholder="Paste FAQ / policy / price notes…"></textarea></label>
+              <label class="row"><input name="active" type="checkbox" checked /> Active</label>
+              <button type="submit">Save document</button>
+              <p id="knowledge-msg" class="muted"></p>
+            </form>
+            <div class="card-block">
+              <h3>Documents</h3>
+              <ul id="knowledge-list" class="list"></ul>
+              <h3>Upcoming bookings</h3>
+              <ul id="bookings-list" class="list"></ul>
+            </div>
+          </div>
+        </div>
+
+        <div id="tab-campaigns" class="tab-pane" hidden>
+          <div class="split">
+            <form id="campaign-form" class="stack card-block">
+              <h3>New broadcast</h3>
+              <label>Campaign name<input name="name" value="Broadcast" required /></label>
+              <label>Message text<textarea name="text" rows="4" placeholder="Optional if you attach media"></textarea></label>
+              <label>Image (optional)<input name="image" type="file" accept="image/*" /></label>
+              <label>PDF (optional)<input name="pdf" type="file" accept="application/pdf" /></label>
+              <label>Delay between recipients (ms)<input name="delayMs" type="number" min="2000" value="4000" /></label>
+              <div class="toolbar">
+                <button type="button" id="select-all-contacts">Select all contacts</button>
+                <button type="button" id="clear-contact-selection" class="ghost">Clear</button>
+              </div>
+              <div id="recipient-picker" class="picker"></div>
+              <button type="submit">Create campaign</button>
+              <p id="campaign-msg" class="muted"></p>
+            </form>
+
+            <div class="card-block">
+              <h3>Campaigns for this client</h3>
+              <ul id="campaign-list" class="list"></ul>
+              <div id="campaign-detail" class="detail" hidden></div>
+            </div>
+          </div>
+        </div>
+
+        <div id="tab-store" class="tab-pane" hidden>
+          <div class="store-links card-block">
+            <h3>Client store links</h3>
+            <p class="muted small">Share the manage link with the client so they can update stock themselves. Storefront is public.</p>
+            <p><strong>Storefront:</strong> <a id="storefront-link" href="#" target="_blank" rel="noopener">—</a></p>
+            <p><strong>Client manage link:</strong> <a id="manage-link" href="#" target="_blank" rel="noopener">—</a></p>
+            <div class="toolbar">
+              <button type="button" id="copy-manage-link" class="ghost">Copy manage link</button>
+              <button type="button" id="regen-manage-link" class="ghost">Regenerate manage link</button>
+            </div>
+            <p id="store-links-msg" class="muted"></p>
+          </div>
+          <div class="split">
+            <form id="product-form" class="stack card-block">
+              <h3>Add / update product</h3>
+              <p class="muted small">Catalog is per client. The WhatsApp AI can use active products when customers ask.</p>
+              <input type="hidden" name="productId" value="" />
+              <label>Name<input name="name" required placeholder="e.g. Premium website package" /></label>
+              <label>SKU / code<input name="sku" placeholder="Optional" /></label>
+              <label>Description<textarea name="description" rows="3" placeholder="Short product details"></textarea></label>
+              <div class="inline-form">
+                <label>Price<input name="price" type="number" step="0.01" min="0" value="0" required /></label>
+                <label>Currency<input name="currency" value="GHS" /></label>
+                <label>Stock<input name="stock" type="number" min="0" placeholder="Optional" /></label>
+              </div>
+              <label>Photos (you can select multiple)<input name="images" type="file" accept="image/*" multiple /></label>
+              <label class="inline-check"><input name="active" type="checkbox" checked /> Active (visible to AI / store)</label>
+              <div class="toolbar">
+                <button type="submit">Save product</button>
+                <button type="button" id="reset-product-form" class="ghost">Clear</button>
+              </div>
+              <p id="product-msg" class="muted"></p>
+            </form>
+
+            <div class="card-block">
+              <div class="toolbar">
+                <input id="product-search" type="search" placeholder="Search products…" />
+              </div>
+              <ul id="product-list" class="list"></ul>
+            </div>
+          </div>
+        </div>
+
+        <div id="tab-onboard" class="tab-pane" hidden>
+          <form id="onboard-form" class="stack card-block" style="max-width:560px">
+            <h3>Client onboarding</h3>
+            <p class="muted">Link an Evolution WhatsApp instance and set the agent type. Stores get a public shop + manage link; PA / CS / booking get a WhatsApp persona instead.</p>
+            <label>Agent type
+              <select name="agentType" id="onboard-agent-type">
+                <option value="store">Store (catalog / COD)</option>
+                <option value="pa">Personal Assistant</option>
+                <option value="customer_service">Customer Service</option>
+                <option value="booking">Booking Agent</option>
+              </select>
+            </label>
+            <label>Business / display name<input name="displayName" required placeholder="e.g. Ama Fresh Market" /></label>
+            <label>Evolution instance name<input name="instanceName" required placeholder="e.g. client-ama-fresh" /></label>
+            <label>WhatsApp number<input name="whatsappOrderNumber" placeholder="2335..." /></label>
+            <div id="onboard-store-fields" class="stack">
+              <label>Store tagline<input name="storeTagline" placeholder="Farm-fresh produce, delivered fast" /></label>
+              <label>Shop address (for Yango delivery quotes)<input name="shopAddress" placeholder="e.g. Madina Market, Accra" /></label>
+              <div class="row" style="gap:12px">
+                <label style="flex:1">Shop lat (optional)<input name="shopLat" type="number" step="any" placeholder="5.67" /></label>
+                <label style="flex:1">Shop lng (optional)<input name="shopLng" type="number" step="any" placeholder="-0.16" /></label>
+              </div>
+            </div>
+            <div id="onboard-booking-fields" class="stack" hidden>
+              <label>Booking URL (Calendly / site)<input name="bookingUrl" type="url" placeholder="https://calendly.com/…" /></label>
+            </div>
+            <label>Contact phone<input name="contactPhone" /></label>
+            <label>Lead distribution
+              <select name="leadDistribution">
+                <option value="auto">Auto (random agents)</option>
+                <option value="manual">Manual queue</option>
+              </select>
+            </label>
+            <label>AI persona notes (optional)
+              <textarea name="systemPrompt" rows="4" placeholder="Leave blank to use a starter prompt for this agent type. Or describe tone, duties, and what it should not do."></textarea>
+            </label>
+            <button type="submit">Onboard client</button>
+            <div id="onboard-result" class="detail" hidden></div>
+          </form>
+        </div>
+
+        <div id="tab-team" class="tab-pane" hidden>
+          <div class="split">
+            <div class="stack card-block">
+              <h3>Lead distribution</h3>
+              <p class="muted small">Auto = random active agent. Manual = unassigned queue until you assign.</p>
+              <label>
+                Mode
+                <select id="distribution-mode">
+                  <option value="auto">Auto (random)</option>
+                  <option value="manual">Manual (queue)</option>
+                </select>
+              </label>
+              <label>
+                Handoff keywords (comma-separated)
+                <input id="handoff-keywords" type="text" />
+              </label>
+              <label>
+                AI persona / custom prompt
+                <textarea id="client-system-prompt" rows="6" placeholder="Leave blank to use the default cash-on-delivery store assistant. Otherwise describe who this WhatsApp AI is, what business it represents, its tone, and what it should/shouldn't do."></textarea>
+              </label>
+              <label>
+                Admin phones (can update deals by WhatsApp)
+                <input id="client-admin-phones" type="text" placeholder="e.g. 233599915630" />
+              </label>
+              <label class="row"><input id="digest-enabled" type="checkbox" /> Daily owner digest on WhatsApp</label>
+              <label>Digest hour (0–23, Africa/Accra-ish local server time)
+                <input id="digest-hour" type="number" min="0" max="23" value="8" />
+              </label>
+              <label>Owner notify phone
+                <input id="owner-notify-phone" type="text" placeholder="Defaults to contact phone" />
+              </label>
+              <h3>Owner alerts (summary only)</h3>
+              <p class="muted small">Customers chat on this business WhatsApp number. The AI replies automatically. The owner gets short summaries and hot-lead alerts — not every message. Full chat is in Hub Inbox.</p>
+              <label>
+                Lead alert mode
+                <select id="client-notify-mode">
+                  <option value="digest">Digest (score + one-line summary)</option>
+                  <option value="handoff_full">Full briefing on handoff</option>
+                  <option value="off">Off</option>
+                </select>
+              </label>
+              <label>
+                Hot-lead score threshold (0–100)
+                <input id="client-score-threshold" type="number" min="0" max="100" value="60" />
+              </label>
+              <label>
+                Alert channel
+                <select id="client-ops-channel">
+                  <option value="whatsapp">WhatsApp (owner phone)</option>
+                  <option value="telegram">Telegram</option>
+                  <option value="both">WhatsApp + Telegram</option>
+                  <option value="off">Off</option>
+                </select>
+              </label>
+              <h3>Platform WhatsApp (no WABA)</h3>
+              <p class="muted small">Route this shop's customers through the agency Meta number. They pick your shop from a menu or your wa.me link — no client WABA or Baileys needed.</p>
+              <label class="row"><input id="platform-whatsapp-enabled" type="checkbox" /> Enable platform tenant on agency line</label>
+              <label>Platform slug (for wa.me ref)
+                <input id="platform-slug" type="text" placeholder="e.g. princess-travel" />
+              </label>
+              <label>Customer wa.me link
+                <input id="platform-wa-link" type="text" readonly style="font-family:monospace;font-size:12px" />
+              </label>
+              <p id="platform-wa-hint" class="muted small"></p>
+              <p class="muted small">This replaces the default store/COD sales instructions for this number only. For PA / CS / booking agents, set persona at Onboard (or here). Session memory, delivery/photo tokens and handoff still work. Admins text DEALS / ADD DEAL / REMOVE DEAL from the linked phone (or listed admin phones).</p>
+              <button type="button" id="save-team-settings">Save settings</button>
+              <p id="team-settings-msg" class="muted"></p>
+
+              <h3>Add sales agent</h3>
+              <form id="add-agent-form" class="stack">
+                <label>Name<input name="name" required /></label>
+                <label>WhatsApp phone (with country code)<input name="phone" required /></label>
+                <label>Login username<input name="login" required /></label>
+                <label>Login password<input name="password" type="password" minlength="4" required /></label>
+                <button type="submit">Add agent</button>
+                <p id="agent-msg" class="muted"></p>
+              </form>
+            </div>
+
+            <div class="card-block">
+              <h3>Team members</h3>
+              <ul id="agent-list" class="list"></ul>
+              <h3>Unassigned leads</h3>
+              <ul id="unassigned-list" class="list"></ul>
+              <h3>Recent handoffs</h3>
+              <ul id="leads-list" class="list"></ul>
+            </div>
+          </div>
+        </div>
+
+        <div id="tab-social" class="tab-pane" hidden>
+          <div class="panel-title-row">
+            <h2>Social media</h2>
+            <p class="muted small">Connect by logging into each network in your browser — no access tokens to copy.</p>
+          </div>
+          <p id="social-status" class="muted small">Loading…</p>
+          <p id="social-flash" class="muted small" hidden></p>
+          <div class="split">
+            <div class="stack card-block" style="max-width:480px">
+              <h3>Connect accounts</h3>
+              <p class="muted small">Choose a platform, then click Connect. You’ll sign in with Facebook / Google / etc. and approve access.</p>
+              <label>Platform
+                <select id="social-platform-select">
+                  <option value="instagram">Instagram</option>
+                  <option value="facebook">Facebook Page</option>
+                  <option value="tiktok">TikTok</option>
+                  <option value="x">X (Twitter)</option>
+                  <option value="linkedin">LinkedIn</option>
+                  <option value="youtube">YouTube Shorts</option>
+                </select>
+              </label>
+              <p id="social-platform-hint" class="muted small"></p>
+              <p id="social-oauth-ready" class="muted small"></p>
+              <div class="row-actions" style="gap:8px;flex-wrap:wrap">
+                <button type="button" id="social-oauth-btn">Connect with Instagram</button>
+              </div>
+              <p id="social-account-msg" class="muted"></p>
+
+              <details id="social-apps-setup" style="margin-top:16px">
+                <summary>One-time app setup (App ID &amp; Secret)</summary>
+                <p class="muted small" style="margin-top:8px">
+                  Create a free developer app once, paste App ID + Secret here, then use Connect above.
+                  Redirect URL to add in each app:
+                  <code id="social-redirect-hint"></code>
+                </p>
+                <form id="social-apps-form" class="stack" style="margin-top:8px">
+                  <label>Hub public URL<input name="publicUrl" placeholder="http://YOUR_VPS_IP:3000" /></label>
+                  <div class="social-app-fields" data-app="meta">
+                    <strong>Meta (Instagram + Facebook)</strong>
+                    <label>App ID<input name="metaAppId" autocomplete="off" /></label>
+                    <label>App Secret<input name="metaAppSecret" type="password" autocomplete="new-password" /></label>
+                    <p class="muted small"><a href="https://developers.facebook.com/apps/" target="_blank" rel="noopener">Create Meta app</a> → Add Facebook Login → paste App ID/Secret</p>
+                  </div>
+                  <div class="social-app-fields" data-app="tiktok" hidden>
+                    <strong>TikTok</strong>
+                    <label>Client key<input name="tiktokClientKey" autocomplete="off" /></label>
+                    <label>Client secret<input name="tiktokClientSecret" type="password" autocomplete="new-password" /></label>
+                    <p class="muted small"><a href="https://developers.tiktok.com/" target="_blank" rel="noopener">TikTok developers</a></p>
+                  </div>
+                  <div class="social-app-fields" data-app="x" hidden>
+                    <strong>X (Twitter)</strong>
+                    <label>Client ID<input name="xClientId" autocomplete="off" /></label>
+                    <label>Client Secret<input name="xClientSecret" type="password" autocomplete="new-password" /></label>
+                    <p class="muted small"><a href="https://developer.x.com/" target="_blank" rel="noopener">X developer portal</a></p>
+                  </div>
+                  <div class="social-app-fields" data-app="linkedin" hidden>
+                    <strong>LinkedIn</strong>
+                    <label>Client ID<input name="linkedinClientId" autocomplete="off" /></label>
+                    <label>Client Secret<input name="linkedinClientSecret" type="password" autocomplete="new-password" /></label>
+                    <p class="muted small"><a href="https://www.linkedin.com/developers/apps" target="_blank" rel="noopener">LinkedIn developers</a></p>
+                  </div>
+                  <div class="social-app-fields" data-app="youtube" hidden>
+                    <strong>YouTube (Google)</strong>
+                    <label>Client ID<input name="googleClientId" autocomplete="off" /></label>
+                    <label>Client Secret<input name="googleClientSecret" type="password" autocomplete="new-password" /></label>
+                    <p class="muted small"><a href="https://console.cloud.google.com/apis/credentials" target="_blank" rel="noopener">Google Cloud credentials</a> — enable YouTube Data API</p>
+                  </div>
+                  <button type="submit">Save app credentials</button>
+                  <p id="social-apps-msg" class="muted"></p>
+                </form>
+              </details>
+            </div>
+            <div class="stack card-block">
+              <h3>Platform status</h3>
+              <ul id="social-platform-list" class="list"></ul>
+              <h3>Recent drafts</h3>
+              <ul id="social-post-list" class="list"></ul>
+            </div>
+          </div>
+        </div>
+
+        <div id="tab-finance" class="tab-pane" hidden>
+          <div class="split">
+            <div class="stack card-block" style="max-width:420px">
+              <h3>Agency &amp; Paystack</h3>
+              <p class="muted small">Paystack <strong>secret + public keys</strong> live in server <code>.env</code> (<code>PAYSTACK_SECRET_KEY</code>, <code>PAYSTACK_PUBLIC_KEY</code>, optional <code>PAYSTACK_WEBHOOK_SECRET</code>). The agency WhatsApp instance has <strong>unlimited AI credits</strong> by default.</p>
+              <p id="paystack-status" class="muted small">Paystack: —</p>
+              <div class="stack" style="margin:12px 0">
+                <p class="muted small" style="margin:0"><strong>Paystack dashboard URLs</strong> — paste these in Paystack → Settings → API Keys &amp; Webhooks:</p>
+                <label class="muted small">Webhook URL
+                  <input id="paystack-webhook-url" type="text" readonly style="font-family:monospace;font-size:12px" />
+                </label>
+                <label class="muted small">Callback URL (after payment)
+                  <input id="paystack-callback-url" type="text" readonly style="font-family:monospace;font-size:12px" />
+                </label>
+                <p class="muted small" style="margin:8px 0 0">Billing emails are assigned automatically from each client’s WhatsApp number (or <code>JAB_HUB_BILLING_EMAIL</code> in server <code>.env</code> for the agency).</p>
+              </div>
+              <label>Agency WhatsApp instance
+                <select id="agency-instance"></select>
+              </label>
+              <label>Low-balance threshold (points)
+                <input id="low-balance-threshold" type="number" min="0" value="50" />
+              </label>
+              <label class="row"><input id="notify-low-balance" type="checkbox" checked /> Notify on low balance</label>
+              <label class="row"><input id="notify-payment" type="checkbox" checked /> Notify on successful payment</label>
+              <label>Free points on signup (all new clients)
+                <input id="signup-bonus-points" type="number" min="0" value="100" />
+              </label>
+              <p class="muted small">Granted once when a client is onboarded. Starts their 30-day points window.</p>
+              <p id="telegram-ops-status" class="muted small">Agency leads Telegram bot: —</p>
+              <label>Ops alert channel
+                <select id="agency-ops-channel">
+                  <option value="telegram">Telegram only (recommended)</option>
+                  <option value="both">WhatsApp summary + Telegram</option>
+                  <option value="whatsapp">WhatsApp summary to connected numbers only</option>
+                  <option value="hub">Hub only (log)</option>
+                  <option value="off">Off</option>
+                </select>
+              </label>
+              <label class="row"><input id="agency-digest-hub-url" type="checkbox" /> Include Hub link in Telegram alerts</label>
+              <p class="muted small">Qualified leads from the <strong>agency WhatsApp line</strong> are scored in chat. When score crosses the threshold (or on handoff), alerts go to Telegram. Setup: create bot with @BotFather → <code>node scripts/agency-leads-telegram-register.mjs</code> → set <code>TELEGRAM_AGENCY_LEADS_BOT_TOKEN</code> + <code>TELEGRAM_AGENCY_LEADS_CHAT_IDS</code> on VPS.</p>
+              <label>Alert content
+                <select id="agency-notify-mode">
+                  <option value="digest">Digest (score + summary)</option>
+                  <option value="handoff_full">Full briefing on handoff</option>
+                  <option value="off">Off</option>
+                </select>
+              </label>
+              <label>Hot-lead score threshold (0–100)
+                <input id="agency-score-threshold" type="number" min="0" max="100" value="60" />
+              </label>
+              <h3>Platform WhatsApp SaaS</h3>
+              <p class="muted small">Clients without WABA share the agency Meta line. Customers use shop wa.me links or the menu; reply <strong>JAB</strong> for agency sales.</p>
+              <p id="platform-agency-line" class="muted small">Agency line: —</p>
+              <ul id="platform-tenant-list" class="list"></ul>
+              <p class="muted small">When a prospect's score crosses this threshold, ops get a digest alert once. Full chat stays in Hub Inbox.</p>
+              <button type="button" id="save-billing-settings">Save agency settings</button>
+              <p id="billing-settings-msg" class="muted"></p>
+
+              <h3>Usage rates (points)</h3>
+              <form id="rates-form" class="stack">
+                <label>AI text<input name="ai_text" type="number" min="0" /></label>
+                <label>AI image<input name="ai_image" type="number" min="0" /></label>
+                <label>AI audio / voice<input name="ai_audio" type="number" min="0" /></label>
+                <label>AI video<input name="ai_video" type="number" min="0" /></label>
+                <label>AI document<input name="ai_document" type="number" min="0" /></label>
+                <label>Campaign text<input name="campaign_text" type="number" min="0" /></label>
+                <label>Campaign image<input name="campaign_image" type="number" min="0" /></label>
+                <label>Campaign document / PDF<input name="campaign_document" type="number" min="0" /></label>
+                <button type="submit">Save rates</button>
+                <p id="rates-msg" class="muted"></p>
+              </form>
+            </div>
+
+            <div class="stack card-block">
+              <h3>Point packages</h3>
+              <p class="muted small">Add as many plan or top-up sizes as you need (e.g. Top-up 100 / 250 / 500). Top-ups refill mid-period when points run out early.</p>
+              <form id="package-form" class="stack" style="max-width:420px">
+                <input type="hidden" name="packageId" value="" />
+                <label>Name<input name="name" required placeholder="Top-up 250" /></label>
+                <label>Price (GHS)<input name="priceGhs" type="number" min="0" step="0.01" required /></label>
+                <label>Points<input name="points" type="number" min="0" required /></label>
+                <label>Bonus points<input name="bonusPoints" type="number" min="0" value="0" /></label>
+                <label>Duration (days)<input name="durationDays" type="number" min="1" value="30" /></label>
+                <label class="row"><input name="isTopup" type="checkbox" /> Top-up package (mid-period refill)</label>
+                <label class="row"><input name="active" type="checkbox" checked /> Active</label>
+                <div class="row-actions">
+                  <button type="submit">Save package</button>
+                  <button type="button" id="new-topup-package" class="ghost">New top-up</button>
+                  <button type="button" id="clear-package-form" class="ghost">Clear</button>
+                </div>
+                <p id="package-msg" class="muted"></p>
+              </form>
+              <ul id="package-list" class="list"></ul>
+
+              <h3>Client wallets</h3>
+              <p class="muted small">Select a client, then send a saved package link — or enter a custom top-up amount for what they want to buy.</p>
+              <div class="row-actions" style="flex-wrap:wrap;gap:8px">
+                <input id="wallet-adjust-amount" type="number" min="1" placeholder="Points" style="width:100px" />
+                <select id="wallet-adjust-dir"><option value="credit">Credit</option><option value="debit">Debit</option></select>
+                <input id="wallet-adjust-note" placeholder="Note" style="flex:1;min-width:120px" />
+                <button type="button" id="wallet-adjust-btn">Adjust selected</button>
+              </div>
+              <div class="row-actions" style="flex-wrap:wrap;gap:8px;margin-top:8px">
+                <select id="wallet-package" title="Saved package"></select>
+                <button type="button" id="wallet-topup-btn">Send package link</button>
+              </div>
+              <div class="row-actions" style="flex-wrap:wrap;gap:8px;margin-top:8px;align-items:center">
+                <input id="custom-topup-ghs" type="number" min="0.01" step="0.01" placeholder="GHS" style="width:100px" title="Custom price" />
+                <input id="custom-topup-points" type="number" min="1" placeholder="Points" style="width:100px" title="Custom points" />
+                <input id="custom-topup-name" placeholder="Name (optional)" style="flex:1;min-width:120px" />
+                <label class="row" style="margin:0"><input id="custom-topup-save" type="checkbox" /> Save as package</label>
+                <button type="button" id="wallet-custom-topup-btn">Send custom top-up</button>
+              </div>
+              <p id="wallet-msg" class="muted"></p>
+              <ul id="wallet-list" class="list"></ul>
+              <h3>Selected client ledger</h3>
+              <ul id="ledger-list" class="list"></ul>
+              <h3>Recent Paystack payments</h3>
+              <ul id="payments-list" class="list"></ul>
+            </div>
+          </div>
+        </div>
+
+        <div id="tab-settings" class="tab-pane" hidden>
+          <div class="settings-card card-block">
+            <h3>Change dashboard password</h3>
+            <p class="muted">This updates `HUB_ADMIN_PASSWORD` in `.env`. You will be logged out after a successful change.</p>
+            <form id="password-form" class="stack">
+              <label>Current password<input name="currentPassword" type="password" autocomplete="current-password" required /></label>
+              <label>New password<input name="newPassword" type="password" autocomplete="new-password" minlength="4" required /></label>
+              <button type="submit">Update password</button>
+              <p id="password-msg" class="muted"></p>
+            </form>
+            <p class="muted small" style="margin-top:18px">
+              Sales agents log in at <a href="/agent-login">/agent-login</a>
+            </p>
+          </div>
+        </div>
+      </main>
+    </div>
+
+    <aside class="rail">
+      <section class="rail-card">
+        <div class="rail-head">
+          <h2>Active Clients</h2>
+          <span class="online-pill" id="online-badge">00 ONLINE</span>
+        </div>
+        <ul id="client-list" class="client-rail"></ul>
+      </section>
+
+      <section class="rail-card">
+        <div class="rail-head">
+          <h2>Recent Activity</h2>
+        </div>
+        <ul id="activity-feed" class="activity-feed"></ul>
+      </section>
+    </aside>
+  </div>
+
+  <script src="/app.js"></script>
+</body>
+</html>

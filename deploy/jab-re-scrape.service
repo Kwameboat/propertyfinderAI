@@ -1,0 +1,19 @@
+[Unit]
+Description=UAE Real Estate listings scraper (one-shot)
+After=network-online.target
+
+[Service]
+Type=oneshot
+User=jabhub
+Group=jabhub
+WorkingDirectory=/opt/jab-hub
+EnvironmentFile=/opt/jab-hub/.env
+Environment=HOME=/home/jabhub
+Environment=NODE_ENV=production
+ExecStart=/usr/bin/node /opt/jab-hub/scripts/scrape-uae-listings.mjs
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=jab-re-scrape
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,32 @@
+# Self-hosted SearXNG — private, Docker network only (no public port).
+# Usage on VPS (from repo root):
+#   export SEARXNG_SECRET_KEY="$(openssl rand -hex 32)"
+#   sed -i "s|REPLACE_WITH_LONG_RANDOM_SECRET_MIN_32_CHARS|$SEARXNG_SECRET_KEY|" deploy/searxng/settings.yml
+#   docker compose -f deploy/searxng/docker-compose.yml up -d
+#
+# n8n calls: http://searxng:8080/search?q=...&format=json
+
+services:
+  searxng:
+    container_name: jabhub_searxng
+    image: searxng/searxng:latest
+    restart: unless-stopped
+    volumes:
+      - ./settings.yml:/etc/searxng/settings.yml:ro
+    environment:
+      SEARXNG_BASE_URL: http://searxng:8080/
+      SEARXNG_SETTINGS_PATH: /etc/searxng/settings.yml
+    networks:
+      - jabhub-net
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8080/healthz"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
+    # No `ports:` — not exposed to the internet. n8n reaches via jabhub-net.
+
+networks:
+  jabhub-net:
+    external: true
+    name: jabhub-net
