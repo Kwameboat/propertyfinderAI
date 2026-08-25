@@ -737,12 +737,12 @@ app.get("/api/rent/config", (req, res) => {
 app.get("/gh/thanks", (req, res) => {
   res.type("html").send(`<!DOCTYPE html>
 <html lang="en"><head><meta charset="utf-8"/><meta name="viewport" content="width=device-width, initial-scale=1"/>
-<title>KeyFinder Ghana</title></head>
+<title>FIE AI</title></head>
 <body style="font-family:system-ui;padding:2rem;max-width:32rem;margin:auto">
 <h1>Payment received</h1>
 <p>If GH₵100 went through, your viewing PIN is being sent to WhatsApp. Give that PIN to the listing agent only when you see the room.</p>
 <p><a href="/gh/agent">Listing agent: enter PIN + MoMo</a></p>
-<p><a href="/gh">Back to KeyFinder Ghana</a></p>
+<p><a href="/gh">Back to FIE AI</a></p>
 <script>
 const q = new URLSearchParams(location.search);
 const viewingId = q.get("viewing");

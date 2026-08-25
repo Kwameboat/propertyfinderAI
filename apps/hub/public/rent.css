@@ -100,6 +100,23 @@ html, body {
   margin: 0 auto;
 }
 
+.market-gh .brand-logo--header {
+  height: 52px;
+  max-width: min(170px, 58vw);
+  object-fit: contain;
+  object-position: center;
+}
+
+.market-gh .brand-logo--hero {
+  max-width: 280px;
+  border-radius: 18px;
+}
+
+.market-gh .brand-logo--menu {
+  max-width: 220px;
+  border-radius: 16px;
+}
+
 .brand-logo--chat {
   height: 28px;
   width: 28px;

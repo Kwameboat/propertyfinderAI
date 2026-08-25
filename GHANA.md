@@ -1,6 +1,6 @@
-# KeyFinder Ghana
+# FIE AI (Ghana)
 
-Ghana housing PWA on the same Dar Concierge engine. **Does not replace the live UAE product.** Default market stays `AE`.
+Ghana housing PWA on the same Dar Concierge engine. **Does not replace the live UAE product.** Default market stays `AE`. Brand: **FIE AI** — your AI real estate agent in Ghana.
 
 Public path: `/gh` (same app as `/rent`, branded from `/api/rent/config`).
 Give Ghana its own domain later (`JAB_HUB_PUBLIC_URL=https://your-ghana-domain`).
@@ -37,13 +37,12 @@ node scripts/scrape-ghana-listings.mjs --sources=seed,meqasa
 | Agent sends PIN (+ MoMo) to platform WhatsApp | — | Held 50 marked ready to payout |
 | Client takes the room | 10% of agreed rent | 50% platform / 50% listing agent |
 
-PIN redeem:
+PIN redeem: open `/gh/agent` or:
 
 ```bash
 curl -X POST http://127.0.0.1:3000/api/rent/viewing/redeem-pin \
-  -H "x-ingest-token: $JAB_RE_INGEST_TOKEN" \
   -H "Content-Type: application/json" \
-  -d '{"text":"PIN 123456 momo 0241234567"}'
+  -d '{"pin":"123456","momo":"0241234567"}'
 ```
 
 Record a close (agency login):
@@ -65,13 +64,13 @@ Leave `JAB_RE_MARKET` unset on the UAE VPS.
 
 ## Live test (Contabo)
 
-Ghana runs as a **second** Hub on the same VPS. Dar Concierge on `:3000` is untouched.
+FIE AI runs as a **second** Hub on the same VPS. Dar Concierge on `:3000` is untouched.
 
 | App | URL |
 |-----|-----|
-| KeyFinder Ghana PWA | http://169.58.81.179:3001/gh |
+| FIE AI PWA | http://169.58.81.179:3001/gh |
 | Agent PIN confirm | http://169.58.81.179:3001/gh/agent |
-| Ghana listing dashboard | http://169.58.81.179:3001/admin/re |
+| FIE listing dashboard | http://169.58.81.179:3001/admin/re |
 | Dar Concierge (UAE, unchanged) | http://169.58.81.179:3000/rent |
 
 Test viewing uses demo pay (`JAB_RE_GH_DEV_PAY=1`) so PIN appears in chat. Give that PIN to `/gh/agent` with a MoMo number.

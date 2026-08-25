@@ -23,7 +23,8 @@ let marketConfig = {
   viewingFeeGhs: 0,
   phoneLabel: "UAE phone",
   phonePlaceholder: "+971 50 xxx xxxx",
-  consent: "I agree to share my details with the listing agent"
+  consent: "I agree to share my details with the listing agent",
+  logo: "/dar-concierge-logo.png"
 };
 
 async function loadMarketConfig() {
@@ -39,11 +40,19 @@ async function loadMarketConfig() {
 
 function applyMarketBranding() {
   const ghana = marketConfig.code === "GH";
+  document.body?.classList.toggle("market-gh", ghana);
   document.title = marketConfig.brand || document.title;
+  if (ghana) {
+    BRAND.name = "FIE AI";
+    BRAND.nameUpper = "FIE AI";
+    BRAND.tagline = "Your AI real estate agent in Ghana";
+    BRAND.poweredBy = "FIE AI";
+    BRAND.poweredLine = "Your AI real estate agent in Ghana";
+  }
   document.querySelector('meta[name="description"]')?.setAttribute(
     "content",
     ghana
-      ? "KeyFinder Ghana — rooms, self-contains, and apartments. Pay GH₵100 to view."
+      ? "FIE AI — your AI real estate agent in Ghana. Rooms, self-contains, and apartments. Pay GH₵100 to view."
       : "Dar Concierge AI — Your UAE AI Property Assistant. Powered by KeyFinder AI."
   );
   document.querySelectorAll(".logo-link").forEach((a) => {
@@ -51,9 +60,10 @@ function applyMarketBranding() {
     a.setAttribute("aria-label", `${marketConfig.brand || "Home"} home`);
   });
   if (ghana) {
+    const logo = marketConfig.logo || "/fie-ai-logo.webp";
     document.querySelectorAll(".brand-logo").forEach((img) => {
-      img.src = "/keyfinder-ghana.svg";
-      img.alt = "KeyFinder Ghana";
+      img.src = logo;
+      img.alt = "FIE AI";
     });
   }
   if (heroGreeting) {
@@ -62,7 +72,7 @@ function applyMarketBranding() {
       : heroGreeting.textContent;
   }
   const powered = document.querySelector(".hero-powered");
-  if (powered && ghana) powered.innerHTML = "Rooms across Accra, Kumasi &amp; Tema";
+  if (powered && ghana) powered.textContent = "Your AI real estate agent in Ghana";
   const pills = document.querySelectorAll(".hero-suggestions .pill");
   if (ghana && pills[0] && pills[1]) {
     pills[0].textContent = "East Legon self-contain";
@@ -84,14 +94,20 @@ function applyMarketBranding() {
     exploreDubai.textContent = "Accra";
     exploreDubai.dataset.filter = "Accra";
   }
-  if (input) input.placeholder = ghana ? "Ask KeyFinder Ghana…" : input.placeholder;
+  if (input) input.placeholder = ghana ? "Ask FIE AI…" : input.placeholder;
   const disclaimer = document.querySelector(".profile-card .disclaimer");
   if (disclaimer && ghana) {
     disclaimer.textContent =
-      "KeyFinder Ghana connects you with listing agents. Pay GH₵100 to view. We are not a landlord.";
+      "FIE AI connects you with listing agents in Ghana. Pay GH₵100 to view. We are not a landlord.";
   }
   const pwaCopy = document.querySelector(".pwa-install-copy strong");
-  if (pwaCopy && ghana) pwaCopy.textContent = "Install KeyFinder Ghana";
+  if (pwaCopy && ghana) pwaCopy.textContent = "Install FIE AI";
+  const pwaSpan = document.querySelector(".pwa-install-copy span");
+  if (pwaSpan && ghana) pwaSpan.textContent = "Add FIE AI to your home screen.";
+  const menuPowered = document.querySelectorAll(".side-menu-powered, .side-menu-foot-brand");
+  menuPowered.forEach((el) => {
+    if (ghana) el.textContent = "FIE AI · Ghana";
+  });
   const phoneInput = leadForm?.querySelector('input[name="phone"]');
   const phoneLabel = phoneInput?.closest("label");
   if (phoneInput) phoneInput.placeholder = marketConfig.phonePlaceholder || phoneInput.placeholder;
@@ -107,7 +123,7 @@ function applyMarketBranding() {
   }
   const muted = document.querySelector("#lead-form > p.muted");
   if (muted && marketConfig.payToView) {
-    muted.textContent = `Pay GH₵${marketConfig.viewingFeeGhs || 100} to book. GH₵50 for KeyFinder, GH₵50 held for the agent until you view.`;
+    muted.textContent = `Pay GH₵${marketConfig.viewingFeeGhs || 100} to book. GH₵50 for FIE AI, GH₵50 held for the agent until you view.`;
   }
   if (marketConfig.payToView) {
     const btn = document.getElementById("lead-submit");
@@ -928,7 +944,7 @@ function addMessage(text, role = "bot", options = {}) {
     wrap.className = "msg bot-wrap";
     wrap.innerHTML = `
       <div class="concierge-label">
-        <img src="/dar-concierge-logo.png" alt="" class="brand-logo brand-logo--chat" />
+        <img src="${escapeAttr(marketConfig.logo || "/dar-concierge-logo.png")}" alt="" class="brand-logo brand-logo--chat" />
         <span>${BRAND.nameUpper}</span>
       </div>
       <div class="msg bot">${formatBotHtml(text)}</div>

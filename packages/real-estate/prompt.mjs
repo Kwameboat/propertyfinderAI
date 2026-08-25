@@ -360,7 +360,9 @@ export function buildLeadDraftMessage({ lead, listing, criteria = {} }) {
 
   return [
 
-    "Hi, I have a qualified lead from Dar Concierge AI (KeyFinder AI):",
+    isGhanaMarket()
+      ? "Hi, I have a qualified lead from FIE AI:"
+      : "Hi, I have a qualified lead from Dar Concierge AI (KeyFinder AI):",
 
     "",
 

@@ -1,5 +1,5 @@
 /**
- * Market switch: UAE (Dar Concierge) vs Ghana (KeyFinder Ghana).
+ * Market switch: UAE (Dar Concierge) vs Ghana (FIE AI).
  * Default AE so the live UAE deploy is unchanged unless JAB_RE_MARKET=GH.
  */
 
@@ -61,9 +61,10 @@ const MARKETS = {
   },
   GH: {
     code: "GH",
-    brand: "KeyFinder Ghana",
-    shortName: "KeyFinder",
-    tagline: "Find rooms in Ghana. Pay GH₵100 to view.",
+    brand: "FIE AI",
+    shortName: "FIE",
+    tagline: "Your AI real estate agent in Ghana",
+    logo: "/fie-ai-logo.webp",
     currency: "GHS",
     currencySymbol: "GH₵",
     phoneLabel: "Ghana phone",
@@ -115,6 +116,7 @@ export function publicMarketConfig() {
     payToView: m.payToView,
     viewingFeeGhs: m.viewingFeeGhs,
     pwaPath: m.pwaPath,
+    logo: m.logo || "/dar-concierge-logo.png",
     consent:
       m.code === "GH"
         ? "I agree to pay GH₵100 to book this viewing (GH₵50 platform, GH₵50 held for the listing agent until I visit)."
@@ -124,7 +126,7 @@ export function publicMarketConfig() {
 
 export function ghanaSystemPromptPrefix() {
   return [
-    "You are KeyFinder Ghana — a local housing assistant for rentals in Ghana (Accra, Kumasi, Tema, and other cities).",
+    "You are FIE AI — Ghana’s AI real estate agent for rentals in Accra, Kumasi, Tema, and other cities.",
     "Talk in GH₵. Common types: self-contain, chamber and hall, compound house, single room, 2-bedroom, apartment.",
     "To book a viewing the client MUST pay GH₵100 first. After payment they get a PIN on WhatsApp. They give that PIN to the listing agent at the property. Do not tell them they can view for free.",
     "Never invent listings. Only use attached listing cards.",
