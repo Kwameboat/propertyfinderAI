@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>KeyFinder Ghana — Agent PIN</title>
+  <link rel="stylesheet" href="/rent.css" />
+  <style>
+    body { margin: 0; background: #0a0a0a; color: #f5f5f5; font-family: Inter, system-ui, sans-serif; }
+    .wrap { max-width: 28rem; margin: 0 auto; padding: 2rem 1.25rem 4rem; }
+    h1 { font-size: 1.4rem; margin: 0.5rem 0 0.25rem; }
+    .muted { color: #888; line-height: 1.45; }
+    label { display: block; margin: 1rem 0 0.35rem; font-size: 0.9rem; }
+    input { width: 100%; box-sizing: border-box; padding: 0.75rem; border-radius: 10px; border: 1px solid #2a2a2a; background: #141414; color: #fff; font-size: 1rem; }
+    button { margin-top: 1.25rem; width: 100%; }
+    .ok { color: #2dd4bf; }
+    .err { color: #f87171; }
+    a { color: #c9a227; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <p class="muted">KeyFinder Ghana</p>
+    <h1>Confirm a viewing</h1>
+    <p class="muted">Client gives you the 6-digit PIN at the property. Enter it with your MoMo number. We then mark GH₵50 ready to pay you.</p>
+    <form id="f">
+      <label>Viewing PIN
+        <input name="pin" inputmode="numeric" maxlength="6" required placeholder="482910" />
+      </label>
+      <label>Your MoMo number
+        <input name="momo" inputmode="tel" required placeholder="0241234567" />
+      </label>
+      <button type="submit" class="gold-btn">Confirm PIN</button>
+    </form>
+    <p id="msg" class="muted"></p>
+    <p><a href="/gh">Back to KeyFinder</a></p>
+  </div>
+  <script>
+    document.getElementById("f").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const msg = document.getElementById("msg");
+      const fd = new FormData(e.target);
+      msg.textContent = "Checking…";
+      msg.className = "muted";
+      try {
+        const res = await fetch("/api/rent/viewing/redeem-pin", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ pin: String(fd.get("pin") || "").trim(), momo: String(fd.get("momo") || "").trim() })
+        });
+        const data = await res.json();
+        if (!res.ok || !data.ok) throw new Error(data.error || "Could not redeem PIN");
+        msg.className = "ok";
+        msg.textContent = "PIN confirmed. GH₵50 for this viewing is ready to pay to your MoMo.";
+      } catch (err) {
+        msg.className = "err";
+        msg.textContent = err.message;
+      }
+    });
+  </script>
+</body>
+</html>

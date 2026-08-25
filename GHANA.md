@@ -61,4 +61,17 @@ Agency dashboard: **Viewings** tab at `/admin/re` — PIN status, MoMo, and reco
 
 ## UAE
 
-Leave `JAB_RE_MARKET` unset or `AE`. Live Dar Concierge on Contabo stays as it is.
+Leave `JAB_RE_MARKET` unset on the UAE VPS.
+
+## Live test (Contabo)
+
+Ghana runs as a **second** Hub on the same VPS. Dar Concierge on `:3000` is untouched.
+
+| App | URL |
+|-----|-----|
+| KeyFinder Ghana PWA | http://169.58.81.179:3001/gh |
+| Agent PIN confirm | http://169.58.81.179:3001/gh/agent |
+| Ghana listing dashboard | http://169.58.81.179:3001/admin/re |
+| Dar Concierge (UAE, unchanged) | http://169.58.81.179:3000/rent |
+
+Test viewing uses demo pay (`JAB_RE_GH_DEV_PAY=1`) so PIN appears in chat. Give that PIN to `/gh/agent` with a MoMo number.

@@ -21,7 +21,7 @@ import { getListingStore } from "./listings-store.mjs";
 import { pullLiveListingsForChat } from "./live-pull.mjs";
 import { mergeCriteriaFromSession } from "./live-search-query.mjs";
 import { normalizeSearchCriteria, filterListingsByEmirate, resolveEmirateScope, extractEmiratesFromText } from "./emirate-scope.mjs";
-import { enrichListingsWithImages, filterValidPortalImages, isValidListingImage } from "./listing-images.mjs";
+import { enrichListingsWithImages, filterValidPortalImages, isValidListingImage, isLocalGhanaMedia, isChatListingImage } from "./listing-images.mjs";
 import { userWantsPhotos } from "./intent.mjs";
 import { syncSessionToSupabase, syncLeadToSupabase, syncListingToSupabase, isSupabaseEnabled } from "./supabase.mjs";
 import { resolveSessionLanguage } from "./language.mjs";
@@ -395,10 +395,11 @@ function listingSnapshot(l, criteria = {}) {
 
 export function formatListingCard(l, criteria = {}) {
   const title = l.title || formatListingTitle(l, criteria);
-  const rawImages = [...(l.images || []), l.image].filter(Boolean);
-  const images = filterValidPortalImages(rawImages).length
-    ? filterValidPortalImages(rawImages)
-    : [...new Set(rawImages.map(String))].filter(isValidListingImage);
+  const rawImages = [...(l.images || []), l.image].filter(Boolean).map(String);
+  const local = rawImages.filter(isLocalGhanaMedia);
+  const portal = filterValidPortalImages(rawImages);
+  const loose = [...new Set(rawImages)].filter(isChatListingImage);
+  const images = local.length ? local : portal.length ? portal : loose;
   return {
     id: (l.id && !isCompositeListingId(l.id) ? l.id : null) || listingKey(l) || l.id,
     title,

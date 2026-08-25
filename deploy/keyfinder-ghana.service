@@ -1,0 +1,29 @@
+[Unit]
+Description=KeyFinder Ghana (separate from Dar Concierge)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=jabhub
+Group=jabhub
+WorkingDirectory=/opt/keyfinder-ghana/apps/hub
+EnvironmentFile=/opt/keyfinder-ghana/.env
+Environment=HOME=/home/jabhub
+Environment=NODE_ENV=production
+Environment=JAB_RE_MARKET=GH
+Environment=JAB_HUB_PORT=3001
+Environment=JAB_HUB_DATA_DIR=/var/lib/keyfinder-ghana
+Environment=JAB_HUB_PUBLIC_URL=http://169.58.81.179:3001
+Environment=JAB_RENT_HTTPS_ORIGIN=off
+Environment=JAB_RE_GH_DEV_PAY=1
+Environment=JAB_RE_PUPPETEER_SCRAPE=0
+ExecStart=/usr/bin/node /opt/keyfinder-ghana/apps/hub/server.mjs
+Restart=always
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=keyfinder-ghana
+
+[Install]
+WantedBy=multi-user.target

@@ -21,7 +21,7 @@ export const GHANA_SEED_LISTINGS = [
     agent_name: "Ama Mensah",
     agent_phone: "+233244000111",
     agency_name: "Demo Agency A",
-    images: []
+    images: ["/gh-media/east-legon-1.svg"]
   },
   {
     source: "jiji",
@@ -40,7 +40,7 @@ export const GHANA_SEED_LISTINGS = [
     agent_name: "Kwame Boat",
     agent_phone: "+233201112233",
     agency_name: "Demo Agency B",
-    images: []
+    images: ["/gh-media/east-legon-2.svg"]
   },
   {
     source: "ghanapropertycentre",
@@ -59,7 +59,7 @@ export const GHANA_SEED_LISTINGS = [
     agent_name: "Kojo Owusu",
     agent_phone: "+233244333000",
     agency_name: "Demo Agency F",
-    images: []
+    images: ["/gh-media/east-legon-3.svg"]
   },
   {
     source: "meqasa",
@@ -77,7 +77,7 @@ export const GHANA_SEED_LISTINGS = [
     agent_name: "Yaw Asante",
     agent_phone: "+233277000444",
     agency_name: "Demo Agency C",
-    images: []
+    images: ["/gh-media/osu.svg"]
   },
   {
     source: "ghanapropertycentre",
@@ -96,7 +96,7 @@ export const GHANA_SEED_LISTINGS = [
     agent_name: "Efua Darko",
     agent_phone: "+233244555666",
     agency_name: "Demo Agency D",
-    images: []
+    images: ["/gh-media/spintex.svg"]
   },
   {
     source: "meqasa",
@@ -114,6 +114,6 @@ export const GHANA_SEED_LISTINGS = [
     agent_name: "Akosua Frimpong",
     agent_phone: "+233244777888",
     agency_name: "Demo Agency E",
-    images: []
+    images: ["/gh-media/ahodwo.svg"]
   }
 ];

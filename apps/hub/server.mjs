@@ -124,6 +124,7 @@ import {
 } from "../../packages/hub-db/index.mjs";
 import { handleRentChat, handleRentTranscribe, submitRentLead, formatListingCard, formatListingDetail } from "../../packages/real-estate/chat.mjs";
 import { publicMarketConfig, isGhanaMarket } from "../../packages/real-estate/market.mjs";
+import { attachClusterMeta, groupListingsByCluster } from "../../packages/real-estate/cluster.mjs";
 import {
   confirmGhanaViewingPayment,
   handleGhanaPaystackWebhook,
@@ -644,7 +645,24 @@ app.get("/agent-login", (req, res) => {
   res.sendFile(path.join(__dirname, "public", "agent-login.html"));
 });
 
+app.get("/", (req, res, next) => {
+  if (isGhanaMarket()) {
+    res.redirect(302, "/gh");
+    return;
+  }
+  next();
+});
+
+app.get("/gh/agent", (req, res) => {
+  res.sendFile(path.join(__dirname, "public", "gh-agent.html"));
+});
+
 app.get(["/rent", "/gh"], (req, res) => {
+  if (isGhanaMarket() && req.path === "/rent") {
+    const q = req.originalUrl.indexOf("?");
+    res.redirect(302, `/gh${q >= 0 ? req.originalUrl.slice(q) : ""}`);
+    return;
+  }
   const proto = String(req.headers["x-forwarded-proto"] || req.protocol || "http")
     .split(",")[0]
     .trim();
@@ -723,6 +741,7 @@ app.get("/gh/thanks", (req, res) => {
 <body style="font-family:system-ui;padding:2rem;max-width:32rem;margin:auto">
 <h1>Payment received</h1>
 <p>If GH₵100 went through, your viewing PIN is being sent to WhatsApp. Give that PIN to the listing agent only when you see the room.</p>
+<p><a href="/gh/agent">Listing agent: enter PIN + MoMo</a></p>
 <p><a href="/gh">Back to KeyFinder Ghana</a></p>
 <script>
 const q = new URLSearchParams(location.search);
@@ -762,23 +781,30 @@ app.post("/api/rent/viewing/confirm", rentRateLimit, async (req, res) => {
   }
 });
 
-app.post("/api/rent/viewing/redeem-pin", async (req, res) => {
+app.post("/api/rent/viewing/redeem-pin", rentRateLimit, async (req, res) => {
   try {
     if (!isGhanaMarket()) {
       res.status(400).json({ ok: false, error: "Ghana market only" });
       return;
     }
-    const token = String(req.headers["x-ingest-token"] || req.body?.token || "");
-    const ingestOk = Boolean(process.env.JAB_RE_INGEST_TOKEN && token === process.env.JAB_RE_INGEST_TOKEN);
-    if (!ingestOk && !req.session) {
-      res.status(401).json({ ok: false, error: "unauthorized" });
-      return;
-    }
     const parsed = parseAgentPinMessage(String(req.body?.text || ""));
     const pin = req.body?.pin || parsed.pin;
     const momo = req.body?.momo || parsed.momo;
+    if (!pin || !momo) {
+      res.status(400).json({ ok: false, error: "PIN and MoMo number required" });
+      return;
+    }
     const viewing = redeemViewingPin(db, { pin, momo, fromPhone: req.body?.fromPhone || "" });
-    res.json({ ok: true, viewing });
+    res.json({
+      ok: true,
+      viewing: {
+        id: viewing.id,
+        status: viewing.status,
+        renter_name: viewing.renter_name,
+        agent_momo: viewing.agent_momo,
+        redeemed_at: viewing.redeemed_at
+      }
+    });
   } catch (error) {
     res.status(400).json({ ok: false, error: error.message });
   }
@@ -1063,8 +1089,15 @@ app.get("/api/rent/browse", async (req, res) => {
     if (req.query.beds) criteria.beds = Number(req.query.beds);
     if (req.query.max_price) criteria.max_price = Number(req.query.max_price);
     const limit = Math.min(40, Math.max(1, Number(req.query.limit) || 20));
-    const listings = (await searchListingsStore(db, criteria, limit)).map((l) => formatListingCard(l));
-    res.json({ ok: true, listings, store: isSupabaseEnabled() ? "supabase" : "sqlite" });
+    const listingsRaw = await searchListingsStore(db, criteria, limit);
+    const listings = isGhanaMarket()
+      ? groupListingsByCluster(listingsRaw).map((g) => attachClusterMeta(g.listing, g.offers))
+      : listingsRaw;
+    res.json({
+      ok: true,
+      listings: listings.map((l) => formatListingCard(l)),
+      store: isSupabaseEnabled() ? "supabase" : "sqlite"
+    });
   } catch (error) {
     res.status(500).json({ ok: false, error: error.message });
   }

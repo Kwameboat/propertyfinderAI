@@ -124,6 +124,14 @@ export async function enrichListingsWithImages(listings = [], { minImages = 1 } 
   return out;
 }
 
+export function isLocalGhanaMedia(url = "") {
+  return /^\/gh-media\/[A-Za-z0-9._-]+\.(?:svg|png|jpe?g|webp)$/i.test(String(url).trim());
+}
+
+export function isChatListingImage(url = "") {
+  return isLocalGhanaMedia(url) || isValidListingImage(url);
+}
+
 export function listingHasRealPhotos(listing = {}) {
   const imgs = filterValidPortalImages(listing.images || (listing.image ? [listing.image] : []));
   return imgs.length > 0;

@@ -50,6 +50,12 @@ function applyMarketBranding() {
     a.setAttribute("href", ghana ? "/gh" : "/rent");
     a.setAttribute("aria-label", `${marketConfig.brand || "Home"} home`);
   });
+  if (ghana) {
+    document.querySelectorAll(".brand-logo").forEach((img) => {
+      img.src = "/keyfinder-ghana.svg";
+      img.alt = "KeyFinder Ghana";
+    });
+  }
   if (heroGreeting) {
     heroGreeting.textContent = ghana
       ? "Welcome. Looking for a self-contain in East Legon or a chamber and hall in Osu?"
@@ -106,6 +112,15 @@ function applyMarketBranding() {
   if (marketConfig.payToView) {
     const btn = document.getElementById("lead-submit");
     if (btn) btn.textContent = `Pay GH₵${marketConfig.viewingFeeGhs || 100}`;
+  }
+  const menuNav = document.querySelector(".side-menu-nav");
+  if (ghana && menuNav && !document.getElementById("gh-agent-link")) {
+    const a = document.createElement("a");
+    a.id = "gh-agent-link";
+    a.className = "side-menu-link";
+    a.href = "/gh/agent";
+    a.textContent = "Listing agent: enter PIN";
+    menuNav.appendChild(a);
   }
 }
 const leadDialog = document.getElementById("lead-dialog");
@@ -1251,7 +1266,7 @@ async function loadExplore() {
   const params = new URLSearchParams({ limit: "20" });
   if (exploreFilter === "rent") params.set("type", "rent");
   else if (exploreFilter === "sale") params.set("type", "sale");
-  else if (exploreFilter === "Dubai") params.set("emirate", "Dubai");
+  else if (exploreFilter === "Dubai" || exploreFilter === "Accra") params.set("emirate", exploreFilter);
 
   try {
     const res = await fetch(`/api/rent/browse?${params}`);
@@ -1775,7 +1790,7 @@ leadForm.addEventListener("submit", async (e) => {
         body: JSON.stringify({ viewingId: data.viewing.id })
       }).then((r) => r.json());
       if (paid.ok && paid.pin) {
-        addMessage(`Dev pay: your viewing PIN is ${paid.pin}. Give it to the agent only at the property.`, "bot");
+        addMessage(`Your viewing PIN is ${paid.pin}. Give it to the agent only at the property. Agent confirms it here: ${location.origin}/gh/agent`, "bot");
       } else if (paid.ok) {
         addMessage("Payment marked. PIN will be sent to WhatsApp.", "bot");
       }
