@@ -4,6 +4,7 @@ import {
   fillGhanaServiceWorker,
   rewriteHubHtmlForGhana,
   rewriteRentHtmlForGhana,
+  ghanaSafeNextPath,
   stripGhanaPublicPrefix
 } from "../packages/real-estate/pwa-host.mjs";
 
@@ -50,6 +51,12 @@ test("Ghana rewrite of rent.html is FIE on first paint", async () => {
   assert.equal(out.includes("Looking for a 4BR in Ajman"), false);
 });
 
+test("Ghana post-login next stays under /gh", () => {
+  assert.equal(ghanaSafeNextPath("/admin/re"), "/gh/admin/re");
+  assert.equal(ghanaSafeNextPath("/gh/admin/re"), "/gh/admin/re");
+  assert.equal(ghanaSafeNextPath("/"), "/gh/admin/re");
+  assert.equal(ghanaSafeNextPath("https://evil.example/"), "/gh/admin/re");
+});
 test("Ghana Hub HTML rewrite prefixes login API and dashboard assets", () => {
   const html = `<!DOCTYPE html><html><head><title>JAB Hub — Login</title>
   <link rel="stylesheet" href="/styles.css" />

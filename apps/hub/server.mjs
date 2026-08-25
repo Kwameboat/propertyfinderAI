@@ -129,6 +129,7 @@ import {
   fillGhanaServiceWorker,
   ghanaAdminPath,
   ghanaLoginPath,
+  ghanaSafeNextPath,
   pwaBuildId,
   rewriteHubHtmlForGhana,
   rewriteRentHtmlForGhana,
@@ -1831,7 +1832,12 @@ app.post("/api/login", loginRateLimit, async (req, res) => {
       return;
     }
     createSession(res, { role: "agency" }, { secure: resolveSecureCookies(req) });
-    res.json({ ok: true, role: "agency" });
+    const redirect = isGhanaMarket()
+      ? ghanaSafeNextPath(req.body?.next || req.query?.next)
+      : String(req.body?.next || "/").startsWith("/")
+        ? String(req.body.next)
+        : "/";
+    res.json({ ok: true, role: "agency", redirect });
   } catch (error) {
     res.status(500).json({ ok: false, error: error.message });
   }

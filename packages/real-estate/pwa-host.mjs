@@ -139,6 +139,20 @@ export function ghanaAdminPath() {
   return `${GHANA_PWA_PATH}/admin/re`;
 }
 
+/** Keep post-login redirects on /gh so they are not swallowed by Evolution on wa.jabdigitalhub.com. */
+export function ghanaSafeNextPath(next) {
+  const fallback = ghanaAdminPath();
+  const raw = String(next || "").trim();
+  if (!raw.startsWith("/") || raw.startsWith("//") || raw.includes("://")) return fallback;
+  const pathOnly = raw.split("?")[0];
+  if (pathOnly === "/admin/re" || pathOnly.startsWith("/admin/re/") || pathOnly === "/admin/listings") {
+    return `${GHANA_PWA_PATH}${raw}`;
+  }
+  if (pathOnly === "/" || pathOnly === "/login" || pathOnly === "/login.html") return fallback;
+  if (pathOnly === GHANA_PWA_PATH || pathOnly.startsWith(`${GHANA_PWA_PATH}/`)) return raw;
+  return fallback;
+}
+
 /** Prefix Hub login/dashboard assets so they work on https://wa.jabdigitalhub.com/gh. */
 export function rewriteHubHtmlForGhana(html) {
   const prefix = ghanaPublicPrefix();
