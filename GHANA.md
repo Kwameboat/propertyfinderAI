@@ -99,11 +99,11 @@ Installed home-screen FIE AI checks for a new service worker on open, focus, and
 
 HTTP `http://169.58.81.179:3001/gh` redirects to the HTTPS PWA.
 
-Cloudflare Tunnel (`/etc/cloudflared/config.yml`) must include this ingress rule **before** the Evolution catch-all:
+Cloudflare Tunnel (`/etc/cloudflared/config.yml`) must list this rule **first** (before `/sw.js` and `/api/rent`), otherwise those regexes steal `/gh/sw.js` and `/gh/api/*`:
 
 ```yaml
   - hostname: wa.jabdigitalhub.com
-    path: /gh
+    path: ^/gh
     service: http://127.0.0.1:3001
 ```
 

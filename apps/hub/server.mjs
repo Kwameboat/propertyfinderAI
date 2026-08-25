@@ -673,7 +673,8 @@ app.get("/gh/manifest.webmanifest", (req, res) => {
 app.get(["/rent-sw.js", "/sw.js"], (req, res) => {
   if (isGhanaMarket()) {
     res.set("Service-Worker-Allowed", "/gh");
-    res.set("Cache-Control", "no-cache, no-store, must-revalidate");
+    res.set("CDN-Cache-Control", "no-store");
+  res.set("Cloudflare-CDN-Cache-Control", "no-store");
     res.type("application/javascript");
     res.send(
       fillGhanaServiceWorker(readFileSync(path.join(PUBLIC_DIR, "gh-sw.js"), "utf8"), {
@@ -690,7 +691,8 @@ app.get(["/rent-sw.js", "/sw.js"], (req, res) => {
 
 app.get(["/gh/sw.js", "/gh/gh-sw.js"], (req, res) => {
   res.set("Service-Worker-Allowed", "/gh");
-  res.set("Cache-Control", "no-cache, no-store, must-revalidate");
+  res.set("CDN-Cache-Control", "no-store");
+  res.set("Cloudflare-CDN-Cache-Control", "no-store");
   res.type("application/javascript");
   res.send(
     fillGhanaServiceWorker(readFileSync(path.join(PUBLIC_DIR, "gh-sw.js"), "utf8"), {
@@ -700,7 +702,7 @@ app.get(["/gh/sw.js", "/gh/gh-sw.js"], (req, res) => {
 });
 
 app.use(express.static(PUBLIC_DIR, { index: false }));
-app.use("/gh", express.static(PUBLIC_DIR, { index: false }));
+app.use("/gh", express.static(PUBLIC_DIR, { index: false, redirect: false }));
 app.use("/uploads", express.static(paths.uploadsDir));
 app.use("/gh/uploads", express.static(paths.uploadsDir));
 
@@ -724,8 +726,8 @@ app.get("/gh/agent", (req, res) => {
   res.sendFile(path.join(__dirname, "public", "gh-agent.html"));
 });
 
-app.get(["/rent", "/gh"], (req, res) => {
-  if (isGhanaMarket() && req.path === "/rent") {
+app.get(["/rent", "/gh", "/gh/"], (req, res) => {
+  if (isGhanaMarket() && (req.path === "/rent")) {
     const q = req.originalUrl.indexOf("?");
     res.redirect(302, `/gh${q >= 0 ? req.originalUrl.slice(q) : ""}`);
     return;
@@ -742,7 +744,7 @@ app.get(["/rent", "/gh"], (req, res) => {
     /^(localhost|127\.0\.0\.1)$/i.test(host) ||
     host === httpsHost;
   if (!skipRedirect) {
-    const dest = new URL(req.path === "/gh" ? "/gh" : "/rent", RENT_HTTPS_ORIGIN);
+    const dest = new URL(req.path.startsWith("/gh") ? "/gh" : "/rent", RENT_HTTPS_ORIGIN);
     const q = req.originalUrl.indexOf("?");
     if (q >= 0) dest.search = req.originalUrl.slice(q);
     res.redirect(302, dest.toString());

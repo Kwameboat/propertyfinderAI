@@ -193,7 +193,7 @@ export function initPwaInstall() {
 export async function registerRentServiceWorker() {
   if (!("serviceWorker" in navigator) || !window.isSecureContext) return;
   const ghana = isGhanaPwa();
-  const swUrl = ghana ? "/gh/sw.js" : "/sw.js";
+  const swUrl = ghana ? "/gh/gh-sw.js" : "/sw.js";
   const scope = ghana ? "/gh" : "/";
   try {
     const registration = await navigator.serviceWorker.register(swUrl, {

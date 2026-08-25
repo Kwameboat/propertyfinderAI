@@ -89,11 +89,11 @@ export function rewriteRentHtmlForGhana(html, { buildId } = {}) {
   for (const [from, to] of swaps) out = out.split(from).join(to);
   out = out.replace(
     'navigator.serviceWorker.register("/sw.js", { scope: "/" })',
-    `navigator.serviceWorker.register("${prefix}/sw.js", { scope: "${prefix}", updateViaCache: "none" })`
+    `navigator.serviceWorker.register("${prefix}/gh-sw.js", { scope: "${prefix}", updateViaCache: "none" })`
   );
   out = out.replace(
     'navigator.serviceWorker.register("/rent-sw.js", { scope: "/" })',
-    `navigator.serviceWorker.register("${prefix}/sw.js", { scope: "${prefix}", updateViaCache: "none" })`
+    `navigator.serviceWorker.register("${prefix}/gh-sw.js", { scope: "${prefix}", updateViaCache: "none" })`
   );
   out = out.replace(/\?v=fie-buy/g, `?v=${build}`);
   out = out.replace(/\?v=logo/g, `?v=${build}`);

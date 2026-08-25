@@ -28,7 +28,7 @@
         window.dispatchEvent(new Event("dar-pwa-ready"));
       });
       if (!("serviceWorker" in navigator) || !window.isSecureContext) return;
-      var swUrl = gh ? "/gh/sw.js" : "/sw.js";
+      var swUrl = gh ? "/gh/gh-sw.js" : "/sw.js";
       var scope = gh ? "/gh" : "/";
       var reloading = false;
       navigator.serviceWorker.addEventListener("controllerchange", function () {
