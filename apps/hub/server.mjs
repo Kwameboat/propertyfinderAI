@@ -127,7 +127,10 @@ import { handleRentChat, handleRentTranscribe, submitRentLead, formatListingCard
 import { publicMarketConfig, isGhanaMarket } from "../../packages/real-estate/market.mjs";
 import {
   fillGhanaServiceWorker,
+  ghanaAdminPath,
+  ghanaLoginPath,
   pwaBuildId,
+  rewriteHubHtmlForGhana,
   rewriteRentHtmlForGhana,
   stripGhanaPublicPrefix
 } from "../../packages/real-estate/pwa-host.mjs";
@@ -312,8 +315,8 @@ function requireAuth(req, res, next) {
     const nextPath = req.originalUrl || req.path || "/";
     const safe = nextPath.startsWith("/") && !nextPath.startsWith("//") && !nextPath.startsWith("/api")
       ? nextPath
-      : "/";
-    res.redirect(`/login?next=${encodeURIComponent(safe)}`);
+      : isGhanaMarket() ? ghanaAdminPath() : "/";
+    res.redirect(`${isGhanaMarket() ? ghanaLoginPath() : "/login"}?next=${encodeURIComponent(safe)}`);
     return;
   }
   req.session = session;
@@ -360,14 +363,15 @@ function createSession(res, payload, { secure = false } = {}) {
   });
 }
 
-/** Secure cookies only when Hub is actually served over HTTPS. */
+/** Secure cookies only when this request is actually HTTPS. */
 function resolveSecureCookies(req) {
   const forced = String(process.env.JAB_HUB_SECURE_COOKIE || "").trim();
   if (forced === "1") return true;
   if (forced === "0") return false;
-  const publicUrl = String(process.env.JAB_HUB_PUBLIC_URL || HUB_PUBLIC_URL || "").trim();
-  if (publicUrl.startsWith("https://")) return true;
-  const proto = String(req?.headers?.["x-forwarded-proto"] || "").split(",")[0].trim();
+  const proto = String(req?.headers?.["x-forwarded-proto"] || req?.protocol || "")
+    .split(",")[0]
+    .trim()
+    .toLowerCase();
   if (proto === "https") return true;
   if (req?.secure) return true;
   return false;
@@ -657,6 +661,41 @@ function sendRentApp(res) {
   res.sendFile(htmlPath);
 }
 
+function sendHubHtml(res, fileName) {
+  const htmlPath = path.join(PUBLIC_DIR, fileName);
+  if (isGhanaMarket()) {
+    res.set("Cache-Control", "no-cache");
+    res.type("html");
+    res.send(rewriteHubHtmlForGhana(readFileSync(htmlPath, "utf8")));
+    return;
+  }
+  res.sendFile(htmlPath);
+}
+
+function shouldSkipHttpsRedirect(req) {
+  const proto = String(req.headers["x-forwarded-proto"] || req.protocol || "http")
+    .split(",")[0]
+    .trim();
+  const host = String(req.headers.host || "").split(":")[0];
+  const httpsHost = RENT_HTTPS_ORIGIN.replace(/^https?:\/\//i, "").split("/")[0];
+  return (
+    !RENT_HTTPS_ORIGIN ||
+    /^(off|0|false)$/i.test(RENT_HTTPS_ORIGIN) ||
+    proto === "https" ||
+    /^(localhost|127\.0\.0\.1)$/i.test(host) ||
+    host === httpsHost
+  );
+}
+
+function redirectGhanaHttps(req, res, destPath) {
+  if (!isGhanaMarket() || shouldSkipHttpsRedirect(req)) return false;
+  const dest = new URL(destPath, RENT_HTTPS_ORIGIN);
+  const q = req.originalUrl.indexOf("?");
+  if (q >= 0) dest.search = req.originalUrl.slice(q);
+  res.redirect(302, dest.toString());
+  return true;
+}
+
 /** PWA routes must beat express.static so Chrome gets SW-Allowed + correct manifest MIME. */
 app.get("/manifest.webmanifest", (req, res) => {
   res.set("Cache-Control", "no-cache");
@@ -707,11 +746,30 @@ app.use("/uploads", express.static(paths.uploadsDir));
 app.use("/gh/uploads", express.static(paths.uploadsDir));
 
 app.get("/login", (req, res) => {
-  res.sendFile(path.join(__dirname, "public", "login.html"));
+  if (isGhanaMarket()) {
+    const q = req.originalUrl.indexOf("?");
+    res.redirect(302, `${ghanaLoginPath()}${q >= 0 ? req.originalUrl.slice(q) : ""}`);
+    return;
+  }
+  res.sendFile(path.join(PUBLIC_DIR, "login.html"));
+});
+
+app.get("/gh/login", (req, res) => {
+  if (redirectGhanaHttps(req, res, ghanaLoginPath())) return;
+  sendHubHtml(res, "login.html");
 });
 
 app.get("/agent-login", (req, res) => {
-  res.sendFile(path.join(__dirname, "public", "agent-login.html"));
+  if (isGhanaMarket()) {
+    res.redirect(302, "/gh/agent-login");
+    return;
+  }
+  res.sendFile(path.join(PUBLIC_DIR, "agent-login.html"));
+});
+
+app.get("/gh/agent-login", (req, res) => {
+  if (redirectGhanaHttps(req, res, "/gh/agent-login")) return;
+  sendHubHtml(res, "agent-login.html");
 });
 
 app.get("/", (req, res, next) => {
@@ -732,24 +790,7 @@ app.get(["/rent", "/gh", "/gh/"], (req, res) => {
     res.redirect(302, `/gh${q >= 0 ? req.originalUrl.slice(q) : ""}`);
     return;
   }
-  const proto = String(req.headers["x-forwarded-proto"] || req.protocol || "http")
-    .split(",")[0]
-    .trim();
-  const host = String(req.headers.host || "").split(":")[0];
-  const httpsHost = RENT_HTTPS_ORIGIN.replace(/^https?:\/\//i, "").split("/")[0];
-  const skipRedirect =
-    !RENT_HTTPS_ORIGIN ||
-    /^(off|0|false)$/i.test(RENT_HTTPS_ORIGIN) ||
-    proto === "https" ||
-    /^(localhost|127\.0\.0\.1)$/i.test(host) ||
-    host === httpsHost;
-  if (!skipRedirect) {
-    const dest = new URL(req.path.startsWith("/gh") ? "/gh" : "/rent", RENT_HTTPS_ORIGIN);
-    const q = req.originalUrl.indexOf("?");
-    if (q >= 0) dest.search = req.originalUrl.slice(q);
-    res.redirect(302, dest.toString());
-    return;
-  }
+  if (redirectGhanaHttps(req, res, req.path.startsWith("/gh") ? "/gh" : "/rent")) return;
   sendRentApp(res);
 });
 
@@ -1755,12 +1796,31 @@ app.post("/api/admin/re/ingest/ghana", requireAgency, async (req, res) => {
   }
 });
 
-app.get("/admin/re", requireAgency, (req, res) => {
-  res.sendFile(path.join(__dirname, "public", "re-admin.html"));
+app.get("/admin/re", (req, res) => {
+  if (isGhanaMarket()) {
+    res.redirect(302, ghanaAdminPath());
+    return;
+  }
+  requireAgency(req, res, () => {
+    res.sendFile(path.join(PUBLIC_DIR, "re-admin.html"));
+  });
 });
 
-app.get("/admin/listings", requireAgency, (req, res) => {
-  res.sendFile(path.join(__dirname, "public", "re-admin.html"));
+app.get("/admin/listings", (req, res) => {
+  if (isGhanaMarket()) {
+    res.redirect(302, "/gh/admin/listings");
+    return;
+  }
+  requireAgency(req, res, () => {
+    res.sendFile(path.join(PUBLIC_DIR, "re-admin.html"));
+  });
+});
+
+app.get(["/gh/admin/re", "/gh/admin/listings"], (req, res) => {
+  if (redirectGhanaHttps(req, res, req.path === "/gh/admin/listings" ? "/gh/admin/listings" : ghanaAdminPath())) {
+    return;
+  }
+  requireAgency(req, res, () => sendHubHtml(res, "re-admin.html"));
 });
 
 app.post("/api/login", loginRateLimit, async (req, res) => {
@@ -1810,7 +1870,11 @@ app.post("/api/agent/login", (req, res) => {
 app.post("/api/logout", (req, res) => {
   const token = req.cookies?.[SESSION_COOKIE];
   if (token) sessions.delete(hashToken(token));
-  res.clearCookie(SESSION_COOKIE);
+  res.clearCookie(SESSION_COOKIE, {
+    httpOnly: true,
+    sameSite: "lax",
+    secure: resolveSecureCookies(req)
+  });
   res.json({ ok: true });
 });
 
@@ -1852,7 +1916,11 @@ app.post("/api/settings/password", requireAgency, async (req, res) => {
     await setHubEnvValue("HUB_ADMIN_PASSWORD", newPassword);
     process.env.HUB_ADMIN_PASSWORD = newPassword;
     sessions.clear();
-    res.clearCookie(SESSION_COOKIE);
+    res.clearCookie(SESSION_COOKIE, {
+      httpOnly: true,
+      sameSite: "lax",
+      secure: resolveSecureCookies(req)
+    });
     res.json({ ok: true });
   } catch (error) {
     res.status(500).json({ ok: false, error: error.message });

@@ -130,3 +130,37 @@ export function rewriteRentHtmlForGhana(html, { buildId } = {}) {
 export function fillGhanaServiceWorker(source, { buildId } = {}) {
   return String(source).replaceAll("__PWA_BUILD__", String(buildId || "1"));
 }
+
+export function ghanaLoginPath() {
+  return `${GHANA_PWA_PATH}/login`;
+}
+
+export function ghanaAdminPath() {
+  return `${GHANA_PWA_PATH}/admin/re`;
+}
+
+/** Prefix Hub login/dashboard assets so they work on https://wa.jabdigitalhub.com/gh. */
+export function rewriteHubHtmlForGhana(html) {
+  const prefix = ghanaPublicPrefix();
+  const boot = `<script>window.__HUB_BASE=${JSON.stringify(prefix)};</script>`;
+  let out = String(html);
+  if (!out.includes("window.__HUB_BASE")) {
+    out = out.replace("<head>", `<head>\n  ${boot}`);
+  }
+  const swaps = [
+    ['href="/styles.css"', `href="${prefix}/styles.css"`],
+    ['href="/re-admin.css', `href="${prefix}/re-admin.css`],
+    ['src="/re-admin.js', `src="${prefix}/re-admin.js`],
+    ['src="/dar-concierge-logo.png"', `src="${prefix}/fie-ai-logo.webp"`],
+    ['href="/login"', `href="${prefix}/login"`],
+    ['href="/agent-login"', `href="${prefix}/agent-login"`],
+    ['href="/admin/re"', `href="${prefix}/admin/re"`],
+    ['fetch("/api/', `fetch("${prefix}/api/`],
+    ["JAB Hub — Login", "FIE AI — Agency login"],
+    ["JAB HUB", "FIE AI"],
+    ["Manage per-client contacts and WhatsApp campaigns.", "Manage FIE AI listings, viewings, and Ghana ingest."]
+  ];
+  for (const [from, to] of swaps) out = out.split(from).join(to);
+  return out;
+}
+

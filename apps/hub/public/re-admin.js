@@ -1,12 +1,21 @@
+const HUB_BASE = window.__HUB_BASE || (location.pathname === "/gh" || location.pathname.startsWith("/gh/") ? "/gh" : "");
+
+function hubPath(path) {
+  if (!path || path.startsWith("http") || path.startsWith("data:")) return path;
+  if (HUB_BASE && path.startsWith(`${HUB_BASE}/`)) return path;
+  if (path.startsWith("/")) return `${HUB_BASE}${path}`;
+  return path;
+}
+
 async function api(path, options = {}) {
-  const res = await fetch(path, {
+  const res = await fetch(hubPath(path), {
     credentials: "same-origin",
     headers: { "Content-Type": "application/json", ...(options.headers || {}) },
     ...options
   });
   const data = await res.json().catch(() => ({}));
   if (res.status === 401) {
-    location.href = "/login?next=" + encodeURIComponent(location.pathname);
+    location.href = hubPath("/login") + "?next=" + encodeURIComponent(location.pathname);
     throw new Error("Unauthorized");
   }
   if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
@@ -165,7 +174,7 @@ function applyDashboardMarket(market, data) {
   document.title = "FIE AI — Listing Dashboard";
   const logo = document.getElementById("dash-logo");
   if (logo) {
-    logo.src = market.logo || "/fie-ai-logo.webp";
+    logo.src = hubPath(market.logo || "/fie-ai-logo.webp");
     logo.alt = "FIE AI";
   }
   const sub = document.querySelector(".ld-brand-sub");
@@ -512,8 +521,8 @@ document.getElementById("refresh-btn").addEventListener("click", async () => {
 });
 
 document.getElementById("logout-btn").addEventListener("click", async () => {
-  await fetch("/api/logout", { method: "POST", credentials: "same-origin" });
-  location.href = "/login.html";
+  await fetch(hubPath("/api/logout"), { method: "POST", credentials: "same-origin" });
+  location.href = hubPath("/login");
 });
 
 document.getElementById("close-listing-drawer").addEventListener("click", closeDrawers);

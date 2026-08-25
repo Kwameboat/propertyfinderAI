@@ -2,6 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import {
   fillGhanaServiceWorker,
+  rewriteHubHtmlForGhana,
   rewriteRentHtmlForGhana,
   stripGhanaPublicPrefix
 } from "../packages/real-estate/pwa-host.mjs";
@@ -47,6 +48,20 @@ test("Ghana rewrite of rent.html is FIE on first paint", async () => {
   assert.match(out, /Install FIE AI/);
   assert.equal(out.includes("Marina Penthouses"), false);
   assert.equal(out.includes("Looking for a 4BR in Ajman"), false);
+});
+
+test("Ghana Hub HTML rewrite prefixes login API and dashboard assets", () => {
+  const html = `<!DOCTYPE html><html><head><title>JAB Hub — Login</title>
+  <link rel="stylesheet" href="/styles.css" />
+</head><body>
+  <p class="eyebrow">JAB HUB</p>
+  <script>fetch("/api/login", {})</script>
+</body></html>`;
+  const out = rewriteHubHtmlForGhana(html);
+  assert.match(out, /window\.__HUB_BASE="\/gh"/);
+  assert.match(out, /href="\/gh\/styles\.css"/);
+  assert.match(out, /fetch\("\/gh\/api\/login"/);
+  assert.match(out, /FIE AI — Agency login/);
 });
 
 test("Ghana service worker receives the deploy build id", () => {

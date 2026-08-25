@@ -91,8 +91,9 @@ FIE AI runs as a **second** Hub on the same VPS. Dar Concierge on `:3000` is unt
 | App | URL |
 |-----|-----|
 | FIE AI PWA | https://wa.jabdigitalhub.com/gh |
+| Agency login | https://wa.jabdigitalhub.com/gh/login |
+| FIE listing dashboard | https://wa.jabdigitalhub.com/gh/admin/re |
 | Agent PIN confirm | https://wa.jabdigitalhub.com/gh/agent |
-| FIE listing dashboard | http://169.58.81.179:3001/admin/re |
 | Dar Concierge (UAE, unchanged) | https://wa.jabdigitalhub.com/rent |
 
 Installed home-screen FIE AI checks for a new service worker on open, focus, and refresh, then reloads once — same as a native app update. Re-adding the icon is not required.

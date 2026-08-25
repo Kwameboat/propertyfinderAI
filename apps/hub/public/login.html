@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>JAB Hub — Login</title>
+  <title>FIE AI — Agency login</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Outfit:wght@600;700&display=swap" rel="stylesheet" />
@@ -11,9 +11,9 @@
 </head>
 <body class="auth-body">
   <main class="auth-card">
-    <p class="eyebrow">JAB HUB</p>
+    <p class="eyebrow">FIE AI</p>
     <h1>Agency login</h1>
-    <p class="muted">Manage per-client contacts and WhatsApp campaigns.</p>
+    <p class="muted">Manage FIE AI listings, viewings, and Ghana ingest.</p>
     <form id="login-form">
       <label>
         Password
@@ -30,10 +30,12 @@
       const password = new FormData(e.target).get("password");
       const err = document.getElementById("login-error");
       err.hidden = true;
-      const res = await fetch("/api/login", {
+      const base = window.__HUB_BASE || (location.pathname.indexOf("/gh") === 0 ? "/gh" : "");
+      const res = await fetch(base + "/api/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ password })
+        body: JSON.stringify({ password }),
+        credentials: "same-origin"
       });
       const data = await res.json();
       if (!res.ok) {
@@ -41,8 +43,8 @@
         err.hidden = false;
         return;
       }
-      const next = new URLSearchParams(location.search).get("next") || "/";
-      location.href = next.startsWith("/") && !next.startsWith("//") ? next : "/";
+      const next = new URLSearchParams(location.search).get("next") || (base ? "/gh/admin/re" : "/");
+      location.href = next.startsWith("/") && !next.startsWith("//") ? next : (base ? "/gh/admin/re" : "/");
     });
   </script>
 </body>
