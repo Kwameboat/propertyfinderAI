@@ -61,6 +61,8 @@ test("Ghana classifyIntent treats rent finance as process, not a listing dump", 
     assert.equal(turn.answerMode, "rent_finance");
     assert.equal(turn.shouldSearch, false);
     assert.equal(userAskingAboutProperty("I can't pay 2 years rent advance"), false);
+    const twi = classifyChatTurn("Kasa Twi. Mepɛ self-contain wɔ East Legon.", {}, {});
+    assert.equal(twi.shouldSearch, true);
   });
 });
 

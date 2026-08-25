@@ -217,6 +217,15 @@ export function classifyIntent(text = "", criteria = {}) {
     }
   }
 
+  if (
+    isGhanaMarket() &&
+    /self-?contain|chamber\s*(and|&)\s*hall|compound|apartment|house|\bdan\b|\bofie\b|\baƒe\b/.test(lower) &&
+    /east legon|osu|spintex|accra|kumasi|tema|adenta|labone|cantonments|mepɛ|me pɛ|hwehwɛ|me le |i dey find|i dey look/.test(lower)
+  ) {
+    if (/buy|purchase|for sale/.test(lower)) return "search_buy";
+    return "search_rent";
+  }
+
   if (/ejari|rera|tenancy|deposit|notice period|service charge|broker fee|self-?contain|chamber\s*(and|&)\s*hall|compound house/.test(lower) && !userExplicitlyAsksForListings(lower)) {
 
     return "faq";
