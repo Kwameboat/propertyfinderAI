@@ -1,5 +1,21 @@
 import { initPwaInstall, registerRentServiceWorker } from "./rent-pwa.js";
 
+const RENT_BASE = window.__RENT_BASE || (location.pathname === "/gh" || location.pathname.startsWith("/gh/") ? "/gh" : "");
+const RENT_API = window.__RENT_API || `${RENT_BASE}/api/rent`;
+
+function assetUrl(src) {
+  if (!src || typeof src !== "string") return src;
+  if (/^https?:\/\//i.test(src) || src.startsWith("data:") || src.startsWith("blob:")) return src;
+  if (RENT_BASE && src.startsWith(`${RENT_BASE}/`)) return src;
+  if (RENT_BASE && src.startsWith("/")) return `${RENT_BASE}${src}`;
+  return src;
+}
+
+function listingImages(listing) {
+  const raw = (listing?.images || []).length ? listing.images : listing?.image ? [listing.image] : [];
+  return raw.map((src) => assetUrl(src)).filter(Boolean);
+}
+
 const chatEl = document.getElementById("chat");
 const chatListingsEl = document.getElementById("chat-listings");
 const chatPanel = document.getElementById("panel-concierge");
@@ -29,7 +45,7 @@ let marketConfig = {
 
 async function loadMarketConfig() {
   try {
-    const res = await fetch("/api/rent/config");
+    const res = await fetch(`${RENT_API}/config`);
     const data = await res.json();
     if (data.ok && data.market) marketConfig = { ...marketConfig, ...data.market };
   } catch {
@@ -56,15 +72,17 @@ function applyMarketBranding() {
       : "Dar Concierge AI — Your UAE AI Property Assistant. Powered by KeyFinder AI."
   );
   document.querySelectorAll(".logo-link").forEach((a) => {
-    a.setAttribute("href", ghana ? "/gh" : "/rent");
+    a.setAttribute("href", ghana ? `${RENT_BASE || "/gh"}` : "/rent");
     a.setAttribute("aria-label", `${marketConfig.brand || "Home"} home`);
   });
   if (ghana) {
-    const logo = marketConfig.logo || "/fie-ai-logo.webp";
+    const logo = assetUrl(marketConfig.logo || "/fie-ai-logo.webp");
     document.querySelectorAll(".brand-logo").forEach((img) => {
       img.src = logo;
       img.alt = "FIE AI";
     });
+    const iosLast = document.querySelector("#pwa-ios-dialog li:last-child");
+    if (iosLast) iosLast.innerHTML = "Tap <strong>Add</strong> — FIE AI opens like an app.";
   }
   if (heroGreeting) {
     heroGreeting.textContent = ghana
@@ -478,7 +496,7 @@ async function submitOwnerListingForm(event) {
   if (submitBtn) submitBtn.disabled = true;
   setOwnerListingError("");
   try {
-    const res = await fetch("/api/rent/owner-listing", { method: "POST", body: fd });
+    const res = await fetch(`${RENT_API}/owner-listing`, { method: "POST", body: fd });
     const data = await res.json().catch(() => ({}));
     if (!res.ok || !data.ok) {
       setOwnerListingError(data.error || "Could not publish listing.");
@@ -553,7 +571,7 @@ async function transcribeAndSend(blob, mimeType) {
   const typing = addTypingIndicator({ status: uiText("transcribing") });
   try {
     const audioBase64 = await blobToBase64(blob);
-    const res = await fetch("/api/rent/transcribe", {
+    const res = await fetch(`${RENT_API}/transcribe`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ audioBase64, mimeType })
@@ -697,7 +715,7 @@ async function runCompare(ids) {
   const list = [...ids].slice(0, 3);
   if (list.length < 2) return;
   try {
-    const res = await fetch("/api/rent/compare", {
+    const res = await fetch(`${RENT_API}/compare`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ ids: list })
@@ -716,7 +734,7 @@ function renderComparisonTable(comparison) {
   const head = `<tr><th></th>${cols
     .map(
       (l) =>
-        `<th><div class="compare-col-head">${l.image ? `<img src="${escapeAttr(l.image)}" alt="" />` : ""}<strong>${escapeHtml(l.title)}</strong><span>${escapeHtml(formatPrice(l))}</span></div></th>`
+        `<th><div class="compare-col-head">${l.image ? `<img src="${escapeAttr(assetUrl(l.image))}" alt="" />` : ""}<strong>${escapeHtml(l.title)}</strong><span>${escapeHtml(formatPrice(l))}</span></div></th>`
     )
     .join("")}</tr>`;
   const body = (comparison.rows || [])
@@ -1028,7 +1046,7 @@ function closeMenu() {
 }
 
 async function createFreshSession() {
-  const res = await fetch("/api/rent/session", {
+  const res = await fetch(`${RENT_API}/session`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: "{}"
@@ -1054,7 +1072,7 @@ async function startNewChat() {
 }
 
 async function loadSessionMessages(id) {
-  const res = await fetch(`/api/rent/session/${encodeURIComponent(id)}`);
+  const res = await fetch(`${RENT_API}/session/${encodeURIComponent(id)}`);
   const data = await res.json();
   if (!data.ok) throw new Error(data.error || "Session not found");
   return data.session || {};
@@ -1143,7 +1161,7 @@ function addMessage(text, role = "bot", options = {}) {
     wrap.className = "msg bot-wrap";
     wrap.innerHTML = `
       <div class="concierge-label">
-        <img src="${escapeAttr(marketConfig.logo || "/dar-concierge-logo.png")}" alt="" class="brand-logo brand-logo--chat" />
+        <img src="${escapeAttr(assetUrl(marketConfig.logo || "/dar-concierge-logo.png"))}" alt="" class="brand-logo brand-logo--chat" />
         <span>${BRAND.nameUpper}</span>
       </div>
       <div class="msg bot">${formatBotHtml(text)}</div>
@@ -1191,7 +1209,7 @@ function openLeadDialog(listingId, listingTitle = "") {
 
 function buildFeatureCard(l) {
   const img = l.image
-    ? `<img src="${escapeAttr(l.image)}" alt="" loading="lazy" />`
+    ? `<img src="${escapeAttr(assetUrl(l.image))}" alt="" loading="lazy" />`
     : "";
   const community = l.community || l.emirate || "";
   const beds = l.beds != null ? `${l.beds} Beds` : "";
@@ -1336,7 +1354,7 @@ function renderMiniListings(listings = [], photoMode = false) {
     card.className = photoMode ? "photo-card" : "mini-card";
     card.dataset.id = l.id;
 
-    const imgs = (l.images || []).length ? l.images : l.image ? [l.image] : [];
+    const imgs = listingImages(l);
     const strip = imgs
       .slice(0, 6)
       .map((src) => `<img src="${escapeAttr(src)}" alt="" loading="eager" decoding="async" referrerpolicy="no-referrer" />`)
@@ -1380,7 +1398,7 @@ function renderMiniListings(listings = [], photoMode = false) {
       });
     } else {
       const imgHtml = l.image
-        ? `<img src="${escapeAttr(l.image)}" alt="" loading="lazy" />`
+        ? `<img src="${escapeAttr(assetUrl(l.image))}" alt="" loading="lazy" />`
         : `<div class="thumb"></div>`;
       card.innerHTML = `
         ${imgHtml}
@@ -1458,7 +1476,7 @@ async function saveSearchAlert() {
   }
   try {
     const sid = await ensureSession();
-    const res = await fetch("/api/rent/saved-search", {
+    const res = await fetch(`${RENT_API}/saved-search`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ sessionId: sid, userPhone: phone })
@@ -1484,7 +1502,7 @@ async function loadExplore() {
   else if (exploreFilter === "Dubai" || exploreFilter === "Accra") params.set("emirate", exploreFilter);
 
   try {
-    const res = await fetch(`/api/rent/browse?${params}`);
+    const res = await fetch(`${RENT_API}/browse?${params}`);
     const data = await res.json();
     if (!data.ok || !data.listings?.length) {
       exploreGrid.innerHTML = `<p class="muted center">No properties found.</p>`;
@@ -1508,7 +1526,7 @@ async function renderSavedGrid() {
   const listings = [];
   for (const id of ids) {
     try {
-      const res = await fetch(`/api/rent/listings/${encodeURIComponent(id)}`);
+      const res = await fetch(`${RENT_API}/listings/${encodeURIComponent(id)}`);
       const data = await res.json();
       if (data.ok && data.listing) listings.push(data.listing);
     } catch {
@@ -1664,7 +1682,7 @@ function renderListingDetail(l) {
     l.furnished === true ? "Furnished" : l.furnished === false ? "Unfurnished" : null
   ].filter(Boolean);
 
-  const images = (l.images || []).length ? l.images : l.image ? [l.image] : [];
+  const images = listingImages(l);
   const gallery = buildPhotoGallery(images);
 
   const amenities =
@@ -1718,14 +1736,14 @@ function mergeListingDetail(api, cached) {
   if (!cached) return api;
   const apiImgs = (api.images || []).length ? api.images : api.image ? [api.image] : [];
   const cachedImgs = (cached.images || []).length ? cached.images : cached.image ? [cached.image] : [];
-  const images = apiImgs.length >= cachedImgs.length ? apiImgs : cachedImgs;
+  const images = (apiImgs.length >= cachedImgs.length ? apiImgs : cachedImgs).map((src) => assetUrl(src));
   const apiDesc = String(api.description || "").trim();
   const cachedDesc = String(cached.description || "").trim();
   return {
     ...cached,
     ...api,
     images,
-    image: images[0] || api.image || cached.image || null,
+    image: images[0] || assetUrl(api.image) || assetUrl(cached.image) || null,
     description: apiDesc.length >= cachedDesc.length ? apiDesc || cachedDesc : cachedDesc,
     amenities: api.amenities?.length ? api.amenities : cached.amenities || []
   };
@@ -1742,7 +1760,7 @@ async function openListingDetail(listingId) {
   }
 
   try {
-    const res = await fetch(`/api/rent/listings/${encodeURIComponent(listingId)}`);
+    const res = await fetch(`${RENT_API}/listings/${encodeURIComponent(listingId)}`);
     const data = await res.json();
     if (data.ok && data.listing) {
       renderListingDetail(mergeListingDetail(data.listing, cached));
@@ -1765,7 +1783,7 @@ async function openListingDetail(listingId) {
 async function ensureSession() {
   if (sessionId) {
     try {
-      const res = await fetch(`/api/rent/session/${encodeURIComponent(sessionId)}`);
+      const res = await fetch(`${RENT_API}/session/${encodeURIComponent(sessionId)}`);
       const data = await res.json();
       if (data.ok) return sessionId;
     } catch {
@@ -1774,7 +1792,7 @@ async function ensureSession() {
     sessionId = "";
     localStorage.removeItem("uae_re_session_id");
   }
-  const res = await fetch("/api/rent/session", { method: "POST", headers: { "Content-Type": "application/json" }, body: "{}" });
+  const res = await fetch(`${RENT_API}/session`, { method: "POST", headers: { "Content-Type": "application/json" }, body: "{}" });
   const data = await res.json();
   if (!data.ok) throw new Error(data.error || "Could not start session");
   sessionId = data.sessionId;
@@ -1830,7 +1848,7 @@ async function sendMessage(text, options = {}) {
 
   try {
     const sid = await ensureSession();
-    const res = await fetch("/api/rent/chat", {
+    const res = await fetch(`${RENT_API}/chat`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ sessionId: sid, message })
@@ -1997,7 +2015,7 @@ leadForm.addEventListener("submit", async (e) => {
 
   try {
     const sid = await ensureSession();
-    const res = await fetch("/api/rent/lead", {
+    const res = await fetch(`${RENT_API}/lead`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -2031,7 +2049,7 @@ leadForm.addEventListener("submit", async (e) => {
       addMessage("Opening MoMo / card payment for GH₵100…", "bot");
       window.location.href = data.authorizationUrl;
     } else if (data.payToView && data.devPay && data.viewing?.id) {
-      const paid = await fetch("/api/rent/viewing/confirm", {
+      const paid = await fetch(`${RENT_API}/viewing/confirm`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ viewingId: data.viewing.id })
@@ -2070,7 +2088,7 @@ async function bootstrap() {
   if (saved) {
     sessionId = saved;
     try {
-      const res = await fetch(`/api/rent/session/${encodeURIComponent(saved)}`);
+      const res = await fetch(`${RENT_API}/session/${encodeURIComponent(saved)}`);
       const data = await res.json();
       const messages = data.ok ? data.session?.messages || [] : [];
       if (data.ok && data.session?.criteria?.language) {

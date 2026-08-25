@@ -16,5 +16,8 @@ tmp/
 !apps/hub/public/dar-concierge-logo.png
 !apps/hub/public/fie-ai-logo.png
 !apps/hub/public/pwa-icon*.png
+!apps/hub/public/apple-touch-icon.png
+!apps/hub/public/fie-pwa-icon*.png
+!apps/hub/public/fie-apple-touch-icon.png
 scripts/last-instance.json
 scripts/tmp-*.mjs

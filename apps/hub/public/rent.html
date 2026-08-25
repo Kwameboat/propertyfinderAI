@@ -17,16 +17,48 @@
   <script>
     (function () {
       window.__darPwa = window.__darPwa || { promptEvent: null };
+      var gh = location.pathname === "/gh" || location.pathname.indexOf("/gh/") === 0;
+      if (gh) {
+        window.__RENT_BASE = window.__RENT_BASE || "/gh";
+        window.__RENT_API = window.__RENT_API || "/gh/api/rent";
+      }
       window.addEventListener("beforeinstallprompt", function (e) {
         e.preventDefault();
         window.__darPwa.promptEvent = e;
         window.dispatchEvent(new Event("dar-pwa-ready"));
       });
-      if ("serviceWorker" in navigator && window.isSecureContext) {
-        navigator.serviceWorker.register("/sw.js", { scope: "/" }).catch(function () {
-          navigator.serviceWorker.register("/rent-sw.js", { scope: "/" });
+      if (!("serviceWorker" in navigator) || !window.isSecureContext) return;
+      var swUrl = gh ? "/gh/sw.js" : "/sw.js";
+      var scope = gh ? "/gh" : "/";
+      var reloading = false;
+      navigator.serviceWorker.addEventListener("controllerchange", function () {
+        if (reloading) return;
+        reloading = true;
+        location.reload();
+      });
+      navigator.serviceWorker.register(swUrl, { scope: scope, updateViaCache: "none" }).then(function (reg) {
+        function promptWaiting() {
+          if (reg.waiting) reg.waiting.postMessage({ type: "SKIP_WAITING" });
+        }
+        promptWaiting();
+        reg.addEventListener("updatefound", function () {
+          var worker = reg.installing;
+          if (!worker) return;
+          worker.addEventListener("statechange", function () {
+            if (worker.state === "installed" && navigator.serviceWorker.controller) promptWaiting();
+          });
         });
-      }
+        var check = function () { reg.update().catch(function () {}); };
+        document.addEventListener("visibilitychange", function () {
+          if (document.visibilityState === "visible") check();
+        });
+        window.addEventListener("focus", check);
+        window.addEventListener("pageshow", check);
+        setInterval(check, 5 * 60 * 1000);
+        check();
+      }).catch(function () {
+        if (!gh) navigator.serviceWorker.register("/rent-sw.js", { scope: "/", updateViaCache: "none" });
+      });
     })();
   </script>
   <link rel="preconnect" href="https://fonts.googleapis.com" />

@@ -1,4 +1,5 @@
 import { createHash, randomBytes, randomUUID, timingSafeEqual } from "node:crypto";
+import { readFileSync } from "node:fs";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -124,6 +125,12 @@ import {
 } from "../../packages/hub-db/index.mjs";
 import { handleRentChat, handleRentTranscribe, submitRentLead, formatListingCard, formatListingDetail } from "../../packages/real-estate/chat.mjs";
 import { publicMarketConfig, isGhanaMarket } from "../../packages/real-estate/market.mjs";
+import {
+  fillGhanaServiceWorker,
+  pwaBuildId,
+  rewriteRentHtmlForGhana,
+  stripGhanaPublicPrefix
+} from "../../packages/real-estate/pwa-host.mjs";
 import { submitOwnerListing, sanitizeOwnerPhotoUrls } from "../../packages/real-estate/owner-listing.mjs";
 import { runGhanaLiveSearch } from "../../packages/real-estate/ghana-live-search.mjs";
 import { attachClusterMeta, groupListingsByCluster } from "../../packages/real-estate/cluster.mjs";
@@ -626,22 +633,76 @@ app.use((err, req, res, next) => {
 });
 app.use(cookieParser());
 
+app.use((req, _res, next) => {
+  if (!isGhanaMarket()) {
+    next();
+    return;
+  }
+  const stripped = stripGhanaPublicPrefix(req.url);
+  if (stripped !== req.url) req.url = stripped;
+  next();
+});
+
+const PUBLIC_DIR = path.join(__dirname, "public");
+
+function sendRentApp(res) {
+  const htmlPath = path.join(PUBLIC_DIR, "rent.html");
+  if (isGhanaMarket()) {
+    const html = readFileSync(htmlPath, "utf8");
+    res.set("Cache-Control", "no-cache");
+    res.type("html");
+    res.send(rewriteRentHtmlForGhana(html, { buildId: pwaBuildId(PUBLIC_DIR) }));
+    return;
+  }
+  res.sendFile(htmlPath);
+}
+
 /** PWA routes must beat express.static so Chrome gets SW-Allowed + correct manifest MIME. */
 app.get("/manifest.webmanifest", (req, res) => {
   res.set("Cache-Control", "no-cache");
   res.type("application/manifest+json");
-  res.sendFile(path.join(__dirname, "public", "manifest.webmanifest"));
+  res.sendFile(path.join(PUBLIC_DIR, isGhanaMarket() ? "gh-manifest.webmanifest" : "manifest.webmanifest"));
+});
+
+app.get("/gh/manifest.webmanifest", (req, res) => {
+  res.set("Cache-Control", "no-cache");
+  res.type("application/manifest+json");
+  res.sendFile(path.join(PUBLIC_DIR, "gh-manifest.webmanifest"));
 });
 
 app.get(["/rent-sw.js", "/sw.js"], (req, res) => {
+  if (isGhanaMarket()) {
+    res.set("Service-Worker-Allowed", "/gh");
+    res.set("Cache-Control", "no-cache, no-store, must-revalidate");
+    res.type("application/javascript");
+    res.send(
+      fillGhanaServiceWorker(readFileSync(path.join(PUBLIC_DIR, "gh-sw.js"), "utf8"), {
+        buildId: pwaBuildId(PUBLIC_DIR)
+      })
+    );
+    return;
+  }
   res.set("Service-Worker-Allowed", "/");
   res.set("Cache-Control", "no-cache");
   res.type("application/javascript");
-  res.sendFile(path.join(__dirname, "public", "rent-sw.js"));
+  res.sendFile(path.join(PUBLIC_DIR, "rent-sw.js"));
 });
 
-app.use(express.static(path.join(__dirname, "public"), { index: false }));
+app.get(["/gh/sw.js", "/gh/gh-sw.js"], (req, res) => {
+  res.set("Service-Worker-Allowed", "/gh");
+  res.set("Cache-Control", "no-cache, no-store, must-revalidate");
+  res.type("application/javascript");
+  res.send(
+    fillGhanaServiceWorker(readFileSync(path.join(PUBLIC_DIR, "gh-sw.js"), "utf8"), {
+      buildId: pwaBuildId(PUBLIC_DIR)
+    })
+  );
+});
+
+app.use(express.static(PUBLIC_DIR, { index: false }));
+app.use("/gh", express.static(PUBLIC_DIR, { index: false }));
 app.use("/uploads", express.static(paths.uploadsDir));
+app.use("/gh/uploads", express.static(paths.uploadsDir));
 
 app.get("/login", (req, res) => {
   res.sendFile(path.join(__dirname, "public", "login.html"));
@@ -687,7 +748,7 @@ app.get(["/rent", "/gh"], (req, res) => {
     res.redirect(302, dest.toString());
     return;
   }
-  res.sendFile(path.join(__dirname, "public", "rent.html"));
+  sendRentApp(res);
 });
 
 /** Simple rate limit for public rent API (per IP). */
@@ -799,7 +860,7 @@ const q = new URLSearchParams(location.search);
 const viewingId = q.get("viewing");
 const reference = q.get("reference");
 if (viewingId || reference) {
-  fetch("/api/rent/viewing/confirm", {
+  fetch((location.pathname.indexOf("/gh") === 0 ? "/gh" : "") + "/api/rent/viewing/confirm", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ viewingId, reference })

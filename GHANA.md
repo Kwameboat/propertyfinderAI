@@ -2,8 +2,8 @@
 
 Ghana housing PWA on the same Dar Concierge engine. **Does not replace the live UAE product.** Default market stays `AE`. Brand: **FIE AI** — your AI real estate agent in Ghana.
 
-Public path: `/gh` (same app as `/rent`, branded from `/api/rent/config`).
-Give Ghana its own domain later (`JAB_HUB_PUBLIC_URL=https://your-ghana-domain`).
+Public path: `/gh` on the same HTTPS host as Dar Concierge (`https://wa.jabdigitalhub.com/gh`).
+Cloudflare Tunnel routes `/gh*` to Hub `:3001` so the PWA is a secure context (install + microphone). Dar Concierge stays at `https://wa.jabdigitalhub.com/rent`.
 
 ## Turn it on
 
@@ -90,9 +90,21 @@ FIE AI runs as a **second** Hub on the same VPS. Dar Concierge on `:3000` is unt
 
 | App | URL |
 |-----|-----|
-| FIE AI PWA | http://169.58.81.179:3001/gh |
-| Agent PIN confirm | http://169.58.81.179:3001/gh/agent |
+| FIE AI PWA | https://wa.jabdigitalhub.com/gh |
+| Agent PIN confirm | https://wa.jabdigitalhub.com/gh/agent |
 | FIE listing dashboard | http://169.58.81.179:3001/admin/re |
-| Dar Concierge (UAE, unchanged) | http://169.58.81.179:3000/rent |
+| Dar Concierge (UAE, unchanged) | https://wa.jabdigitalhub.com/rent |
+
+Installed home-screen FIE AI checks for a new service worker on open, focus, and refresh, then reloads once — same as a native app update. Re-adding the icon is not required.
+
+HTTP `http://169.58.81.179:3001/gh` redirects to the HTTPS PWA.
+
+Cloudflare Tunnel (`/etc/cloudflared/config.yml`) must include this ingress rule **before** the Evolution catch-all:
+
+```yaml
+  - hostname: wa.jabdigitalhub.com
+    path: /gh
+    service: http://127.0.0.1:3001
+```
 
 Test viewing uses demo pay (`JAB_RE_GH_DEV_PAY=1`) so PIN appears in chat. Give that PIN to `/gh/agent` with a MoMo number.

@@ -1,10 +1,29 @@
 /**
  * PWA install — Install now opens the browser's native install dialog immediately.
  * HTTP origins cannot install on Android; those taps jump to the HTTPS app URL first.
+ * Installed apps check for a new service worker on open/focus and reload once it activates.
  */
 
 const DISMISS_KEY = "dar_concierge_pwa_install_dismissed";
-const HTTPS_ORIGIN = "https://wa.jabdigitalhub.com";
+const DEFAULT_HTTPS_ORIGIN = "https://wa.jabdigitalhub.com";
+
+function isGhanaPwa() {
+  return (
+    window.__RENT_BASE === "/gh" ||
+    location.pathname === "/gh" ||
+    location.pathname.startsWith("/gh/")
+  );
+}
+
+function httpsOrigin() {
+  const fromWindow = String(window.__RENT_HTTPS_ORIGIN || "").trim();
+  if (fromWindow && !/^(off|0|false)$/i.test(fromWindow)) return fromWindow.replace(/\/$/, "");
+  return DEFAULT_HTTPS_ORIGIN;
+}
+
+function pwaStartPath() {
+  return isGhanaPwa() ? "/gh" : "/rent";
+}
 
 function store() {
   window.__darPwa = window.__darPwa || { promptEvent: null };
@@ -45,7 +64,7 @@ function setVisible(el, show) {
 function needsHttpsJump() {
   if (window.isSecureContext) return false;
   try {
-    return new URL(HTTPS_ORIGIN).host !== location.host;
+    return new URL(httpsOrigin()).host !== location.host;
   } catch {
     return true;
   }
@@ -90,7 +109,7 @@ async function triggerInstall(event) {
   event?.stopPropagation?.();
 
   if (needsHttpsJump()) {
-    const next = new URL("/rent", HTTPS_ORIGIN);
+    const next = new URL(pwaStartPath(), httpsOrigin());
     next.searchParams.set("install", "1");
     location.assign(next.toString());
     return "redirect";
@@ -122,6 +141,28 @@ async function triggerInstall(event) {
   return "unavailable";
 }
 
+function setupPwaAutoUpdate(registration) {
+  if (!registration) return;
+  const promptWaiting = () => {
+    registration.waiting?.postMessage({ type: "SKIP_WAITING" });
+  };
+  promptWaiting();
+  registration.addEventListener("updatefound", () => {
+    const worker = registration.installing;
+    worker?.addEventListener("statechange", () => {
+      if (worker.state === "installed" && navigator.serviceWorker.controller) promptWaiting();
+    });
+  });
+  const check = () => registration.update().catch(() => {});
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "visible") check();
+  });
+  window.addEventListener("focus", check);
+  window.addEventListener("pageshow", check);
+  setInterval(check, 5 * 60 * 1000);
+  check();
+}
+
 export function initPwaInstall() {
   const els = getInstallEls();
 
@@ -151,15 +192,27 @@ export function initPwaInstall() {
 
 export async function registerRentServiceWorker() {
   if (!("serviceWorker" in navigator) || !window.isSecureContext) return;
+  const ghana = isGhanaPwa();
+  const swUrl = ghana ? "/gh/sw.js" : "/sw.js";
+  const scope = ghana ? "/gh" : "/";
   try {
-    await navigator.serviceWorker.register("/sw.js", { scope: "/" });
+    const registration = await navigator.serviceWorker.register(swUrl, {
+      scope,
+      updateViaCache: "none"
+    });
+    setupPwaAutoUpdate(registration);
   } catch {
+    if (ghana) return;
     try {
-      await navigator.serviceWorker.register("/rent-sw.js", { scope: "/" });
+      const registration = await navigator.serviceWorker.register("/rent-sw.js", {
+        scope: "/",
+        updateViaCache: "none"
+      });
+      setupPwaAutoUpdate(registration);
     } catch {
       /* Chrome will not install without a controlling SW */
     }
   }
 }
 
-export { isStandalone, triggerInstall };
+export { isStandalone, triggerInstall, isGhanaPwa };

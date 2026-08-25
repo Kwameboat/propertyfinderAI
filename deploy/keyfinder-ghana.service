@@ -14,8 +14,8 @@ Environment=NODE_ENV=production
 Environment=JAB_RE_MARKET=GH
 Environment=JAB_HUB_PORT=3001
 Environment=JAB_HUB_DATA_DIR=/var/lib/keyfinder-ghana
-Environment=JAB_HUB_PUBLIC_URL=http://169.58.81.179:3001
-Environment=JAB_RENT_HTTPS_ORIGIN=off
+Environment=JAB_HUB_PUBLIC_URL=https://wa.jabdigitalhub.com
+Environment=JAB_RENT_HTTPS_ORIGIN=https://wa.jabdigitalhub.com
 Environment=JAB_RE_GH_DEV_PAY=1
 Environment=JAB_RE_PUPPETEER_SCRAPE=0
 ExecStart=/usr/bin/node /opt/keyfinder-ghana/apps/hub/server.mjs
