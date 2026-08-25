@@ -26,6 +26,7 @@ import {
 import { formatComparisonWhatsApp } from "./listing-compare.mjs";
 import { sendMetaCloudText } from "../meta-cloud.mjs";
 import { aiDisclaimerText } from "./disclaimer.mjs";
+import { isGhanaMarket } from "./market.mjs";
 
 const JAB_SALES_RE =
   /\b(jab|digital hub|digitalhub|waba|paystack|onboard|onboarding|setup fee|agency pricing|become a client|sign up|signup|top[\s-]?up)\b/i;
@@ -42,6 +43,9 @@ export function isReWhatsAppOnAgencyEnabled() {
   return String(process.env.JAB_RE_WA_ON_AGENCY || "").trim() === "1";
 }
 
+const GHANA_RE_PROPERTY_RE =
+  /\b(rent|rental|self-?contain|chamber|compound|accra|kumasi|tema|east legon|osu|spintex|cedi|gh₵|nras|ofie|ɔdan|aƒe|mepɛ|hwehwɛ|viewing|listing|property|apartment|house)\b/i;
+
 export function shouldRouteInboundToRealEstate(text = "") {
   const t = String(text || "").trim();
   if (!t) return false;
@@ -50,6 +54,7 @@ export function shouldRouteInboundToRealEstate(text = "") {
   if (userWantsSavedSearch(t) || userWantsListAlerts(t) || userWantsStopAlerts(t)) return true;
   if (userWantsMoveInCalculator(t)) return true;
   if (/^(yes|confirm|book viewing|i'?m interested)$/i.test(t)) return true;
+  if (isGhanaMarket() && GHANA_RE_PROPERTY_RE.test(t)) return true;
   return RE_PROPERTY_RE.test(t);
 }
 

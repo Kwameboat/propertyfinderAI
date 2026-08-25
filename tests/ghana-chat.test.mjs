@@ -81,6 +81,29 @@ test("Ghana system prompt is GH₵ and names real partners, not UAE rules", asyn
   });
 });
 
+test("Ghana chat follows Twi, Ewe, and voice-note language", async () => {
+  const { detectLanguage, resolveSessionLanguage, voiceTranscriptionPrompt } = await import(
+    "../packages/real-estate/language.mjs"
+  );
+  assert.equal(detectLanguage("Kasa Twi. Mepɛ self-contain wɔ East Legon."), "tw");
+  assert.equal(detectLanguage("Me le aƒe dim le Accra"), "ee");
+  assert.equal(detectLanguage("Reply in ewe please"), "ee");
+  assert.equal(detectLanguage("I dey find self contain for Spintex"), "pidgin");
+  assert.equal(detectLanguage("Show me houses for sale in East Legon"), "en");
+  assert.equal(resolveSessionLanguage("ok", "tw"), "tw");
+  await withMarket("GH", () => {
+    assert.match(voiceTranscriptionPrompt(), /Twi/);
+    const prompt = buildRealEstateSystemPrompt({
+      userMessage: "Mepɛ dan wɔ Osu",
+      language: "tw",
+      answerMode: "search"
+    });
+    assert.match(prompt, /Twi/);
+    assert.match(prompt, /Ewe/);
+    assert.match(prompt, /voice notes/i);
+  });
+});
+
 test("UAE prompt is unchanged when market is AE", async () => {
   await withMarket("AE", () => {
     const prompt = buildRealEstateSystemPrompt({ userMessage: "Ejari please", answerMode: "faq" });

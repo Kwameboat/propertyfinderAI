@@ -47,6 +47,7 @@ Ghana chat (`/gh`) answers as a professional Ghanaian agent:
 - Live asking prices and counts from FIE inventory (Ghana Property Centre, Jiji, Meqasa, direct listings)
 - Ghana knowledge: property types, Accra/Kumasi/Tema areas, Rent Act advance cap, ECG / Ghana Water, viewing PIN
 - If someone cannot pay 1–2 years advance, FIE names **real** rent-to-monthly partners with official links: [NRAS](https://www.nras.gov.gh/), [Rent Masters](https://www.rent-masters.com/), [Renmo](https://listings.renmo.homes/), [ArchieRent](https://archielands.com/ArchieRent/index.php), [RENTBRiG](https://www.rentbrig.com/)
+- Voice notes: tap the mic on `/gh` (or send a WhatsApp voice note). FIE transcribes Twi, Fante, Ewe, Ga, Dagbani, Hausa, Ghanaian Pidgin, and Ghanaian English, then replies in the same language.
 
 UAE `/rent` chat is unchanged (`JAB_RE_MARKET` unset).
 

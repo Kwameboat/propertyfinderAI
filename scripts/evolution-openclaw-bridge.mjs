@@ -99,6 +99,7 @@ import {
   isReWhatsAppOnAgencyEnabled,
   shouldRouteInboundToRealEstate
 } from "../packages/real-estate/re-wa.mjs";
+import { voiceTranscriptionPrompt } from "../packages/real-estate/language.mjs";
 import {
   guardedEvolutionSend,
   assertOutboundAllowed,
@@ -377,7 +378,7 @@ async function transcribeAudioWithGemini({ base64, mimetype }) {
         {
           role: "user",
           parts: [
-            { text: "Transcribe this WhatsApp voice note to plain text. Reply with only the transcript, no quotes or preamble." },
+            { text: voiceTranscriptionPrompt() },
             { inlineData: { mimeType: mimetype || "audio/ogg", data: base64 } }
           ]
         }

@@ -58,7 +58,7 @@ const GREETING_ONLY =
   /^(?:hi|hello|hey|thanks|thank you|ok|okay|cool|great|got it|cheers|salam|marhaba|shukran|yes|no|sure)\b[\s!.]*$/i;
 
 const PURE_GREETING =
-  /^(?:hi|hello|hey|thanks|thank you|cheers|salam|marhaba|shukran)\b[\s!.]*$/i;
+  /^(?:hi|hello|hey|thanks|thank you|ok|okay|cool|great|got it|cheers|salam|marhaba|shukran|yes|no|sure|medaase|akpe|naa)\b[\s!.]*$/i;
 
 /** User is refining an active property search (new criteria → re-search). */
 export function userRefiningSearch(text = "", session = {}) {

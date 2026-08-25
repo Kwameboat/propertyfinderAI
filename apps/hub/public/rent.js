@@ -318,8 +318,92 @@ const RENT_UI = {
     bookViewing: "Mag-book ng viewing",
     bookTitle: "Mag-book ng viewing",
     errorGeneric: "May problema — subukan muli."
-  }
-};
+  },
+  pidgin: {
+      placeholder: "Ask FIE AI…",
+      transcribing: "I dey write di voice…",
+      recording: "I dey record… tap mic send",
+      micDenied: "Browser no gree microphone.",
+      voiceFailed: "E no transcribe — type am.",
+      bookViewing: "Pay make we go see",
+      bookTitle: "Pay make we go see",
+      errorGeneric: "Something miss — try again.",
+      searching: "I dey search Ghana listings…",
+      aiDisclaimer: "This one be AI. AI fit miss."
+    },
+    tw: {
+      placeholder: "Bisa FIE AI…",
+      transcribing: "Yɛrekyerɛw wo nne…",
+      recording: "Yɛrekyere… mia mic na fa kɔ",
+      micDenied: "Browser no ammɛn wo microphone. Ma ho kwan wɔ settings mu.",
+      voiceFailed: "Yɛantumi ankyerɛw nne no — twerɛ kyerɛ me.",
+      bookViewing: "Tua kɔhwɛ",
+      bookTitle: "Tua kɔhwɛ",
+      errorGeneric: "Biribi ankɔ yie — san yɛ bio.",
+      searching: "Yɛrehwehwɛ Ghana listings…",
+      aiDisclaimer: "Wei yɛ AI. AI betumi ayɛ mfomso."
+    },
+    ee: {
+      placeholder: "Bia FIE AI…",
+      transcribing: "Miele gbe ŋlɔm…",
+      recording: "Miele mɔ̃ ɖem… zi mic ɖe ɖoɖo",
+      micDenied: "Browser me de mɔ̃ ɖe microphone ŋu o.",
+      voiceFailed: "Meteŋu ŋlɔ gbe la o — ŋlɔe.",
+      bookViewing: "Dɔ kpɔkpɔ",
+      bookTitle: "Dɔ kpɔkpɔ",
+      errorGeneric: "Vodada aɖe va — ga dzem.",
+      searching: "Miele Ghana listings dim…",
+      aiDisclaimer: "Esia nye AI. AI ate ŋu awɔ vodada."
+    },
+    gaa: {
+      placeholder: "Bii FIE AI…",
+      transcribing: "Wɔŋmɛɔ dzee…",
+      recording: "Wɔŋmɛɔ… shi mic kɛha",
+      micDenied: "Browser ekɛ microphone lɛ shwie.",
+      voiceFailed: "Wɔnyɛ dzee ŋmaaa — ŋma.",
+      bookViewing: "Naakpɛɛ",
+      bookTitle: "Naakpɛɛ",
+      errorGeneric: "Efee flɛɛ — kee ekoŋŋ.",
+      searching: "Wɔkwɛɔ Ghana listings…",
+      aiDisclaimer: "Nɛkɛ ji AI. AI nyɛɔ fee flɛɛ."
+    },
+    fat: {
+      placeholder: "Bisa FIE AI…",
+      transcribing: "Yɛrekyerɛw wo ndze…",
+      recording: "Yɛrekyerɛ… mia mic",
+      micDenied: "Browser no ammɛn microphone.",
+      voiceFailed: "Yɛantumi — kyerɛw kyerɛ me.",
+      bookViewing: "Tua kɔhwɛ",
+      bookTitle: "Tua kɔhwɛ",
+      errorGeneric: "Biribi ankɔ yie — san yɛ.",
+      searching: "Yɛrehwehwɛ Ghana listings…",
+      aiDisclaimer: "Iyi yɛ AI. AI botum ayɛ mfomso."
+    },
+    dag: {
+      placeholder: "Bɔhi FIE AI…",
+      transcribing: "Ti yɛri a yɛltɔɣa…",
+      recording: "Ti yɛri… n-ŋme mic",
+      micDenied: "Browser bi ti microphone.",
+      voiceFailed: "Ti ku tooi yɛli — sabi.",
+      bookViewing: "Labi nya",
+      bookTitle: "Labi nya",
+      errorGeneric: "Binshɛɣu niŋ — labi niŋ.",
+      searching: "Ti bɔri Ghana listings…",
+      aiDisclaimer: "Ŋun nyɛ AI. AI tooi niŋ taɣibu."
+    },
+    ha: {
+      placeholder: "Tambayi FIE AI…",
+      transcribing: "Muna rubuta murya…",
+      recording: "Ana ɗauka… taɓa mic",
+      micDenied: "Browser ya hana microphone.",
+      voiceFailed: "Ba a iya rubuta muryar — rubuta.",
+      bookViewing: "Biyan duba",
+      bookTitle: "Biyan duba",
+      errorGeneric: "Wani kuskure — sake gwadawa.",
+      searching: "Muna neman Ghana listings…",
+      aiDisclaimer: "Wannan AI ne. AI na iya yin kuskure."
+    }
+  };
 
 let userLanguage = localStorage.getItem(LANG_KEY) || "en";
 let mediaRecorder = null;
@@ -336,7 +420,9 @@ function isGhanaMarket() {
 }
 
 function composerPlaceholder() {
-  return isGhanaMarket() ? "Ask FIE AI…" : uiText("placeholder");
+  if (!isGhanaMarket()) return uiText("placeholder");
+  if (RENT_UI[userLanguage]?.placeholder && userLanguage !== "en") return RENT_UI[userLanguage].placeholder;
+  return "Ask FIE AI — type or tap the mic";
 }
 
 function defaultInitials() {
@@ -429,7 +515,16 @@ function applyUiLanguage(lang) {
   const leadSubmit = document.getElementById("lead-submit");
   if (leadSubmit && !marketConfig.payToView) leadSubmit.textContent = uiText("bookViewing");
   if (leadTitle && !pendingListingTitle) leadTitle.textContent = uiText("bookTitle");
-  document.documentElement.lang = userLanguage === "ar" || userLanguage === "ur" ? userLanguage : "en";
+  document.documentElement.lang =
+    userLanguage === "ar" || userLanguage === "ur"
+      ? userLanguage
+      : userLanguage === "tw" || userLanguage === "fat"
+        ? "ak"
+        : userLanguage === "ee"
+          ? "ee"
+          : userLanguage === "ha"
+            ? "ha"
+            : "en";
   document.documentElement.dir = userLanguage === "ar" || userLanguage === "ur" ? "rtl" : "ltr";
   const composerNote = document.getElementById("composer-ai-note");
   if (composerNote) composerNote.textContent = uiText("aiDisclaimer");
