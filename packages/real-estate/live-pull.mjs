@@ -8,6 +8,7 @@ import { fetchN8nLiveSearch, isN8nLiveSearchEnabled } from "./n8n-live-search.mj
 import { enrichListingsWithImages, listingHasRealPhotos, preferListingImages } from "./listing-images.mjs";
 import { enrichListingsWithDetail, listingNeedsDetailEnrich } from "./listing-detail-enrich.mjs";
 import { ingestListingBatch, prepareListing } from "./ingest.mjs";
+import { upsertListing } from "../hub-db/real-estate.mjs";
 import { isSupabaseEnabled, batchSyncListingsToSupabaseWithReturn } from "./supabase.mjs";
 import {
   normalizeSearchCriteria,
@@ -37,9 +38,39 @@ export function isVerifiedPortalListing(listing = {}) {
 function mergeByKey(existing = [], incoming = []) {
   const map = new Map(existing.map((l) => [`${l.source}:${l.external_id}`, l]));
   for (const row of incoming) {
-    map.set(`${row.source}:${row.external_id}`, row);
+    const key = `${row.source}:${row.external_id}`;
+    const prev = map.get(key);
+    if (prev) {
+      map.set(key, {
+        ...prev,
+        ...row,
+        images: preferListingImages(row.images, prev.images)
+      });
+    } else {
+      map.set(key, row);
+    }
   }
   return [...map.values()];
+}
+
+function persistGhanaListingGalleries(db, listings = []) {
+  if (!db) return;
+  for (const listing of listings) {
+    if (!listing?.source || !listing?.external_id) continue;
+    if (!Array.isArray(listing.images) || !listing.images.length) continue;
+    try {
+      upsertListing(db, listing);
+    } catch (error) {
+      console.error(
+        JSON.stringify({
+          at: new Date().toISOString(),
+          ghanaGalleryPersistError: error.message,
+          source: listing.source,
+          external_id: listing.external_id
+        })
+      );
+    }
+  }
 }
 
 async function finalizeListings(listings = [], criteria = {}, { limit = 8, ingestSource = "live_pull", scope } = {}) {
@@ -114,6 +145,14 @@ async function pullLiveListingsForChatInner(db, criteria = {}, options = {}) {
     }
     const grouped = groupListingsByCluster(listings);
     listings = grouped.map((g) => attachClusterMeta(g.listing, g.offers)).slice(0, limit);
+    if (listings.some((l) => listingNeedsDetailEnrich(l, { minImages: 4 }))) {
+      try {
+        listings = await enrichListingsWithDetail(listings, { minImages: 4, max: listings.length });
+        persistGhanaListingGalleries(db, listings);
+      } catch (error) {
+        console.error(JSON.stringify({ at: new Date().toISOString(), ghanaGalleryEnrichError: error.message }));
+      }
+    }
     const loc = criteria.community || criteria.emirate || "Ghana";
     const tx = criteria.transaction_type === "sale" ? "homes for sale" : criteria.transaction_type === "rent" ? "rentals" : "listings";
     return {

@@ -247,10 +247,14 @@ export function upsertListing(db, input) {
   const row = normalizeListingInput(input);
   const now = Date.now();
   const existing = db
-    .prepare(`SELECT id FROM re_listings WHERE source = ? AND external_id = ?`)
+    .prepare(`SELECT id, images_json FROM re_listings WHERE source = ? AND external_id = ?`)
     .get(row.source, row.external_id);
 
   if (existing) {
+    const storedImages = parseJson(existing.images_json, []);
+    if (Array.isArray(storedImages) && storedImages.length > (row.images || []).length) {
+      row.images = storedImages;
+    }
     db.prepare(`
       UPDATE re_listings SET
         source_url = ?, transaction_type = ?, property_type = ?, beds = ?, baths = ?,

@@ -133,9 +133,18 @@ export function parseListingDetailFromMarkdown(markdown = "", listing = {}) {
   };
 }
 
+export function listingHasGpcFullGallery(listing = {}) {
+  return (listing.images || []).some(
+    (url) =>
+      /images\.ghanapropertycentre\.com\/properties\/images\/\d+\//i.test(String(url)) &&
+      !/\/(thumbs|branded|profiles)\//i.test(String(url))
+  );
+}
+
 export function listingNeedsDetailEnrich(listing = {}, { minImages = DETAIL_MIN_IMAGES } = {}) {
   const imgs = filterValidPortalImages(listing.images || []);
   const desc = String(listing.description || "").trim();
+  if (listingHasGpcFullGallery(listing)) return false;
   return (
     Boolean(listing.source_url) &&
     (imgs.length < minImages || desc.length < 80 || listing.baths == null || listing.size_sqft == null)

@@ -5,7 +5,7 @@
 const CDN_HINTS = /images\.bayut|propertyfinder|dubizzle|cloudinary|akamai|amazonaws|ghanapropertycentre|meqasa|jiji/i;
 const LISTING_IMAGE = /\/listing\/|images\.bayut\.com\/|media\/images\/listing|\/photos?\//i;
 const JUNK_IMAGE =
-  /nav_header|mf-logo|serp-hero|placeholder|banner\.webp|static\/nav|growth\.propertyfinder|\.svg(?:\?|$)|favicon|apple-touch|1x1|sprite|avatar|logo|unsplash|pexels|pixabay|shutterstock|gettyimages|stock-photo|placeholder\.com|via\.placeholder/i;
+  /nav_header|mf-logo|serp-hero|placeholder|banner\.webp|static\/nav|growth\.propertyfinder|\.svg(?:\?|$)|favicon|apple-touch|1x1|sprite|avatar|logo|unsplash|pexels|pixabay|shutterstock|gettyimages|stock-photo|placeholder\.com|via\.placeholder|\/properties\/branded\/|\/properties\/profiles\//i;
 
 export function extractImagesFromText(text = "") {
   const src = String(text || "");
@@ -19,7 +19,8 @@ export function extractImagesFromText(text = "") {
     /(https?:\/\/static\.shared\.propertyfinder\.ae\/[^\s"'<>]+)/gi,
     /(https?:\/\/www\.propertyfinder\.ae\/property\/[^\s"'<>]+)/gi,
     /(https?:\/\/[^\s"'<>]*propertyfinder[^\s"'<>]*(?:\/images\/|\/property\/|photo|media\/images\/listing)[^\s"'<>]*)/gi,
-    /(https?:\/\/[^\s"'<>]*dubizzle[^\s"'<>]*(?:\.jpg|\.jpeg|\.png|\.webp|listing)[^\s"'<>]*)/gi
+    /(https?:\/\/[^\s"'<>]*dubizzle[^\s"'<>]*(?:\.jpg|\.jpeg|\.png|\.webp|listing)[^\s"'<>]*)/gi,
+    /(https?:\/\/images\.ghanapropertycentre\.com\/properties\/images\/\d+\/[^\s"'<>]+)/gi
   ];
 
   for (const re of patterns) {
@@ -81,7 +82,7 @@ export function preferListingImages(primary = [], fallback = []) {
 
 export async function fetchListingImages(sourceUrl = "", { markdown = "" } = {}) {
   let images = extractImagesFromText(markdown);
-  if (images.length >= 2) return images;
+  if (images.length >= 8) return images.slice(0, 12);
 
   const url = String(sourceUrl || "").trim();
   if (!url) return images;

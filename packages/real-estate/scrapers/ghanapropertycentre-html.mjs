@@ -121,6 +121,64 @@ function externalIdFromUrl(url) {
   return m ? m[1] : String(url).replace(/https?:\/\/ghanapropertycentre\.com\//i, "").slice(0, 180);
 }
 
+function unescapeGpcJson(raw = "") {
+  return String(raw).replace(/\\u([0-9a-fA-F]{4})/g, (_, hex) => String.fromCharCode(parseInt(hex, 16)));
+}
+
+export function isGpcListingPhoto(url = "") {
+  const u = cleanGpcImageUrl(url);
+  if (!/^https?:\/\/images\.ghanapropertycentre\.com\/properties\/images\/\d+\//i.test(u)) return false;
+  if (/\/(thumbs|branded|profiles)\//i.test(u)) return false;
+  return /\.(?:jpe?g|png|webp)(?:\?|$)/i.test(u);
+}
+
+export function gpcFullImageUrl(url = "") {
+  return cleanGpcImageUrl(url).replace(/\/properties\/images\/thumbs\//i, "/properties/images/");
+}
+
+function cleanGpcImageUrl(url = "") {
+  return String(url || "").replace(/\\\//g, "/").split("?")[0];
+}
+
+/** Drop SERP thumbs when the matching full-size photo is already present. */
+export function preferFullGpcImages(images = []) {
+  const list = (images || []).map(String).filter(Boolean);
+  const trueFull = new Set(list.map(gpcFullImageUrl).filter((u, i) => isGpcListingPhoto(list[i])));
+  const seen = new Set();
+  const out = [];
+  for (const raw of list) {
+    const cleaned = cleanGpcImageUrl(raw);
+    const full = gpcFullImageUrl(cleaned);
+    if (/\/thumbs\//i.test(cleaned) && trueFull.has(full)) continue;
+    const key = full.toLowerCase();
+    if (seen.has(key)) continue;
+    seen.add(key);
+    out.push(cleaned);
+  }
+  return out;
+}
+
+/** Alpine `propertyGallery(JSON.parse('...'))` on GPC detail pages — full photo set, not the SERP thumb. */
+export function parseGpcGalleryHtml(html = "") {
+  const src = String(html || "");
+  const match = src.match(/propertyGallery\(\s*JSON\.parse\('((?:\\'|[^'])*)'\)/);
+  if (!match) return [];
+  try {
+    const photos = JSON.parse(unescapeGpcJson(match[1]));
+    if (!Array.isArray(photos)) return [];
+    const urls = [];
+    for (const photo of photos) {
+      const full = gpcFullImageUrl(photo?.full || photo?.url || "");
+      const thumb = gpcFullImageUrl(photo?.thumb || "");
+      const chosen = isGpcListingPhoto(full) ? full : isGpcListingPhoto(thumb) ? thumb : "";
+      if (chosen) urls.push(chosen);
+    }
+    return [...new Set(urls)].slice(0, 16);
+  } catch {
+    return [];
+  }
+}
+
 export function parseGpcSearchHtml(html, { city = "Accra", transactionType = "rent" } = {}) {
   const rows = [];
   const seen = new Set();

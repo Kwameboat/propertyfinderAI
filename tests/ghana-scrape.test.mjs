@@ -1,6 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { parseGpcSearchHtml } from "../packages/real-estate/scrapers/ghanapropertycentre-html.mjs";
+import { parseGpcSearchHtml, parseGpcGalleryHtml, preferFullGpcImages } from "../packages/real-estate/scrapers/ghanapropertycentre-html.mjs";
+import { listingNeedsDetailEnrich } from "../packages/real-estate/listing-detail-enrich.mjs";
 import { getN8nIngestSources, getScrapeEmirates } from "../packages/real-estate/mode.mjs";
 import { GHANA_PORTALS, GHANA_DIRECT_SOURCE, ghanaListingSources } from "../packages/real-estate/market.mjs";
 import { INGEST_SOURCES, GHANA_SCRAPE_TYPES } from "../packages/real-estate/scrape-runner.mjs";
@@ -146,4 +147,51 @@ test("FlareSolverr HTML wrapper unwraps Jiji JSON", () => {
   const data = jsonFromFlareHtml(html);
   assert.equal(data.adverts_list.count, 2);
   assert.equal(data.adverts_list.adverts[0].id, 1);
+});
+
+test("GPC detail HTML parses the Alpine propertyGallery photos", () => {
+  const html = `
+<section x-data="propertyGallery(JSON.parse('[{\\u0022full\\u0022:\\u0022https:\\\\/\\\\/images.ghanapropertycentre.com\\\\/properties\\\\/images\\\\/19191\\\\/photo-a.jpeg\\u0022,\\u0022thumb\\u0022:\\u0022https:\\\\/\\\\/images.ghanapropertycentre.com\\\\/properties\\\\/images\\\\/thumbs\\\\/19191\\\\/photo-a.jpeg\\u0022},{\\u0022full\\u0022:\\u0022https:\\\\/\\\\/images.ghanapropertycentre.com\\\\/properties\\\\/images\\\\/19191\\\\/photo-b.jpeg\\u0022,\\u0022thumb\\u0022:\\u0022https:\\\\/\\\\/images.ghanapropertycentre.com\\\\/properties\\\\/images\\\\/thumbs\\\\/19191\\\\/photo-b.jpeg\\u0022},{\\u0022full\\u0022:\\u0022https:\\\\/\\\\/images.ghanapropertycentre.com\\\\/properties\\\\/images\\\\/19191\\\\/photo-c.jpeg\\u0022,\\u0022thumb\\u0022:\\u0022https:\\\\/\\\\/images.ghanapropertycentre.com\\\\/properties\\\\/images\\\\/thumbs\\\\/19191\\\\/photo-c.jpeg\\u0022}]'), false, '2 Bed Airport')">
+<span x-text="(currentIndex + 1) + ' / 3'"></span>
+</section>`;
+  const images = parseGpcGalleryHtml(html);
+  assert.equal(images.length, 3);
+  assert.equal(images[0], "https://images.ghanapropertycentre.com/properties/images/19191/photo-a.jpeg");
+  assert.ok(images.every((url) => !url.includes("/thumbs/")));
+});
+
+test("GPC thumb plus matching full-size photo collapses to the full URL", () => {
+  const images = preferFullGpcImages([
+    "https://images.ghanapropertycentre.com/properties/images/thumbs/19191/photo-a.jpeg",
+    "https://images.ghanapropertycentre.com/properties/images/19191/photo-a.jpeg",
+    "https://images.ghanapropertycentre.com/properties/images/19191/photo-b.jpeg"
+  ]);
+  assert.deepEqual(images, [
+    "https://images.ghanapropertycentre.com/properties/images/19191/photo-a.jpeg",
+    "https://images.ghanapropertycentre.com/properties/images/19191/photo-b.jpeg"
+  ]);
+});
+
+test("GPC search JSON-LD still only has the SERP cover image", () => {
+  const rows = parseGpcSearchHtml(GPC_FIXTURE, { city: "Accra", transactionType: "rent" });
+  assert.equal(rows[0].images.length, 1);
+});
+
+test("GPC SERP thumbs still need detail enrich; full galleries do not", () => {
+  const thumbListing = {
+    source_url: "https://ghanapropertycentre.com/for-rent/flats-apartments/greater-accra/east-legon/19191-apt",
+    images: [
+      "https://images.ghanapropertycentre.com/properties/images/thumbs/19191/photo-a.jpeg"
+    ],
+    description: "Luxurious Fully Furnished 2 Bedrooms Apartment"
+  };
+  const galleryListing = {
+    ...thumbListing,
+    images: [
+      "https://images.ghanapropertycentre.com/properties/images/19191/photo-a.jpeg",
+      "https://images.ghanapropertycentre.com/properties/images/19191/photo-b.jpeg"
+    ]
+  };
+  assert.equal(listingNeedsDetailEnrich(thumbListing, { minImages: 4 }), true);
+  assert.equal(listingNeedsDetailEnrich(galleryListing, { minImages: 4 }), false);
 });

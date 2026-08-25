@@ -12,7 +12,7 @@ import {
   normalizeListingRow
 } from "./scrapers/normalize.mjs";
 import { filterValidPortalImages, extractImagesFromText } from "./listing-images.mjs";
-import { parseGpcSearchHtml } from "./scrapers/ghanapropertycentre-html.mjs";
+import { parseGpcSearchHtml, parseGpcGalleryHtml, preferFullGpcImages } from "./scrapers/ghanapropertycentre-html.mjs";
 
 const EMIRATE_FROM_SLUG = {
   dubai: "Dubai",
@@ -223,6 +223,17 @@ function parseListingFromHtml(html, url, partial = {}) {
   else if (next && portal === "bayut") listing = parseBayutDetail(next, url);
   else if (next && portal === "dubizzle") listing = parseDubizzleDetail(next, url);
 
+  if (portal === "ghanapropertycentre") {
+    const gallery = parseGpcGalleryHtml(html);
+    if (gallery.length) {
+      listing = mergeListing(listing || partial, {
+        source: "ghanapropertycentre",
+        source_url: url,
+        images: gallery
+      });
+    }
+  }
+
   if (!listing?.images?.length) {
     const ld = parseJsonLdListing(extractJsonLd(html), url);
     if (ld) listing = listing ? mergeListing(listing, ld) : ld;
@@ -246,6 +257,9 @@ function parseListingFromHtml(html, url, partial = {}) {
   }
 
   if (listing) listing = mergeListing(partial, listing);
+  if (portal === "ghanapropertycentre" && listing?.images?.length) {
+    listing.images = preferFullGpcImages(listing.images);
+  }
   return listing;
 }
 
