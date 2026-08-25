@@ -94,7 +94,12 @@ function applyMarketBranding() {
     exploreDubai.textContent = "Accra";
     exploreDubai.dataset.filter = "Accra";
   }
-  if (input) input.placeholder = ghana ? "Ask FIE AI…" : input.placeholder;
+  if (input) input.placeholder = composerPlaceholder();
+  if (!localStorage.getItem(PROFILE_KEY)) {
+    const ini = defaultInitials();
+    if (headerAvatar) headerAvatar.textContent = ini;
+    if (profileAvatarLg) profileAvatarLg.textContent = ini;
+  }
   const disclaimer = document.querySelector(".profile-card .disclaimer");
   if (disclaimer && ghana) {
     disclaimer.textContent =
@@ -317,6 +322,18 @@ function uiText(key) {
   return (RENT_UI[userLanguage] || RENT_UI.en)[key] || RENT_UI.en[key] || "";
 }
 
+function isGhanaMarket() {
+  return marketConfig.code === "GH";
+}
+
+function composerPlaceholder() {
+  return isGhanaMarket() ? "Ask FIE AI…" : uiText("placeholder");
+}
+
+function defaultInitials() {
+  return isGhanaMarket() ? "FI" : "DC";
+}
+
 function aiDisclaimerHtml(text) {
   const line = String(text || uiText("aiDisclaimer") || RENT_UI.en.aiDisclaimer);
   return `<p class="ai-disclaimer" role="note">${escapeHtml(line)}</p>`;
@@ -325,10 +342,10 @@ function aiDisclaimerHtml(text) {
 function applyUiLanguage(lang) {
   userLanguage = String(lang || "en").toLowerCase();
   localStorage.setItem(LANG_KEY, userLanguage);
-  input.placeholder = uiText("placeholder");
+  if (input) input.placeholder = composerPlaceholder();
   if (recordingLabel) recordingLabel.textContent = uiText("recording");
   const leadSubmit = document.getElementById("lead-submit");
-  if (leadSubmit) leadSubmit.textContent = uiText("bookViewing");
+  if (leadSubmit && !marketConfig.payToView) leadSubmit.textContent = uiText("bookViewing");
   if (leadTitle && !pendingListingTitle) leadTitle.textContent = uiText("bookTitle");
   document.documentElement.lang = userLanguage === "ar" || userLanguage === "ur" ? userLanguage : "en";
   document.documentElement.dir = userLanguage === "ar" || userLanguage === "ur" ? "rtl" : "ltr";
@@ -450,19 +467,23 @@ function isSaved(id) {
 }
 
 function initials(name) {
-  const parts = String(name || "DC").trim().split(/\s+/).filter(Boolean);
-  if (!parts.length) return "DC";
+  const fallback = defaultInitials();
+  const parts = String(name || fallback).trim().split(/\s+/).filter(Boolean);
+  if (!parts.length) return fallback;
   if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
   return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
 }
 
 function applyProfileName(name) {
   const n = String(name || "").trim();
-  const ini = initials(n || "Guest");
+  const ini = n ? initials(n) : defaultInitials();
   headerAvatar.textContent = ini;
   profileAvatarLg.textContent = ini;
-  if (n) {
-    heroGreeting.textContent = `Welcome, ${n.split(/\s+/)[0]}. What property are you looking for across the UAE today?`;
+  if (n && heroGreeting) {
+    const first = n.split(/\s+/)[0];
+    heroGreeting.textContent = isGhanaMarket()
+      ? `Welcome, ${first}. Looking for a self-contain in East Legon or a chamber and hall in Osu?`
+      : `Welcome, ${first}. What property are you looking for across the UAE today?`;
   }
 }
 

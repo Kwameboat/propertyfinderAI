@@ -1,7 +1,7 @@
 /**
  * Dar Concierge PWA service worker — offline shell + static asset cache.
  */
-const CACHE = "dar-concierge-v4";
+const CACHE = "dar-concierge-v5";
 const PRECACHE = [
   "/rent",
   "/rent.html",
