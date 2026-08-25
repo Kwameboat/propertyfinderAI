@@ -37,7 +37,7 @@ src, dst, token = sys.argv[1], sys.argv[2], sys.argv[3]
 Path(dst).write_text(Path(src).read_text().replace("REPLACE_WITH_JAB_RE_INGEST_TOKEN", token))
 PY
   docker cp "$WORKDIR/$base" jabhub_n8n:/tmp/"$base"
-  docker exec jabhub_n8n n8n import:workflow --input=/tmp/"$base" --activeState=fromJson
+  docker exec jabhub_n8n n8n import:workflow --input=/tmp/"$base"
 done
 docker exec jabhub_n8n n8n update:workflow --id=a1b2c3d4-e5f6-7890-abcd-ef1234567890 --active=false || true
 docker exec jabhub_n8n n8n update:workflow --id=b2c3d4e5-f6a7-8901-bcde-f12345678901 --active=false || true

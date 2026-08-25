@@ -327,7 +327,7 @@ export async function countActiveListingsSupabase() {
 export async function countListingsBySourceSupabase() {
   if (!isSupabaseEnabled()) return null;
   const rows = await supabaseRequest(
-    "listings?select=source,external_id,images&is_active=eq.true&limit=10000"
+    "listings?select=source,external_id&is_active=eq.true&limit=10000"
   );
   if (!Array.isArray(rows)) return {};
   return rows.reduce((acc, row) => {
