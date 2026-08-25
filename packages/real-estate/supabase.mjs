@@ -324,10 +324,11 @@ export async function countActiveListingsSupabase() {
   return m ? Number(m[1]) : null;
 }
 
-export async function countListingsBySourceSupabase() {
+export async function countListingsBySourceSupabase(sources) {
   if (!isSupabaseEnabled()) return null;
+  const filter = sources?.length ? `&source=in.(${sources.join(",")})` : "";
   const rows = await supabaseRequest(
-    "listings?select=source,external_id&is_active=eq.true&limit=10000"
+    `listings?select=source,external_id&is_active=eq.true${filter}&limit=10000`
   );
   if (!Array.isArray(rows)) return {};
   return rows.reduce((acc, row) => {

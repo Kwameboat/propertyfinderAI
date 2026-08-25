@@ -62,7 +62,7 @@ export async function getListingsStatus(db) {
   if (isSupabaseEnabled()) {
     const [total, bySource] = await Promise.all([
       countActiveListingsSupabase(),
-      countListingsBySourceSupabase()
+      countListingsBySourceSupabase(isGhanaMarket() ? GHANA_PORTALS : null)
     ]);
     const sources = bySource || {};
     if (isGhanaMarket()) {
