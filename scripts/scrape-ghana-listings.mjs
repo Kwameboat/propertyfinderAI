@@ -9,7 +9,7 @@ import { openHubDb, upsertListing, startScrapeRun, finishScrapeRun } from "../pa
 import { GHANA_SEED_LISTINGS } from "../packages/real-estate/data/seed-ghana-listings.mjs";
 import { clusterKey } from "../packages/real-estate/cluster.mjs";
 import { loadHubEnv } from "../packages/real-estate/env.mjs";
-import { scrapeSourceToRows, GHANA_INGEST_SOURCES } from "../packages/real-estate/scrape-runner.mjs";
+import { scrapeSourceToRows, GHANA_INGEST_SOURCES, GHANA_SCRAPE_TYPES } from "../packages/real-estate/scrape-runner.mjs";
 import { isSupabaseEnabled, batchSyncListingsToSupabase } from "../packages/real-estate/supabase.mjs";
 import { prepareListing } from "../packages/real-estate/ingest.mjs";
 import { getN8nIngestSources } from "../packages/real-estate/mode.mjs";
@@ -50,7 +50,7 @@ async function saveSupabase(rows) {
 const summary = [];
 
 for (const source of sources) {
-  const runId = startScrapeRun(db, { source, emirate: "Ghana", transaction_type: "rent" });
+  const runId = startScrapeRun(db, { source, emirate: "Ghana", transaction_type: GHANA_SCRAPE_TYPES.join(",") });
   const errors = [];
   let found = 0;
   let supabaseUpserted = 0;
@@ -59,7 +59,7 @@ for (const source of sources) {
       saveSqlite(GHANA_SEED_LISTINGS);
       found = GHANA_SEED_LISTINGS.length;
     } else {
-      const scrape = await scrapeSourceToRows(source, { types: ["rent"], maxPages: 3 });
+      const scrape = await scrapeSourceToRows(source, { types: GHANA_SCRAPE_TYPES, maxPages: 3 });
       found = scrape.found;
       errors.push(...(scrape.errors || []));
       saveSqlite(scrape.rows);

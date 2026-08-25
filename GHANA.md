@@ -23,15 +23,17 @@ cd apps/hub && npm start
 # open http://127.0.0.1:3000/gh
 ```
 
-Scrape Ghana portals into the listing store (SQLite + Supabase when configured):
+Scrape Ghana portals into the listing store (SQLite + Supabase when configured). Each run collects **rent and sale**:
 
 ```bash
 node scripts/scrape-ghana-listings.mjs --sources=meqasa,jiji,ghanapropertycentre
 ```
 
-n8n on the VPS (`:5678`) now runs **FIE AI Ghana** workflows against Hub `:3001`. Dar Concierge UAE scrape workflows are deactivated. Hourly UAE systemd scrape timers stay disabled.
+n8n on the VPS (`:5678`) now runs **FIE AI Ghana** workflows against Hub `:3001` with `types: ["rent","sale"]`. Dar Concierge UAE scrape workflows are deactivated. Hourly UAE systemd scrape timers stay disabled.
 
-Live Ghana inventory: Ghana Property Centre HTML/JSON-LD is the reliable public source. Meqasa and Jiji are attempted each run; Jiji often 403s from datacenter IPs.
+Live Ghana inventory: Ghana Property Centre HTML/JSON-LD is the reliable public source (for-rent and for-sale). Meqasa and Jiji are attempted each run; Jiji often 403s from datacenter IPs.
+
+Landlords and agents can also publish from the PWA: tap **List your property** on `/gh` (also in the menu and Profile). Direct listings use source `fie_direct` and show in Explore Rent/Buy alongside portal rows.
 
 ## Money
 

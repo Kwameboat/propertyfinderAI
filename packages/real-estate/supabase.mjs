@@ -3,7 +3,7 @@
  * When SUPABASE_URL + SUPABASE_SERVICE_ROLE_KEY are set, upserts mirror local SQLite.
  */
 
-import { isGhanaMarket, GHANA_PORTALS, UAE_PORTALS } from "./market.mjs";
+import { isGhanaMarket, GHANA_PORTALS, UAE_PORTALS, ghanaListingSources } from "./market.mjs";
 
 function cfg() {
   const url = String(process.env.SUPABASE_URL || "").trim().replace(/\/$/, "");
@@ -171,7 +171,7 @@ export async function searchListingsSupabase(criteria = {}, limit = 10) {
   if (criteria.sources?.length) {
     params.set("source", `in.(${criteria.sources.join(",")})`);
   } else if (isGhanaMarket()) {
-    params.set("source", `in.(${GHANA_PORTALS.join(",")})`);
+    params.set("source", `in.(${ghanaListingSources().join(",")})`);
   }
   if (criteria.transaction_type) params.set("transaction_type", `eq.${criteria.transaction_type}`);
   if (criteria.emirates?.length > 1) {

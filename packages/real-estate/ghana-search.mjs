@@ -6,14 +6,14 @@
 import { searchListingsStore } from "./listings-store.mjs";
 import { formatListingTitle } from "./listing-polish.mjs";
 import { attachClusterMeta, groupListingsByCluster } from "./cluster.mjs";
-import { isGhanaMarket, GHANA_PORTALS } from "./market.mjs";
+import { isGhanaMarket, ghanaListingSources } from "./market.mjs";
 
 function ghanaQuery(criteria = {}) {
   const query = {
-    transaction_type: criteria.transaction_type || "rent",
     include_seed: true,
-    sources: GHANA_PORTALS
+    sources: ghanaListingSources()
   };
+  if (criteria.transaction_type) query.transaction_type = criteria.transaction_type;
   const city = String(criteria.emirate || "").trim();
   if (city && !/^(dubai|abu dhabi|sharjah|ajman|rak|fujairah|uaq)$/i.test(city)) {
     query.emirate = city;
@@ -48,7 +48,11 @@ export async function pullGhanaListingsForChat(db, criteria = {}, { limit = 8 } 
   if (!listings.length && (query.emirate || query.community || query.beds != null)) {
     listings = await searchListingsStore(
       db,
-      { transaction_type: query.transaction_type, include_seed: true, sources: GHANA_PORTALS },
+      {
+        ...(query.transaction_type ? { transaction_type: query.transaction_type } : {}),
+        include_seed: true,
+        sources: ghanaListingSources()
+      },
       24
     );
   }
@@ -61,11 +65,17 @@ export async function pullGhanaListingsForChat(db, criteria = {}, { limit = 8 } 
 
   const loc = criteria.community || criteria.emirate || "Ghana";
   const type = criteria.property_type ? ` ${criteria.property_type}` : "";
+  const tx =
+    criteria.transaction_type === "sale"
+      ? "homes for sale"
+      : criteria.transaction_type === "rent"
+        ? "rentals"
+        : "listings";
   return {
     ok: cards.length > 0,
     listings: cards,
     sources: ["ghana_store"],
-    searchMessage: `Searched Ghana listings for${type} rentals in ${loc}.`,
+    searchMessage: `Searched Ghana listings for${type} ${tx} in ${loc}.`,
     searched: true,
     fetchedAt: new Date().toISOString()
   };

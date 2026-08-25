@@ -133,6 +133,20 @@ html, body {
   margin: 0 0 12px;
 }
 
+.market-gh .list-property-cta {
+  margin-top: 12px;
+  width: 100%;
+}
+
+.market-gh .list-property-hint {
+  margin: 8px 0 0;
+  font-size: 0.75rem;
+}
+
+.market-gh .list-property-profile {
+  margin-top: 12px;
+}
+
 .market-gh .brand-logo--menu {
   max-width: 96px;
   max-height: 120px;
@@ -1347,7 +1361,11 @@ dialog label {
 }
 
 dialog input[type="text"],
-dialog input[type="tel"] {
+dialog input[type="tel"],
+dialog input[type="number"],
+dialog input[type="file"],
+dialog select,
+dialog textarea {
   display: block;
   width: 100%;
   margin-top: 4px;
@@ -1357,6 +1375,22 @@ dialog input[type="tel"] {
   background: var(--bg);
   color: var(--text);
   font: inherit;
+}
+
+dialog textarea {
+  min-height: 72px;
+  resize: vertical;
+}
+
+.owner-listing-dialog {
+  max-height: min(90dvh, 720px);
+  overflow: auto;
+}
+
+.owner-listing-error {
+  margin-top: 12px;
+  color: #f87171;
+  font-size: 0.82rem;
 }
 
 dialog .checkbox {

@@ -36,7 +36,7 @@
         },
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={\"source\":\"ghanapropertycentre\",\"types\":[\"rent\"],\"maxPages\":3}",
+        "jsonBody": "={\"source\":\"ghanapropertycentre\",\"types\":[\"rent\",\"sale\"],\"maxPages\":3}",
         "options": { "timeout": 600000 }
       },
       "id": "scrape-gpc",
@@ -59,7 +59,7 @@
         },
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={\"source\":\"meqasa\",\"types\":[\"rent\"],\"maxPages\":2}",
+        "jsonBody": "={\"source\":\"meqasa\",\"types\":[\"rent\",\"sale\"],\"maxPages\":2}",
         "options": { "timeout": 600000 }
       },
       "id": "scrape-meqasa",
@@ -82,7 +82,7 @@
         },
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={\"source\":\"jiji\",\"types\":[\"rent\"],\"maxPages\":2}",
+        "jsonBody": "={\"source\":\"jiji\",\"types\":[\"rent\",\"sale\"],\"maxPages\":2}",
         "options": { "timeout": 300000 }
       },
       "id": "scrape-jiji",

@@ -167,9 +167,11 @@ async function runPuppeteerSource(source, stubDb, upsert, options) {
   return fn();
 }
 
+export const GHANA_SCRAPE_TYPES = ["rent", "sale"];
+
 async function scrapeGhanaSource(scrapeFn, stubDb, upsert, options) {
   const cities = options.emirates?.length ? options.emirates : getScrapeEmirates();
-  const types = options.types?.length ? options.types : ["rent"];
+  const types = options.types?.length ? options.types : GHANA_SCRAPE_TYPES;
   const pages = options.maxPages || 3;
   const errors = [];
   let found = 0;

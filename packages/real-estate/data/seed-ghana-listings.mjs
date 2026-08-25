@@ -115,5 +115,24 @@ export const GHANA_SEED_LISTINGS = [
     agent_phone: "+233244777888",
     agency_name: "Demo Agency E",
     images: ["/gh-media/ahodwo.svg"]
+  },
+  {
+    source: "ghanapropertycentre",
+    external_id: "gh-east-legon-sale-1",
+    source_url: "https://ghanapropertycentre.com/for-sale/houses/east-legon",
+    transaction_type: "sale",
+    property_type: "house",
+    beds: 3,
+    baths: 3,
+    emirate: "Accra",
+    community: "East Legon",
+    price_aed: 850000,
+    price_period: "total",
+    furnished: false,
+    description: "3-bedroom house for sale in East Legon, walled compound, parking.",
+    agent_name: "Nana Adjei",
+    agent_phone: "+233244999000",
+    agency_name: "Demo Agency Sale",
+    images: ["/gh-media/east-legon-1.svg"]
   }
 ];

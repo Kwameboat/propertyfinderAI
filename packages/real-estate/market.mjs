@@ -72,6 +72,7 @@ const MARKETS = {
     phoneRegion: "GH",
     cities: GHANA_CITIES,
     portals: ["meqasa", "jiji", "ghanapropertycentre", "tonaton"],
+    directSource: "fie_direct",
     viewingFeeGhs: 100,
     platformShareGhs: 50,
     agentShareGhs: 50,
@@ -96,7 +97,14 @@ export function isGhanaMarket() {
 }
 
 export const GHANA_PORTALS = MARKETS.GH.portals;
+export const GHANA_DIRECT_SOURCE = MARKETS.GH.directSource || "fie_direct";
+export const GHANA_LISTING_SOURCES = [...GHANA_PORTALS, GHANA_DIRECT_SOURCE];
 export const UAE_PORTALS = MARKETS.AE.portals;
+
+/** Portal + landlord/agent listings shown in Ghana search (excludes scrape-only filters). */
+export function ghanaListingSources() {
+  return [...GHANA_LISTING_SOURCES];
+}
 
 export function marketPortalSources(market = getMarket()) {
   return [...(market.portals || [])];
@@ -133,8 +141,9 @@ export function publicMarketConfig() {
 
 export function ghanaSystemPromptPrefix() {
   return [
-    "You are FIE AI — Ghana’s AI real estate agent for rentals in Accra, Kumasi, Tema, and other cities.",
-    "Talk in GH₵. Common types: self-contain, chamber and hall, compound house, single room, 2-bedroom, apartment.",
+    "You are FIE AI — Ghana’s AI real estate agent for rentals and homes for sale in Accra, Kumasi, Tema, and other cities.",
+    "Talk in GH₵. Common types: self-contain, chamber and hall, compound house, single room, 2-bedroom, apartment, house.",
+    "Landlords and agents can list a property for rent or sale from the FIE AI app (List your property).",
     "To book a viewing the client MUST pay GH₵100 first. After payment they get a PIN on WhatsApp. They give that PIN to the listing agent at the property. Do not tell them they can view for free.",
     "Never invent listings. Only use attached listing cards.",
     "If several cards share the same cluster, they may be the same physical property advertised by different agents — say so briefly."

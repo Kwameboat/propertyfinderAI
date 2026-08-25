@@ -10,6 +10,8 @@ import { migrateGhanaViewing } from "../packages/hub-db/ghana-viewing.mjs";
 import { pullGhanaListingsForChat } from "../packages/real-estate/ghana-search.mjs";
 import { resolveEmirateScope } from "../packages/real-estate/emirate-scope.mjs";
 import { GHANA_SEED_LISTINGS } from "../packages/real-estate/data/seed-ghana-listings.mjs";
+import { buildOwnerListing, submitOwnerListing } from "../packages/real-estate/owner-listing.mjs";
+import { GHANA_DIRECT_SOURCE } from "../packages/real-estate/market.mjs";
 
 function withMarket(code, fn) {
   const prev = process.env.JAB_RE_MARKET;
@@ -134,5 +136,83 @@ test("Ghana search clusters East Legon seed offers into one card", async () => {
     const east = pull.listings.filter((l) => l.community === "East Legon");
     assert.equal(east.length, 1);
     assert.equal(east[0].other_agent_count, 2);
+    const buy = await pullGhanaListingsForChat(db, { emirate: "Accra", community: "East Legon", transaction_type: "sale" }, { limit: 8 });
+    assert.ok(buy.listings.some((l) => l.transaction_type === "sale"));
+    assert.ok(buy.searchMessage.includes("homes for sale"));
+  });
+});
+
+test("direct owner listing is Ghana-only and saves rent or sale", async () => {
+  await withMarket("AE", () => {
+    const blocked = buildOwnerListing({
+      name: "Ama Mensah",
+      phone: "0244111222",
+      city: "Accra",
+      area: "East Legon",
+      transaction_type: "rent",
+      property_type: "self-contain",
+      beds: 1,
+      price: 1800,
+      consent: true
+    });
+    assert.equal(blocked.ok, false);
+  });
+
+  await withMarket("GH", async () => {
+    const missing = buildOwnerListing({ name: "Ama", phone: "0244111222", consent: true });
+    assert.equal(missing.ok, false);
+
+    const rent = buildOwnerListing({
+      name: "Ama Mensah",
+      phone: "0244111222",
+      city: "Accra",
+      area: "East Legon",
+      transaction_type: "rent",
+      property_type: "self-contain",
+      beds: 1,
+      price: 1800,
+      consent: true
+    });
+    assert.equal(rent.ok, true);
+    assert.equal(rent.row.source, GHANA_DIRECT_SOURCE);
+    assert.equal(rent.row.transaction_type, "rent");
+    assert.equal(rent.row.price_period, "monthly");
+    assert.equal(rent.row.agent_phone, "+233244111222");
+
+    const sale = buildOwnerListing({
+      name: "Kojo Owusu",
+      phone: "+233201112233",
+      role: "agent",
+      city: "Kumasi",
+      area: "Ahodwo",
+      transaction_type: "buy",
+      property_type: "house",
+      beds: 3,
+      price: "450000",
+      consent: "on"
+    });
+    assert.equal(sale.ok, true);
+    assert.equal(sale.row.transaction_type, "sale");
+    assert.equal(sale.row.price_period, "total");
+    assert.equal(sale.row.price_aed, 450000);
+
+    const db = new DatabaseSync(":memory:");
+    migrateRealEstate(db);
+    const saved = await submitOwnerListing(db, {
+      name: "Ama Mensah",
+      phone: "0244111222",
+      city: "Accra",
+      area: "Osu",
+      transaction_type: "sale",
+      property_type: "apartment",
+      beds: 2,
+      price: 320000,
+      consent: true
+    });
+    assert.equal(saved.ok, true);
+    const found = searchListings(db, { transaction_type: "sale", sources: [GHANA_DIRECT_SOURCE] }, 10);
+    assert.equal(found.length, 1);
+    assert.equal(found[0].community, "Osu");
+    assert.equal(found[0].source, GHANA_DIRECT_SOURCE);
   });
 });

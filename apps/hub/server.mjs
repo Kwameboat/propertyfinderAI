@@ -1,4 +1,4 @@
-import { createHash, randomBytes, timingSafeEqual } from "node:crypto";
+import { createHash, randomBytes, randomUUID, timingSafeEqual } from "node:crypto";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -124,6 +124,7 @@ import {
 } from "../../packages/hub-db/index.mjs";
 import { handleRentChat, handleRentTranscribe, submitRentLead, formatListingCard, formatListingDetail } from "../../packages/real-estate/chat.mjs";
 import { publicMarketConfig, isGhanaMarket } from "../../packages/real-estate/market.mjs";
+import { submitOwnerListing, sanitizeOwnerPhotoUrls } from "../../packages/real-estate/owner-listing.mjs";
 import { attachClusterMeta, groupListingsByCluster } from "../../packages/real-estate/cluster.mjs";
 import {
   confirmGhanaViewingPayment,
@@ -706,6 +707,51 @@ function rentRateLimit(req, res, next) {
   next();
 }
 
+const ownerListRate = new Map();
+const OWNER_LIST_WINDOW_MS = 60 * 60 * 1000;
+const OWNER_LIST_MAX = Number(process.env.JAB_RE_OWNER_LIST_MAX || 8);
+
+function ownerListingRateLimit(req, res, next) {
+  const ip = String(req.headers["x-forwarded-for"] || req.socket?.remoteAddress || "local").split(",")[0].trim();
+  const now = Date.now();
+  const row = ownerListRate.get(ip) || { count: 0, reset: now + OWNER_LIST_WINDOW_MS };
+  if (now > row.reset) {
+    row.count = 0;
+    row.reset = now + OWNER_LIST_WINDOW_MS;
+  }
+  row.count++;
+  ownerListRate.set(ip, row);
+  if (row.count > OWNER_LIST_MAX) {
+    res.status(429).json({ ok: false, error: "Too many listings from this device — try again later." });
+    return;
+  }
+  next();
+}
+
+function optionalOwnerPhotos(req, res, next) {
+  const ct = String(req.headers["content-type"] || "");
+  if (ct.includes("multipart/form-data")) {
+    return upload.array("photos", 5)(req, res, next);
+  }
+  next();
+}
+
+async function saveOwnerListingPhotos(files = []) {
+  if (!files?.length) return [];
+  const folder = randomUUID();
+  const dir = path.join(paths.uploadsDir, "owner-listings", folder);
+  await mkdir(dir, { recursive: true });
+  const saved = [];
+  for (const file of files) {
+    const ext = path.extname(file.originalname || file.filename || "").toLowerCase();
+    if (![".jpg", ".jpeg", ".png", ".webp"].includes(ext)) continue;
+    const name = `${Date.now()}-${saved.length}${ext === ".jpeg" ? ".jpg" : ext}`;
+    await writeFile(path.join(dir, name), await readFile(file.path));
+    saved.push(`/uploads/owner-listings/${folder}/${name}`);
+  }
+  return saved;
+}
+
 /** Rate limit Hub admin login (per IP). */
 const loginRate = new Map();
 const LOGIN_RATE_WINDOW_MS = 60_000;
@@ -1137,6 +1183,32 @@ app.post("/api/rent/lead", rentRateLimit, async (req, res) => {
       notes
     });
     res.json({ ok: true, ...result });
+  } catch (error) {
+    res.status(400).json({ ok: false, error: error.message });
+  }
+});
+
+app.post("/api/rent/owner-listing", rentRateLimit, ownerListingRateLimit, optionalOwnerPhotos, async (req, res) => {
+  try {
+    if (!isGhanaMarket()) {
+      res.status(404).json({ ok: false, error: "Not found" });
+      return;
+    }
+    const body = req.body || {};
+    const uploaded = await saveOwnerListingPhotos(req.files || []);
+    const photoUrls = sanitizeOwnerPhotoUrls(body.photoUrls || body.photos || body.photo_urls);
+    const result = await submitOwnerListing(db, {
+      ...body,
+      photos: [...uploaded, ...photoUrls]
+    });
+    if (!result.ok) {
+      res.status(400).json({ ok: false, error: result.error || "Could not save listing" });
+      return;
+    }
+    res.json({
+      ok: true,
+      listing: result.listing ? formatListingCard(result.listing) : null
+    });
   } catch (error) {
     res.status(400).json({ ok: false, error: error.message });
   }

@@ -125,7 +125,11 @@ export async function enrichListingsWithImages(listings = [], { minImages = 1 } 
 }
 
 export function isLocalGhanaMedia(url = "") {
-  return /^\/gh-media\/[A-Za-z0-9._-]+\.(?:svg|png|jpe?g|webp)$/i.test(String(url).trim());
+  const u = String(url).trim();
+  return (
+    /^\/gh-media\/[A-Za-z0-9._-]+\.(?:svg|png|jpe?g|webp)$/i.test(u) ||
+    /^\/uploads\/owner-listings\/[A-Za-z0-9/_-]+\.(?:png|jpe?g|webp)$/i.test(u)
+  );
 }
 
 export function isChatListingImage(url = "") {

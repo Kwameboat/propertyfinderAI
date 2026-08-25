@@ -36,7 +36,7 @@
         },
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={\"sources\":[\"ghanapropertycentre\",\"meqasa\",\"jiji\"],\"types\":[\"rent\"],\"maxPages\":2}",
+        "jsonBody": "={\"sources\":[\"ghanapropertycentre\",\"meqasa\",\"jiji\"],\"types\":[\"rent\",\"sale\"],\"maxPages\":2}",
         "options": { "timeout": 1800000 }
       },
       "id": "scrape-all-ghana",

@@ -52,7 +52,7 @@ function applyMarketBranding() {
   document.querySelector('meta[name="description"]')?.setAttribute(
     "content",
     ghana
-      ? "FIE AI — your AI real estate agent in Ghana. Rooms, self-contains, and apartments. Pay GH₵100 to view."
+      ? "FIE AI — your AI real estate agent in Ghana. Rent or buy rooms, self-contains, apartments, and houses. Landlords and agents can list directly. Pay GH₵100 to view."
       : "Dar Concierge AI — Your UAE AI Property Assistant. Powered by KeyFinder AI."
   );
   document.querySelectorAll(".logo-link").forEach((a) => {
@@ -77,8 +77,8 @@ function applyMarketBranding() {
   if (ghana && pills[0] && pills[1]) {
     pills[0].textContent = "East Legon self-contain";
     pills[0].dataset.msg = "Show me self-contain rooms for rent in East Legon";
-    pills[1].textContent = "Osu chamber and hall";
-    pills[1].dataset.msg = "I need a chamber and hall in Osu under GH₵1500";
+    pills[1].textContent = "East Legon for sale";
+    pills[1].dataset.msg = "Show me houses for sale in East Legon";
   }
   const actions = document.querySelectorAll("#quick-actions .action-card");
   if (ghana && actions.length >= 3) {
@@ -134,6 +134,11 @@ function applyMarketBranding() {
     const btn = document.getElementById("lead-submit");
     if (btn) btn.textContent = `Pay GH₵${marketConfig.viewingFeeGhs || 100}`;
   }
+  document.querySelectorAll(".gh-only").forEach((el) => {
+    el.classList.toggle("hidden", !ghana);
+    el.hidden = !ghana;
+  });
+  fillOwnerListingCities();
   const menuNav = document.querySelector(".side-menu-nav");
   if (ghana && menuNav && !document.getElementById("gh-agent-link")) {
     const a = document.createElement("a");
@@ -152,6 +157,10 @@ const leadListing = document.getElementById("lead-listing");
 const listingDialog = document.getElementById("listing-dialog");
 const listingDetailEl = document.getElementById("listing-detail");
 const listingClose = document.getElementById("listing-close");
+const ownerListingDialog = document.getElementById("owner-listing-dialog");
+const ownerListingForm = document.getElementById("owner-listing-form");
+const ownerListingCancel = document.getElementById("owner-listing-cancel");
+const ownerListingError = document.getElementById("owner-listing-error");
 const compareDialog = document.getElementById("compare-dialog");
 const compareContent = document.getElementById("compare-content");
 const compareClose = document.getElementById("compare-close");
@@ -332,6 +341,79 @@ function composerPlaceholder() {
 
 function defaultInitials() {
   return isGhanaMarket() ? "FI" : "DC";
+}
+
+function fillOwnerListingCities() {
+  const select = document.getElementById("owner-listing-city");
+  if (!select || !Array.isArray(marketConfig.cities) || !marketConfig.cities.length) return;
+  const current = select.value;
+  select.innerHTML = marketConfig.cities
+    .map((city) => `<option value="${escapeAttr(city)}">${escapeHtml(city)}</option>`)
+    .join("");
+  if (current && marketConfig.cities.includes(current)) select.value = current;
+}
+
+function setOwnerListingError(message) {
+  if (!ownerListingError) return;
+  if (!message) {
+    ownerListingError.textContent = "";
+    ownerListingError.classList.add("hidden");
+    ownerListingError.hidden = true;
+    return;
+  }
+  ownerListingError.textContent = message;
+  ownerListingError.classList.remove("hidden");
+  ownerListingError.hidden = false;
+}
+
+function openOwnerListingDialog() {
+  if (!isGhanaMarket() || !ownerListingDialog) return;
+  closeMenu?.();
+  fillOwnerListingCities();
+  setOwnerListingError("");
+  ownerListingDialog.showModal();
+}
+
+async function submitOwnerListingForm(event) {
+  event.preventDefault();
+  if (!ownerListingForm) return;
+  const submitBtn = document.getElementById("owner-listing-submit");
+  const fd = new FormData(ownerListingForm);
+  if (!fd.get("consent")) {
+    setOwnerListingError("Please confirm you have the right to list this property.");
+    return;
+  }
+  const files = ownerListingForm.querySelector('input[name="photos"]')?.files;
+  if (files?.length) {
+    const photos = fd.getAll("photos");
+    fd.delete("photos");
+    [...photos].slice(0, 5).forEach((file) => fd.append("photos", file));
+  }
+  if (submitBtn) submitBtn.disabled = true;
+  setOwnerListingError("");
+  try {
+    const res = await fetch("/api/rent/owner-listing", { method: "POST", body: fd });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok || !data.ok) {
+      setOwnerListingError(data.error || "Could not publish listing.");
+      return;
+    }
+    ownerListingDialog.close();
+    ownerListingForm.reset();
+    exploreLoaded = false;
+    switchTab("explore");
+    if (data.listing?.transaction_type === "sale") {
+      document.querySelectorAll(".filter-pill").forEach((p) => p.classList.remove("active"));
+      const buy = document.querySelector('.filter-pill[data-filter="sale"]');
+      if (buy) buy.classList.add("active");
+      exploreFilter = "sale";
+    }
+    await loadExplore();
+  } catch {
+    setOwnerListingError("Could not publish listing. Try again.");
+  } finally {
+    if (submitBtn) submitBtn.disabled = false;
+  }
 }
 
 function aiDisclaimerHtml(text) {
@@ -627,6 +709,7 @@ function sourceLabel(source) {
     meqasa: "Meqasa",
     ghanapropertycentre: "Ghana Property Centre",
     tonaton: "Tonaton",
+    fie_direct: "Direct listing",
     seed: "Demo"
   };
   return map[source] || source.replace(/_/g, " ");
@@ -1683,8 +1766,10 @@ micBtn?.addEventListener("click", () => toggleVoiceRecording());
 
 document.querySelectorAll(".pill, .action-card").forEach((el) => {
   el.addEventListener("click", () => {
+    const msg = el.getAttribute("data-msg");
+    if (!msg) return;
     switchTab("concierge");
-    sendMessage(el.getAttribute("data-msg"));
+    sendMessage(msg);
   });
 });
 
@@ -1728,6 +1813,14 @@ saveProfileBtn?.addEventListener("click", () => {
 });
 
 leadCancel.addEventListener("click", () => leadDialog.close());
+ownerListingCancel?.addEventListener("click", () => ownerListingDialog?.close());
+document.getElementById("list-property-btn")?.addEventListener("click", openOwnerListingDialog);
+document.getElementById("list-property-profile-btn")?.addEventListener("click", openOwnerListingDialog);
+document.getElementById("list-property-menu-btn")?.addEventListener("click", () => {
+  closeMenu();
+  openOwnerListingDialog();
+});
+ownerListingForm?.addEventListener("submit", submitOwnerListingForm);
 listingClose.addEventListener("click", () => listingDialog.close());
 compareClose?.addEventListener("click", () => compareDialog.close());
 savedCompareBtn?.addEventListener("click", () => runCompare([...compareSelection]));
