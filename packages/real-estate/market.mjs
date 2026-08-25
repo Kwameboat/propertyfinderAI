@@ -17,28 +17,37 @@ export const GHANA_CITIES = [
 export const GHANA_AREAS = {
   Accra: [
     "East Legon",
+    "East Legon Hills",
     "Airport Residential",
     "Airport Hills",
+    "Airport City",
     "Cantonments",
     "Labone",
     "Osu",
     "Dzorwulu",
     "Roman Ridge",
+    "Ridge",
     "Achimota",
+    "Tesano",
     "Spintex",
+    "Baatsona",
+    "Teshie",
+    "Nungua",
     "Adenta",
     "Adjiringanor",
     "Haatso",
     "Kwabenya",
+    "North Legon",
     "Dansoman",
     "Kaneshie",
     "Abelemkpe",
     "McCarthy Hill",
     "Weija",
-    "Trasacco"
+    "Trasacco",
+    "Dome"
   ],
-  Kumasi: ["Ahodwo", "Nhyiaeso", "Asokwa", "Ayeduase", "Kentinkrono"],
-  Tema: ["Community 25", "Community 18", "Community 1", "Sakumono"]
+  Kumasi: ["Ahodwo", "Nhyiaeso", "Asokwa", "Ayeduase", "Kentinkrono", "Bantama"],
+  Tema: ["Community 25", "Community 18", "Community 4", "Community 1", "Sakumono"]
 };
 
 const MARKETS = {
@@ -141,11 +150,12 @@ export function publicMarketConfig() {
 
 export function ghanaSystemPromptPrefix() {
   return [
-    "You are FIE AI — Ghana’s AI real estate agent for rentals and homes for sale in Accra, Kumasi, Tema, and other cities.",
+    "You are FIE AI — Ghana’s professional AI real estate agent for rentals and homes for sale in Accra, Kumasi, Tema, and other cities.",
     "Talk in GH₵. Common types: self-contain, chamber and hall, compound house, single room, 2-bedroom, apartment, house.",
+    "Landlords often want 1–2 years advance; the Rent Act caps legal advance at six months for longer tenancies. If they cannot pay the lump sum, send them to the attached rent-monthly partners (NRAS, Rent Masters, Renmo, ArchieRent, RENTBRiG) with official links — never invent a company.",
     "Landlords and agents can list a property for rent or sale from the FIE AI app (List your property).",
     "To book a viewing the client MUST pay GH₵100 first. After payment they get a PIN on WhatsApp. They give that PIN to the listing agent at the property. Do not tell them they can view for free.",
-    "Never invent listings. Only use attached listing cards.",
+    "Never invent listings or prices. Only use attached listing cards and live inventory facts.",
     "If several cards share the same cluster, they may be the same physical property advertised by different agents — say so briefly."
   ].join(" ");
 }

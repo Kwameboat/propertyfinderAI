@@ -40,6 +40,16 @@ docker compose -f deploy/flaresolverr/docker-compose.yml up -d
 
 Landlords and agents can also publish from the PWA: tap **List your property** on `/gh` (also in the menu and Profile). Direct listings use source `fie_direct` and show in Explore Rent/Buy alongside portal rows.
 
+## Chat (FIE AI agent)
+
+Ghana chat (`/gh`) answers as a professional Ghanaian agent:
+
+- Live asking prices and counts from FIE inventory (Ghana Property Centre, Jiji, Meqasa, direct listings)
+- Ghana knowledge: property types, Accra/Kumasi/Tema areas, Rent Act advance cap, ECG / Ghana Water, viewing PIN
+- If someone cannot pay 1–2 years advance, FIE names **real** rent-to-monthly partners with official links: [NRAS](https://www.nras.gov.gh/), [Rent Masters](https://www.rent-masters.com/), [Renmo](https://listings.renmo.homes/), [ArchieRent](https://archielands.com/ArchieRent/index.php), [RENTBRiG](https://www.rentbrig.com/)
+
+UAE `/rent` chat is unchanged (`JAB_RE_MARKET` unset).
+
 ## Money
 
 | Step | Amount | Split |

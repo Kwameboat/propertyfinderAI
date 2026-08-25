@@ -1,10 +1,13 @@
 /**
- * Knowledge retrieval for UAE real estate concierge.
+ * Knowledge retrieval for UAE / Ghana real estate concierge.
  */
 
 import { searchKnowledge } from "../hub-db/real-estate.mjs";
+import { isGhanaMarket } from "./market.mjs";
+import { formatGhanaKnowledgeBlock, retrieveGhanaKnowledge } from "./ghana-knowledge.mjs";
 
 export function formatKnowledgeBlockForPrompt(docs = []) {
+  if (isGhanaMarket()) return formatGhanaKnowledgeBlock(docs);
   if (!docs.length) {
     return "KNOWLEDGE BASE: no matching docs — use general UAE property knowledge carefully and suggest verifying with RERA/DLD.";
   }
@@ -14,7 +17,10 @@ export function formatKnowledgeBlockForPrompt(docs = []) {
   return ["KNOWLEDGE BASE (trusted reference — prefer over guessing):", ...blocks].join("\n\n");
 }
 
-export function retrieveKnowledge(db, { query = "", intent = "general", limit = 6 } = {}) {
+export function retrieveKnowledge(db, { query = "", intent = "general", limit = 6, rentFinance = false } = {}) {
+  if (isGhanaMarket()) {
+    return retrieveGhanaKnowledge(query, { intent, limit, rentFinance });
+  }
   const intentTags = {
     faq: "faq renting ejari rera",
     move_in: "move in dewa ejari checklist",

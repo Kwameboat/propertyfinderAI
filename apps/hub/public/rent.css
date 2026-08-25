@@ -485,6 +485,52 @@ html, body {
   flex-shrink: 0;
 }
 
+.partner-cards {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  align-self: stretch;
+}
+
+.partner-card {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 12px 14px;
+  border-radius: var(--radius);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  color: inherit;
+  text-decoration: none;
+}
+
+.partner-card:hover {
+  border-color: var(--gold);
+}
+
+.partner-card strong {
+  font-size: 0.88rem;
+}
+
+.partner-kind {
+  font-size: 0.68rem;
+  color: var(--muted);
+  letter-spacing: 0.02em;
+}
+
+.partner-summary {
+  font-size: 0.8rem;
+  line-height: 1.4;
+  color: var(--text);
+}
+
+.partner-link {
+  font-size: 0.72rem;
+  color: var(--gold);
+  font-weight: 600;
+  margin-top: 2px;
+}
+
 /* Inline chat listing cards — lives inside .chat-thread */
 .chat-thread .chat-listings {
   padding: 8px 0 4px;

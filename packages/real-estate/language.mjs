@@ -1,6 +1,8 @@
 /**
- * Lightweight language detection for UAE concierge (no external deps).
+ * Lightweight language detection for UAE / Ghana concierge (no external deps).
  */
+
+import { isGhanaMarket } from "./market.mjs";
 
 export const LANGUAGE_NAMES = {
   en: "English",
@@ -70,7 +72,9 @@ export function languagePromptBlock(language = "en") {
     "Language (critical):",
     `- Always reply in ${name} (${code}) — the user's current language.`,
     "- If they switch language mid-chat, switch immediately to match them.",
-    "- Keep UAE place names and AED prices as-is (Marina, JVC, AED 120,000/year).",
+    isGhanaMarket()
+      ? "- Keep Ghana place names and GH₵ prices as-is (East Legon, Osu, GH₵ 1,800/month)."
+      : "- Keep UAE place names and AED prices as-is (Marina, JVC, AED 120,000/year).",
     "- Voice notes arrive as transcribed text — respond in the transcript's language.",
     code === "ar"
       ? "- Use natural Gulf-friendly Arabic; you can mix English property terms when common (Studio, Penthouse)."

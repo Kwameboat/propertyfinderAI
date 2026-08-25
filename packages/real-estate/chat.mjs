@@ -13,7 +13,7 @@ import {
 import { intentNeedsWeb, intentNeedsKnowledge, intentNeedsListings, intentNeedsDeveloperIntel, transactionTypeForIntent, intentNeedsChart } from "./intent.mjs";
 import { extractCriteria, scoreLead, normalizeMarketPhone } from "./qualification.mjs";
 import { retrieveKnowledge, formatKnowledgeBlockForPrompt } from "./rag.mjs";
-import { searchUaeRealEstateWeb, formatWebBlockForPrompt } from "./web.mjs";
+import { searchUaeRealEstateWeb, searchGhanaRealEstateWeb, formatWebBlockForPrompt } from "./web.mjs";
 import { buildRealEstateSystemPrompt, buildLeadDraftMessage } from "./prompt.mjs";
 import { runOpenClawRealEstate, stripHiddenTokens, transcribeVoiceNote } from "./gemini.mjs";
 import { buildInsightChartLive, formatChartBlockForPrompt, buildLiveRagContext } from "./market-data.mjs";
@@ -39,7 +39,9 @@ import {
   formatComparisonBlockForPrompt
 } from "./listing-compare.mjs";
 import { formatListingTitle, polishListingsForChat } from "./listing-polish.mjs";
-import { getMarket, isGhanaMarket, formatMoney, ghanaSystemPromptPrefix } from "./market.mjs";
+import { getMarket, isGhanaMarket } from "./market.mjs";
+import { userWantsGhanaRentFinance, GHANA_RENT_MONTHLY_PARTNERS, formatGhanaPartnersForPrompt } from "./ghana-knowledge.mjs";
+import { buildGhanaLiveFacts, formatGhanaLiveFactsBlock, formatGhanaChartBlockForPrompt } from "./ghana-live-facts.mjs";
 import { attachClusterMeta, groupListingsByCluster } from "./cluster.mjs";
 import { startGhanaViewing } from "./ghana-viewing.mjs";
 import { aiDisclaimerText } from "./disclaimer.mjs";
@@ -84,6 +86,8 @@ export async function handleRentChat(db, { sessionId, message, userPhone = "" } 
   const intent = turn.intent;
   const txType = transactionTypeForIntent(intent, criteria);
   if (txType && !criteria.transaction_type) criteria = { ...criteria, transaction_type: txType };
+  const ghana = isGhanaMarket();
+  const wantsRentFinance = ghana && userWantsGhanaRentFinance(inbound);
 
   let knowledgeBlock = "";
   let webBlock = "";
@@ -94,7 +98,7 @@ export async function handleRentChat(db, { sessionId, message, userPhone = "" } 
   const shouldSearch = turn.shouldSearch;
   const wantsCompare = turn.turn === "compare";
 
-  const needsDeveloperIntel = intentNeedsDeveloperIntel(intent, inbound);
+  const needsDeveloperIntel = !ghana && intentNeedsDeveloperIntel(intent, inbound);
   if (needsDeveloperIntel) {
     try {
       const intel = await buildDeveloperIntelContext(inbound);
@@ -115,25 +119,50 @@ export async function handleRentChat(db, { sessionId, message, userPhone = "" } 
     }
   }
 
-  if (intentNeedsKnowledge(intent) || shouldSearch) {
+  const skipHeavy = turn.answerMode === "greeting" || turn.answerMode === "post_booking";
+
+  if (!skipHeavy && (intentNeedsKnowledge(intent) || shouldSearch || wantsRentFinance || ghana)) {
     const docs = retrieveKnowledge(db, {
       query: inbound,
       intent,
-      limit: shouldSearch || intentNeedsListings(intent) ? 6 : 4
+      limit: shouldSearch || intentNeedsListings(intent) ? 6 : 5,
+      rentFinance: wantsRentFinance
     });
     knowledgeBlock = formatKnowledgeBlockForPrompt(docs);
+    if (wantsRentFinance) {
+      knowledgeBlock = `${formatGhanaPartnersForPrompt()}\n\n${knowledgeBlock}`;
+    }
   }
 
-  if (intentNeedsWeb(intent) && !intentNeedsChart(intent, inbound)) {
+  let ghanaFacts = null;
+  if (ghana && !wantsCompare && !skipHeavy) {
     try {
-      const hits = await searchUaeRealEstateWeb(inbound, { limit: 5 });
+      ghanaFacts = await buildGhanaLiveFacts(db, { criteria, message: inbound });
+      const factsBlock = formatGhanaLiveFactsBlock(ghanaFacts);
+      if (factsBlock) knowledgeBlock = `${knowledgeBlock}\n\n${factsBlock}`.trim();
+    } catch (error) {
+      console.error(JSON.stringify({ at: new Date().toISOString(), ghanaLiveFactsError: error.message }));
+    }
+  }
+
+  if (
+    !skipHeavy &&
+    (intentNeedsWeb(intent) ||
+      (ghana && (wantsRentFinance || intent === "market" || intent === "news" || intent === "area_guide" || intent === "process" || intent === "faq")))
+  ) {
+    try {
+      const hits = ghana
+        ? await searchGhanaRealEstateWeb(inbound, { limit: 5 })
+        : intentNeedsChart(intent, inbound)
+          ? []
+          : await searchUaeRealEstateWeb(inbound, { limit: 5 });
       webBlock = formatWebBlockForPrompt(hits);
     } catch {
       webBlock = formatWebBlockForPrompt([]);
     }
   }
 
-  const showChart = intentNeedsChart(intent, inbound) && !wantsCompare;
+  const showChart = intentNeedsChart(intent, inbound) && !wantsCompare && turn.answerMode !== "rent_finance";
   let chart = null;
   let chartBlock = "";
   let comparison = null;
@@ -157,9 +186,14 @@ export async function handleRentChat(db, { sessionId, message, userPhone = "" } 
   }
 
   if (showChart) {
-    const rag = await buildLiveRagContext(db, criteria, inbound);
-    chart = await buildInsightChartLive(db, intent, criteria, inbound, rag.snapshot);
-    chartBlock = formatChartBlockForPrompt(chart, rag.liveSearchBlock);
+    if (ghana) {
+      chart = ghanaFacts?.chart || null;
+      chartBlock = formatGhanaChartBlockForPrompt(chart);
+    } else {
+      const rag = await buildLiveRagContext(db, criteria, inbound);
+      chart = await buildInsightChartLive(db, intent, criteria, inbound, rag.snapshot);
+      chartBlock = formatChartBlockForPrompt(chart, rag.liveSearchBlock);
+    }
   }
 
   let searchStatusMessage = "";
@@ -270,7 +304,7 @@ export async function handleRentChat(db, { sessionId, message, userPhone = "" } 
     answerMode: turn.answerMode,
     focusListingIndex: turn.focusIndex,
     userMessage: inbound,
-    showListings: hasListings && !wantsCompare && turn.answerMode !== "faq" && turn.answerMode !== "market" && turn.answerMode !== "post_booking",
+    showListings: hasListings && !wantsCompare && turn.answerMode !== "faq" && turn.answerMode !== "market" && turn.answerMode !== "post_booking" && turn.answerMode !== "rent_finance",
     showPhotos: hasListings && !wantsCompare && (shouldSearch || turn.answerMode === "listing_followup") && turn.answerMode !== "post_booking",
     showChart: Boolean(chart),
     showComparison: Boolean(comparison),
@@ -301,15 +335,17 @@ export async function handleRentChat(db, { sessionId, message, userPhone = "" } 
           : "I don't have a live match yet — try another area or bed count.");
 
   if (userWantsMoveInCalculator(inbound) || (intent === "move_in" && /cost|calculator|upfront|cheque|deposit/.test(inbound.toLowerCase()))) {
-    const parsed = parseMoveInCalculatorInput(inbound);
-    const annualRent = parsed.annualRent || criteria.max_price || criteria.min_price || 0;
-    if (annualRent > 0) {
-      const calc = computeMoveInCost({
-        annualRent,
-        includeChiller: parsed.includeChiller,
-        depositMonths: parsed.depositMonths
-      });
-      displayText = `${displayText}\n\n${formatMoveInCostWhatsApp(calc)}`.trim();
+    if (!ghana) {
+      const parsed = parseMoveInCalculatorInput(inbound);
+      const annualRent = parsed.annualRent || criteria.max_price || criteria.min_price || 0;
+      if (annualRent > 0) {
+        const calc = computeMoveInCost({
+          annualRent,
+          includeChiller: parsed.includeChiller,
+          depositMonths: parsed.depositMonths
+        });
+        displayText = `${displayText}\n\n${formatMoveInCostWhatsApp(calc)}`.trim();
+      }
     }
   }
 
@@ -332,6 +368,7 @@ export async function handleRentChat(db, { sessionId, message, userPhone = "" } 
     turn.answerMode !== "market" &&
     turn.answerMode !== "post_booking" &&
     turn.answerMode !== "greeting" &&
+    turn.answerMode !== "rent_finance" &&
     (shouldSearch || turn.answerMode === "listing_followup" || turn.answerMode === "search");
 
   if (listings.length && !wantsCompare) {
@@ -366,7 +403,9 @@ export async function handleRentChat(db, { sessionId, message, userPhone = "" } 
     dataSource: chart?.dataSource || null,
     developerIntel: Boolean(developerIntelBlock),
     listings: showListingCards ? listings.slice(0, 8).map((l) => formatListingCard(l, criteria)) : [],
-    keepListings: !shouldSearch && !wantsCompare && turn.answerMode !== "post_booking" && turn.answerMode !== "greeting",
+    keepListings: !shouldSearch && !wantsCompare && turn.answerMode !== "post_booking" && turn.answerMode !== "greeting" && turn.answerMode !== "rent_finance",
+    partners: wantsRentFinance ? GHANA_RENT_MONTHLY_PARTNERS : [],
+    showPartners: wantsRentFinance,
     searchStatus: searchStatusMessage,
     shortlistId,
     leadReady,

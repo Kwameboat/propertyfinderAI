@@ -84,10 +84,10 @@ function applyMarketBranding() {
   if (ghana && actions.length >= 3) {
     actions[0].dataset.msg = "What does a self-contain in East Legon usually cost per month?";
     actions[0].querySelector("span:last-child").textContent = "Accra rents";
-    actions[1].dataset.msg = "How does the GH₵100 viewing fee and PIN work?";
-    actions[1].querySelector("span:last-child").textContent = "Viewing fee";
-    actions[2].dataset.msg = "Show 2 bedroom apartments in Spintex";
-    actions[2].querySelector("span:last-child").textContent = "Spintex 2-bed";
+    actions[1].dataset.msg = "I can't pay 2 years rent advance. Who pays the landlord so I can pay monthly?";
+    actions[1].querySelector("span:last-child").textContent = "Pay monthly";
+    actions[2].dataset.msg = "How does the GH₵100 viewing fee and PIN work?";
+    actions[2].querySelector("span:last-child").textContent = "Viewing fee";
   }
   const exploreDubai = document.querySelector('.explore-filters [data-filter="Dubai"]');
   if (ghana && exploreDubai) {
@@ -1689,9 +1689,28 @@ async function ensureSession() {
 }
 
 function looksLikePropertySearch(text = "") {
-  return /\b(rent|buy|lease|bhk|br|bed|studio|apartment|villa|townhouse|penthouse|ajman|dubai|sharjah|abu dhabi|fujairah|ras al khaimah|umm al quwain|aed|budget|under|max|min)\b/i.test(
+  return /\b(rent|buy|lease|bhk|br|bed|studio|apartment|villa|townhouse|penthouse|self-?contain|chamber|compound|ajman|dubai|sharjah|abu dhabi|fujairah|ras al khaimah|umm al quwain|accra|kumasi|tema|east legon|osu|spintex|aed|gh₵|cedis|budget|under|max|min)\b/i.test(
     String(text || "")
   );
+}
+
+function appendPartnersToChat(partners = []) {
+  if (!partners.length) return;
+  const wrap = document.createElement("div");
+  wrap.className = "partner-cards";
+  wrap.innerHTML = partners
+    .map((p) => {
+      const meta = [p.kind, p.phone].filter(Boolean).join(" · ");
+      const href = String(p.url || "").trim();
+      return `<a class="partner-card" href="${escapeHtml(href)}" target="_blank" rel="noopener noreferrer">
+        <strong>${escapeHtml(p.name || "")}</strong>
+        <span class="partner-kind">${escapeHtml(meta)}</span>
+        <span class="partner-summary">${escapeHtml(p.summary || "")}</span>
+        <span class="partner-link">Open site →</span>
+      </a>`;
+    })
+    .join("");
+  appendToChat(wrap);
 }
 
 function appendSearchStatus(text) {
@@ -1726,6 +1745,9 @@ async function sendMessage(text, options = {}) {
     if (!data.ok) throw new Error(data.error || "Chat failed");
     if (data.language) applyUiLanguage(data.language);
     addMessage(data.text || "…", "bot", { aiDisclaimer: data.aiDisclaimer });
+    if (data.showPartners && data.partners?.length) {
+      appendPartnersToChat(data.partners);
+    }
     if (data.showChart && data.chart) {
       appendChartToChat(data.chart);
     }
