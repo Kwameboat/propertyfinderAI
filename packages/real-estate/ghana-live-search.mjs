@@ -5,6 +5,7 @@
 
 import { fetchText } from "./scrapers/http.mjs";
 import { parseGpcSearchHtml } from "./scrapers/ghanapropertycentre-html.mjs";
+import { scrapeJijiHtml } from "./scrapers/jiji-html.mjs";
 import { fetchN8nLiveSearch, isN8nLiveSearchEnabled } from "./n8n-live-search.mjs";
 import { prepareListing } from "./ingest.mjs";
 import { isSupabaseEnabled, batchSyncListingsToSupabaseWithReturn } from "./supabase.mjs";
@@ -127,7 +128,14 @@ export async function runGhanaLiveSearch(db, { query = "", message = "", criteri
     })
   );
 
-  const [live, serp] = await Promise.all([n8nPromise, serpPromise]);
+  const jijiPromise = scrapeJijiHtml({
+    city,
+    transactionType,
+    pages: 1,
+    query: area || ""
+  }).catch((error) => ({ listings: [], errors: [error.message] }));
+
+  const [live, serp, jiji] = await Promise.all([n8nPromise, serpPromise, jijiPromise]);
   if (live.error) errors.push(live.error);
   const n8nUrls = urlsFromN8n(live);
   if (n8nUrls.length) sources.push("n8n");
@@ -152,9 +160,15 @@ export async function runGhanaLiveSearch(db, { query = "", message = "", criteri
   }
 
   for (const row of live.listings || []) {
-    if (Number(row.price_aed) > 0 && isGpcDetailUrl(row.source_url)) {
+    if (Number(row.price_aed) > 0 && (isGpcDetailUrl(row.source_url) || /jiji\.com\.gh/i.test(row.source_url || ""))) {
       rows.push(row);
     }
+  }
+
+  if (jiji.errors?.length) errors.push(...jiji.errors.slice(0, 3));
+  if (jiji.listings?.length) {
+    rows.push(...jiji.listings);
+    if (!sources.includes("jiji")) sources.push("jiji");
   }
 
   rows = uniqById(rows).filter((r) => Number(r.price_aed) > 0);

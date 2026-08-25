@@ -35,7 +35,7 @@ export function extractImagesFromText(text = "") {
 const PORTAL_HOST =
   /(?:^|\.)(?:bayut\.com|bayutcdn\.com|propertyfinder\.ae|propertyfinder\.com|dubizzle\.com|dubizzle\.ae|ghanapropertycentre\.com|meqasa\.com|jiji\.com\.gh|tonaton\.com)$/i;
 const PORTAL_LISTING_CDN =
-  /images\.bayut\.com|bayutcdn|static\.shared\.propertyfinder|static\.propertyfinder|propertyfinder\.ae\/(?:property|images|photos?|picture)|media\.images\.listing|\/listing\/|dubizzle\.(?:com|ae).*\/(?:photos?|images?|pictures?)|images\.ghanapropertycentre\.com|dve7rykno93gs\.cloudfront\.net|img\.jiji/i;
+  /images\.bayut\.com|bayutcdn|static\.shared\.propertyfinder|static\.propertyfinder|propertyfinder\.ae\/(?:property|images|photos?|picture)|media\.images\.listing|\/listing\/|dubizzle\.(?:com|ae).*\/(?:photos?|images?|pictures?)|images\.ghanapropertycentre\.com|dve7rykno93gs\.cloudfront\.net|img\.jiji|jijistatic/i;
 
 export function isValidListingImage(url = "") {
   const u = String(url).trim();

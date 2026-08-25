@@ -537,6 +537,21 @@ document.getElementById("btn-ghana-scrape")?.addEventListener("click", async () 
   }
 });
 
+document.getElementById("btn-jiji-scrape")?.addEventListener("click", async () => {
+  const el = document.getElementById("action-msg");
+  el.textContent = "Scraping Jiji Ghana (Cloudflare bypass, 1–3 min)…";
+  try {
+    const data = await api("/api/admin/re/ingest/ghana", {
+      method: "POST",
+      body: JSON.stringify({ source: "jiji", types: ["rent", "sale"], maxPages: 3 })
+    });
+    el.textContent = `Jiji — found ${data.found ?? 0}, saved ${data.upserted ?? 0}${data.errors?.length ? `. ${data.errors[0]}` : "."}`;
+    await loadDashboard();
+  } catch (e) {
+    el.textContent = e.message;
+  }
+});
+
 document.getElementById("live-search-form")?.addEventListener("submit", async (e) => {
   e.preventDefault();
   const msg = document.getElementById("live-msg");

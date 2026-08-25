@@ -1,53 +1,123 @@
 /**
- * Jiji Ghana (and Tonaton) public listing scrape.
- * Jiji often returns 403 to datacenter IPs — caller should treat empty as a miss.
+ * Jiji Ghana (and Tonaton) listing scrape.
+ * Direct HTTP is Cloudflare-blocked from datacenter IPs; FlareSolverr is the working path.
  */
 
 import { fetchText, sleep } from "./http.mjs";
 import { normalizeListingRow } from "./normalize.mjs";
+import {
+  cookieHeader,
+  flareSolverrGet,
+  isFlareSolverrEnabled,
+  jsonFromFlareHtml
+} from "./flaresolverr.mjs";
 
-const CITY_SLUG = {
-  Accra: "accra",
-  Kumasi: "kumasi",
-  Tema: "tema",
-  Takoradi: "takoradi",
-  "Cape Coast": "cape-coast",
-  Tamale: "tamale"
+const REGION_SLUG = {
+  Accra: "greater-accra",
+  Madina: "greater-accra",
+  Kasoa: "greater-accra",
+  Tema: "greater-accra",
+  Kumasi: "ashanti",
+  Takoradi: "western",
+  "Cape Coast": "central",
+  Tamale: "northern"
 };
+
+/** Accra and Tema share Greater Accra on Jiji — scrape each region once. */
+export function uniqueJijiCities(cities = []) {
+  const seen = new Set();
+  const out = [];
+  for (const city of cities) {
+    const slug = REGION_SLUG[city] || String(city || "").toLowerCase();
+    if (!slug || seen.has(slug)) continue;
+    seen.add(slug);
+    out.push(city);
+  }
+  return out.length ? out : ["Accra", "Kumasi"];
+}
 
 function parsePrice(text) {
   const m = String(text || "").replace(/,/g, "").match(/([\d]{2,9})/);
   return m ? Number(m[1]) : 0;
 }
 
-function rowFromJijiAd(ad, city, transactionType, source) {
-  const id = ad.id || ad.guid || ad.slug;
+function decodeEntities(value = "") {
+  return String(value || "")
+    .replace(/&amp;/g, "&")
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">");
+}
+
+function attrValue(ad, name) {
+  const attrs = Array.isArray(ad?.attrs) ? ad.attrs : [];
+  const hit = attrs.find((a) => String(a?.name || "").toLowerCase() === name.toLowerCase());
+  return hit?.value ?? hit?.semantic_value ?? null;
+}
+
+function cityFromJijiAd(ad, fallback = "Accra") {
+  const blob = `${ad.region_parent_name || ""} ${ad.region_name || ""} ${ad.region || ""}`;
+  if (/tema/i.test(blob)) return "Tema";
+  if (/kumasi|ashanti/i.test(blob)) return "Kumasi";
+  if (/takoradi|sekondi|western/i.test(blob)) return "Takoradi";
+  if (/cape\s*coast|central/i.test(blob)) return "Cape Coast";
+  if (/tamale|northern/i.test(blob)) return "Tamale";
+  return fallback || "Accra";
+}
+
+function imagesFromJijiAd(ad) {
+  const urls = [];
+  if (ad?.image_obj?.url) urls.push(ad.image_obj.url);
+  if (ad?.image_url) urls.push(ad.image_url);
+  for (const img of ad?.images || []) {
+    const url = typeof img === "string" ? img : img?.url;
+    if (url) urls.push(url);
+  }
+  return [...new Set(urls.filter(Boolean))];
+}
+
+function listingUrl(ad, host) {
+  const raw = decodeEntities(ad.url || ad.absolute_url || "");
+  const path = raw.split("?")[0];
+  if (/^https?:\/\//i.test(path)) return path;
+  if (path.startsWith("/")) return `${host}${path}`;
+  if (ad.slug) return `${host}/${ad.slug}`;
+  return `${host}/${ad.id || ad.guid}`;
+}
+
+function propertyTypeFrom(ad) {
+  const text = `${ad.title || ""} ${ad.slug || ""} ${ad.category_slug || ""}`.toLowerCase();
+  if (/self-?contain/.test(text)) return "self-contain";
+  if (/chamber/.test(text)) return "chamber-and-hall";
+  if (/house|townhouse|duplex/.test(text)) return "house";
+  return "apartment";
+}
+
+export function rowFromJijiAd(ad, city, transactionType, source) {
+  const id = ad?.id || ad?.guid || ad?.slug;
   if (!id) return null;
-  const url =
-    ad.url ||
-    ad.absolute_url ||
-    (ad.slug ? `https://jiji.com.gh/${ad.slug}` : `https://jiji.com.gh/${id}`);
+  const host = source === "tonaton" ? "https://tonaton.com" : "https://jiji.com.gh";
   const title = ad.title || ad.name || "";
-  const price = Number(ad.price?.value || ad.price || parsePrice(ad.price_text));
-  const images = []
-    .concat(ad.image_url ? [ad.image_url] : [])
-    .concat((ad.images || ad.photos || []).map((p) => (typeof p === "string" ? p : p?.url)))
-    .filter(Boolean);
-  const loc = ad.region_text || ad.location || city;
+  const price = Number(ad.price_obj?.value || ad.price?.value || ad.price || parsePrice(ad.price_title || ad.price_text));
+  if (!Number.isFinite(price) || price <= 0) return null;
+  const resolvedCity = cityFromJijiAd(ad, city);
+  const bedsRaw = attrValue(ad, "Bedrooms") ?? ad.bedrooms ?? ad.attrs?.rooms;
+  const beds = bedsRaw == null ? null : Number(String(bedsRaw).replace(/[^\d]/g, "")) || null;
   return normalizeListingRow({
     source,
     external_id: String(id),
-    source_url: String(url).startsWith("http") ? url : `https://jiji.com.gh${url}`,
+    source_url: listingUrl(ad, host),
     transaction_type: transactionType,
-    property_type: /self-?contain/i.test(title) ? "self-contain" : /chamber/i.test(title) ? "chamber-and-hall" : "apartment",
-    beds: Number(ad.attrs?.rooms || ad.bedrooms) || null,
-    emirate: city,
-    community: String(loc).split(",")[0].trim() || city,
+    property_type: propertyTypeFrom(ad),
+    beds,
+    baths: Number(attrValue(ad, "Bathrooms")) || null,
+    emirate: resolvedCity,
+    community: String(ad.region_name || ad.region_item_text || resolvedCity).split(",")[0].trim() || resolvedCity,
     price_aed: price,
-    price_period: transactionType === "rent" ? "monthly" : "total",
-    images,
-    description: title,
-    agent_phone: ad.phone || "",
+    price_period: transactionType === "rent" || /month/i.test(ad.price_obj?.period || "") ? "monthly" : "total",
+    images: imagesFromJijiAd(ad),
+    description: ad.short_description || title,
     agency_name: `${source} listing`
   });
 }
@@ -85,45 +155,91 @@ function parseJijiHtml(html, city, transactionType, source) {
   return rows.filter((r) => Number(r.price_aed) > 0);
 }
 
+function adsFromPayload(data) {
+  return (
+    data?.adverts_list?.adverts ||
+    data?.data?.adverts ||
+    data?.adverts ||
+    []
+  );
+}
+
+async function fetchJijiListingJson(url, session) {
+  if (session.cookie) {
+    try {
+      const text = await fetchText(url, {
+        timeoutMs: 25000,
+        headers: {
+          Accept: "application/json",
+          "User-Agent": session.userAgent || "Mozilla/5.0",
+          Cookie: session.cookie,
+          Referer: "https://jiji.com.gh/"
+        }
+      });
+      return JSON.parse(text);
+    } catch {
+      session.cookie = "";
+    }
+  }
+
+  if (isFlareSolverrEnabled()) {
+    const solution = await flareSolverrGet(url, { timeoutMs: 60000 });
+    session.userAgent = solution.userAgent || session.userAgent;
+    session.cookie = cookieHeader(solution.cookies);
+    return jsonFromFlareHtml(solution.response);
+  }
+
+  const text = await fetchText(url, {
+    timeoutMs: 20000,
+    headers: { Accept: "application/json", Referer: "https://jiji.com.gh/" }
+  });
+  return JSON.parse(text);
+}
+
+function listingApiUrl({ host, category, regionSlug, page, query }) {
+  const params = new URLSearchParams({
+    slug: category,
+    init_page: page === 1 ? "true" : "false",
+    page: String(page)
+  });
+  if (regionSlug) params.set("region_slug", regionSlug);
+  if (query) params.set("query", query);
+  return `${host}/api_web/v1/listing?${params.toString()}`;
+}
+
 async function scrapeJijiLike({
   city = "Accra",
   transactionType = "rent",
   pages = 2,
-  source = "jiji"
+  source = "jiji",
+  query = ""
 } = {}) {
   const listings = [];
   const errors = [];
-  const slug = CITY_SLUG[city] || "accra";
+  const host = source === "tonaton" ? "https://jiji.com.gh" : "https://jiji.com.gh";
   const category = transactionType === "sale" ? "houses-apartments-for-sale" : "houses-apartments-for-rent";
-  const host = source === "tonaton" ? "https://tonaton.com" : "https://jiji.com.gh";
+  const regionSlug = REGION_SLUG[city] || "greater-accra";
+  const session = { cookie: "", userAgent: "" };
 
   for (let page = 1; page <= pages; page += 1) {
-    const apiUrl = `${host.replace("tonaton.com", "jiji.com.gh")}/api_web/v1/listing?slug=${category}&region_slug=${slug}&page=${page}`;
+    const apiUrl = listingApiUrl({ host, category, regionSlug, page, query });
     try {
-      const text = await fetchText(apiUrl, {
-        timeoutMs: 20000,
-        headers: { Accept: "application/json", Referer: `${host}/` }
-      });
-      let data;
-      try {
-        data = JSON.parse(text);
-      } catch {
-        data = null;
-      }
-      const ads = data?.adverts_list?.adverts || data?.data?.adverts || data?.adverts || [];
+      const data = await fetchJijiListingJson(apiUrl, session);
+      const ads = adsFromPayload(data);
       if (Array.isArray(ads) && ads.length) {
         for (const ad of ads) {
           const row = rowFromJijiAd(ad, city, transactionType, source);
           if (row) listings.push(row);
         }
-        await sleep(Number(process.env.JAB_RE_SCRAPE_DELAY_MS || 2500));
+        await sleep(Number(process.env.JAB_RE_SCRAPE_DELAY_MS || 1500));
         continue;
       }
+      errors.push(`${apiUrl}: empty adverts`);
     } catch (error) {
       errors.push(`${apiUrl}: ${error.message}`);
     }
 
-    const htmlUrl = `${host}/${slug}/${category}`;
+    const htmlUrl = `https://jiji.com.gh/${regionSlug}/${category}`;
     try {
       const html = await fetchText(htmlUrl, { timeoutMs: 20000 });
       listings.push(...parseJijiHtml(html, city, transactionType, source));

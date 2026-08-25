@@ -10,6 +10,8 @@ import {
   gpcLiveSearchUrls
 } from "../packages/real-estate/ghana-live-search.mjs";
 import { buildLiveSearchQuery } from "../packages/real-estate/live-search-query.mjs";
+import { rowFromJijiAd, uniqueJijiCities } from "../packages/real-estate/scrapers/jiji-html.mjs";
+import { jsonFromFlareHtml } from "../packages/real-estate/scrapers/flaresolverr.mjs";
 
 const GPC_FIXTURE = `
 <script type="application/ld+json">{"@context":"https://schema.org","@type":"ItemList","numberOfItems":2,"itemListElement":[
@@ -101,4 +103,47 @@ test("Ghana ingest sources are the Ghana portals", async () => {
     if (prev == null) delete process.env.JAB_RE_MARKET;
     else process.env.JAB_RE_MARKET = prev;
   }
+});
+
+test("Jiji Accra and Tema share Greater Accra so they scrape once", () => {
+  assert.deepEqual(uniqueJijiCities(["Accra", "Tema", "Kumasi"]), ["Accra", "Kumasi"]);
+});
+
+test("Jiji advert JSON maps to a priced Ghana rental", () => {
+  const row = rowFromJijiAd(
+    {
+      id: 16503937,
+      title: "2bdrm House in Community 25 for rent",
+      url: "/community-25/houses-apartments-for-rent/2bdrm-house-in-community-25-for-rent-cYU9SHtEYlo8c9gQMHNyI4aA.html?page=1&amp;pos=1",
+      region_name: "Community 25",
+      region_parent_name: "Tema Metropolitan",
+      price_obj: { value: 4000, view: "GH₵ 4,000", period: "per month" },
+      attrs: [
+        { name: "Bedrooms", value: 2 },
+        { name: "Bathrooms", value: 2 }
+      ],
+      image_obj: { url: "https://pictures-ghana.jijistatic.net/61759030_photo.jpg" },
+      slug: "2bdrm-house-in-community-25-for-rent"
+    },
+    "Accra",
+    "rent",
+    "jiji"
+  );
+  assert.equal(row.source, "jiji");
+  assert.equal(row.external_id, "16503937");
+  assert.equal(row.emirate, "Tema");
+  assert.equal(row.community, "Community 25");
+  assert.equal(row.price_aed, 4000);
+  assert.equal(row.beds, 2);
+  assert.equal(row.transaction_type, "rent");
+  assert.equal(row.property_type, "house");
+  assert.match(row.source_url, /^https:\/\/jiji\.com\.gh\/community-25\/houses-apartments-for-rent\//);
+  assert.equal(row.images[0], "https://pictures-ghana.jijistatic.net/61759030_photo.jpg");
+});
+
+test("FlareSolverr HTML wrapper unwraps Jiji JSON", () => {
+  const html = `<html><body><pre>{"adverts_list":{"count":2,"adverts":[{"id":1}]}}</pre></body></html>`;
+  const data = jsonFromFlareHtml(html);
+  assert.equal(data.adverts_list.count, 2);
+  assert.equal(data.adverts_list.adverts[0].id, 1);
 });

@@ -15,7 +15,7 @@ import { getScrapeEmirates } from "./mode.mjs";
 import { isPuppeteerScrapeEnabled, isPuppeteerIngestSource, PUPPETEER_INGEST_SOURCES } from "./puppeteer-mode.mjs";
 import { scrapeMeqasaHtml } from "./scrapers/meqasa-html.mjs";
 import { scrapeGhanaPropertyCentreHtml } from "./scrapers/ghanapropertycentre-html.mjs";
-import { scrapeJijiHtml, scrapeTonatonHtml } from "./scrapers/jiji-html.mjs";
+import { scrapeJijiHtml, scrapeTonatonHtml, uniqueJijiCities } from "./scrapers/jiji-html.mjs";
 import { GHANA_PORTALS } from "./market.mjs";
 
 async function scrapeBayutCombined(db, upsert, options) {
@@ -216,7 +216,11 @@ export async function scrapeSourceToRows(source, options = {}) {
     propertyfinder_api: () =>
       scrapePropertyFinderApi(stubDb, upsert, { emirates: portalEmirates, maxPages: options.maxPages || 2 }),
     meqasa: () => scrapeGhanaSource(scrapeMeqasaHtml, stubDb, upsert, options),
-    jiji: () => scrapeGhanaSource(scrapeJijiHtml, stubDb, upsert, options),
+    jiji: () =>
+      scrapeGhanaSource(scrapeJijiHtml, stubDb, upsert, {
+        ...options,
+        emirates: uniqueJijiCities(options.emirates?.length ? options.emirates : getScrapeEmirates())
+      }),
     ghanapropertycentre: () => scrapeGhanaSource(scrapeGhanaPropertyCentreHtml, stubDb, upsert, options),
     tonaton: () => scrapeGhanaSource(scrapeTonatonHtml, stubDb, upsert, options)
   };
