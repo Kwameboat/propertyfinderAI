@@ -117,5 +117,30 @@ test("live Ghana facts cite inventory medians and never invent companies", async
       assert.equal(chart.unit, "GH₵/mo");
       assert.ok(chart.bars.length >= 1);
     }
+
+    upsertListing(db, {
+      ...GHANA_SEED_LISTINGS[0],
+      source: "ghanapropertycentre",
+      external_id: "yearly-mislabel-el",
+      source_url: "https://ghanapropertycentre.com/for-rent/self-contain-test",
+      property_type: "self-contain",
+      beds: 1,
+      price_aed: 22200,
+      price_period: "monthly",
+      transaction_type: "rent"
+    });
+    const selfFacts = await buildGhanaLiveFacts(db, {
+      criteria: {
+        emirate: "Accra",
+        community: "East Legon",
+        transaction_type: "rent",
+        property_type: "self-contain",
+        beds: 1
+      },
+      message: "What does a self-contain in East Legon usually cost per month?"
+    });
+    assert.ok(selfFacts.match.median != null);
+    assert.ok(selfFacts.match.median < 8000, `self-contain median should be monthly not yearly, got ${selfFacts.match.median}`);
+    assert.match(formatGhanaLiveFactsBlock(selfFacts), /self-contain/);
   });
 });

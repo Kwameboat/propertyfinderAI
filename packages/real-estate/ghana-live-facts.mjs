@@ -12,9 +12,27 @@ function median(nums = []) {
   return s.length % 2 ? s[mid] : Math.round((s[mid - 1] + s[mid]) / 2);
 }
 
-function priceOf(row) {
+function monthlyAsking(row) {
   const n = Number(row?.price_aed);
-  return Number.isFinite(n) && n > 0 ? n : null;
+  if (!Number.isFinite(n) || n <= 0) return null;
+  const type = String(row.property_type || "").toLowerCase();
+  const period = String(row.price_period || "monthly").toLowerCase();
+  const room = /self-?contain|chamber|single.?room|compound/.test(type);
+  if (String(row.transaction_type || "") !== "rent") return n;
+  if (period === "yearly" || period === "annual") return Math.round(n / 12);
+  // GPC often stores a yearly cedi figure with period=monthly on room lets (e.g. 22,200 vs 1,850).
+  if (room && n >= 8000) return Math.round(n / 12);
+  return n;
+}
+
+function matchesType(row, propertyType) {
+  if (!propertyType) return true;
+  const want = String(propertyType).toLowerCase().replace(/-/g, " ");
+  const have = String(row.property_type || "").toLowerCase().replace(/-/g, " ");
+  if (!have) return false;
+  if (want.includes("self contain") || want.includes("self-contain")) return /self\s*contain/.test(have);
+  if (want.includes("chamber")) return /chamber/.test(have);
+  return have.includes(want) || want.includes(have);
 }
 
 function ghanaQuery(criteria = {}) {
@@ -31,14 +49,13 @@ function ghanaQuery(criteria = {}) {
   }
   if (criteria.community) query.community = criteria.community;
   if (criteria.beds != null) query.beds = criteria.beds;
-  if (criteria.property_type) query.property_type = criteria.property_type;
   if (criteria.max_price != null) query.max_price = criteria.max_price;
   if (criteria.min_price != null) query.min_price = criteria.min_price;
   return query;
 }
 
 function summarise(rows = []) {
-  const prices = rows.map(priceOf).filter((n) => n != null);
+  const prices = rows.map(monthlyAsking).filter((n) => n != null);
   const byArea = new Map();
   const byCity = new Map();
   const byType = new Map();
@@ -49,7 +66,7 @@ function summarise(rows = []) {
     if (!byArea.has(area)) byArea.set(area, []);
     if (!byCity.has(city)) byCity.set(city, []);
     if (!byType.has(type)) byType.set(type, []);
-    const p = priceOf(row);
+    const p = monthlyAsking(row);
     if (p != null) {
       byArea.get(area).push(p);
       byCity.get(city).push(p);
@@ -129,13 +146,24 @@ export function formatGhanaLiveFactsBlock(facts) {
     }
     const band =
       stats.median != null
-        ? `median ${formatMoney(stats.median)}, range ${formatMoney(stats.min)}–${formatMoney(stats.max)} (${stats.priced} priced / ${stats.sample} rows)`
+        ? `median ${formatMoney(stats.median)}/month, range ${formatMoney(stats.min)}–${formatMoney(stats.max)} (${stats.priced} priced / ${stats.sample} rows)`
         : `${stats.sample} rows, prices incomplete`;
     lines.push(`- ${label}: ${band}`);
+    if (stats.types?.length) {
+      lines.push("  By type (use the type they asked about — do not quote house medians for a self-contain):");
+      for (const t of stats.types.slice(0, 6)) {
+        lines.push(`  · ${t.label}: median ${formatMoney(t.median)}/month (${t.sample} listings, ${formatMoney(t.min)}–${formatMoney(t.max)})`);
+      }
+    }
     for (const a of (stats.areas || []).slice(0, 5)) {
       lines.push(`  · ${a.label}: median ${formatMoney(a.median)} (${a.sample} listings)`);
     }
   };
+  if (facts.askedType) {
+    lines.push(
+      `- User asked about: ${facts.askedType}. Quote THAT type's median first. Never blend 4-bed houses into a self-contain or chamber-and-hall answer.`
+    );
+  }
   paint(facts.place ? `Match (${facts.place})` : "Match for this question", facts.match);
   if (facts.allRent && facts.allRent.sample !== facts.match?.sample) {
     paint("Wider Accra/Ghana rent sample", facts.allRent);
@@ -169,21 +197,29 @@ export async function buildGhanaLiveFacts(db, { criteria = {}, message = "" } = 
       : /buy|for sale|purchase/i.test(message)
         ? "sale"
         : "rent";
-  const matchCriteria = { ...criteria, transaction_type: tx };
-  const query = ghanaQuery(matchCriteria);
+  const askedType = criteria.property_type || "";
+  const areaQuery = ghanaQuery({
+    ...criteria,
+    transaction_type: tx,
+    beds: /self-?contain|chamber|single.?room/i.test(askedType) ? undefined : criteria.beds,
+    property_type: undefined
+  });
 
-  const [matchRows, rentRows, status] = await Promise.all([
-    searchListingsStore(db, query, 50).catch(() => []),
+  const [areaRows, rentRows, status] = await Promise.all([
+    searchListingsStore(db, areaQuery, 50).catch(() => []),
     searchListingsStore(db, { include_seed: true, sources: ghanaListingSources(), transaction_type: "rent" }, 50).catch(
       () => []
     ),
     getListingsStatus(db).catch(() => ({ listings: 0, sources: {} }))
   ]);
 
-  const place = [criteria.community, criteria.emirate].filter(Boolean).join(", ") || (tx === "sale" ? "Ghana sales" : "Ghana rent");
+  const matchRows = askedType ? areaRows.filter((row) => matchesType(row, askedType)) : areaRows;
+  const placeBits = [askedType, criteria.community, criteria.emirate].filter(Boolean);
+  const place = placeBits.join(", ") || (tx === "sale" ? "Ghana sales" : "Ghana rent");
   const match = summarise(matchRows);
+  const area = summarise(areaRows);
   const allRent = summarise(rentRows);
-  const facts = { place, match, allRent, status, transactionType: tx };
+  const facts = { place, match, area, allRent, status, transactionType: tx, askedType };
   facts.chart = tx === "rent" ? buildGhanaInventoryChart(facts) : null;
   return facts;
 }

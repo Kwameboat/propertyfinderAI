@@ -203,6 +203,10 @@ export async function searchListingsSupabase(criteria = {}, limit = 10) {
         String(r.sub_community || "").toLowerCase().includes(q)
     );
   }
+  if (criteria.property_type && criteria.property_type !== "studio") {
+    const want = String(criteria.property_type).toLowerCase();
+    filtered = filtered.filter((r) => String(r.property_type || "").toLowerCase().includes(want));
+  }
   return filtered.slice(0, limit);
 }
 
