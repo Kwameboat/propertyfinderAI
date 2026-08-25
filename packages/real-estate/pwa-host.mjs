@@ -84,7 +84,34 @@ export function rewriteRentHtmlForGhana(html, { buildId } = {}) {
       "Dar Concierge AI — Your UAE AI Property Assistant. Powered by KeyFinder AI. Rent, buy, off-plan across the emirates.",
       "FIE AI — your AI real estate agent in Ghana. Rent or buy rooms, self-contains, apartments, and houses."
     ],
-    ["Dar Concierge opens like an app.", "FIE AI opens like an app."]
+    ["Dar Concierge opens like an app.", "FIE AI opens like an app."],
+    ["<body>", '<body class="market-gh">'],
+    ['id="header-avatar">DC</span>', 'id="header-avatar">FI</span>'],
+    [
+      "Welcome. Looking for a 4BR in Ajman or a villa in Dubai today?",
+      "Welcome. Looking for a self-contain in East Legon or a chamber and hall in Osu?"
+    ],
+    ["Powered by <strong>KeyFinder AI</strong>", "Your AI real estate agent in Ghana"],
+    [
+      'data-msg="Show me penthouses for rent in Dubai Marina">Marina Penthouses',
+      'data-msg="Show me self-contain rooms for rent in East Legon">East Legon self-contain'
+    ],
+    [
+      'data-msg="I\'m looking for a villa to rent in JVC, 3 bed">JVC Villas',
+      'data-msg="Show me houses for sale in East Legon">East Legon for sale'
+    ],
+    ['placeholder="Ask Dar Concierge AI…"', 'placeholder="Ask FIE AI — type or tap the mic"'],
+    ["<strong>Install Dar Concierge</strong>", "<strong>Install FIE AI</strong>"],
+    [
+      "Use Dar Concierge like a native app — home screen icon, offline shell, no browser chrome.",
+      "Use FIE AI like a native app — home screen icon, and it updates itself when you open it."
+    ],
+    ['class="pill gh-only hidden"', 'class="pill gh-only"'],
+    ['id="gh-pay-monthly-pill" hidden', 'id="gh-pay-monthly-pill"'],
+    ['id="gh-twi-pill" hidden', 'id="gh-twi-pill"'],
+    ['class="gold-btn list-property-cta gh-only hidden"', 'class="gold-btn list-property-cta gh-only"'],
+    ['id="list-property-btn" hidden', 'id="list-property-btn"'],
+    ['class="muted list-property-hint gh-only hidden"', 'class="muted list-property-hint gh-only"']
   ];
   for (const [from, to] of swaps) out = out.split(from).join(to);
   out = out.replace(
