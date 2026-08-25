@@ -181,6 +181,10 @@ function applyDashboardMarket(market, data) {
   if (ingestHelp) {
     ingestHelp.textContent = "Paste a Ghana Property Centre for-rent or for-sale search URL, or use Live search.";
   }
+  const cityFilter = document.getElementById("listing-emirate-filter");
+  if (cityFilter?.options?.[0] && !cityFilter.options[0].value) {
+    cityFilter.options[0].textContent = "All cities";
+  }
   const liveStatus = document.getElementById("live-status");
   if (liveStatus) {
     liveStatus.textContent = data.liveSearch?.n8n
@@ -300,7 +304,7 @@ async function openListingDrawer(id) {
 
     const rows = [
       ["Price", fmtPrice(l.price_aed, l.transaction_type)],
-      ["Emirate", l.emirate || "—"],
+      [marketCode === "GH" ? "City" : "Emirate", l.emirate || "—"],
       ["Community", l.community || "—"],
       ["Building", l.building || "—"],
       ["Beds", l.beds === 0 ? "Studio" : l.beds ?? "—"],
