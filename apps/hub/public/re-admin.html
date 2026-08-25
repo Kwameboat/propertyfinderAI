@@ -25,6 +25,9 @@
       <button type="button" class="ld-nav-item" data-view="leads">
         <span class="ld-nav-icon">◎</span> Leads
       </button>
+      <button type="button" class="ld-nav-item" data-view="viewings">
+        <span class="ld-nav-icon">◆</span> Viewings
+      </button>
       <button type="button" class="ld-nav-item" data-view="ingest">
         <span class="ld-nav-icon">↓</span> Ingest
       </button>
@@ -35,6 +38,7 @@
     <div class="ld-sidebar-foot">
       <a href="/" class="ld-link">Agency console</a>
       <a href="/rent" class="ld-link" target="_blank" rel="noopener">Open /rent PWA</a>
+      <a href="/gh" class="ld-link" target="_blank" rel="noopener">Open /gh PWA</a>
       <button type="button" id="logout-btn" class="ld-link ld-link-btn">Log out</button>
     </div>
   </aside>
@@ -102,6 +106,9 @@
             <option value="RAK">RAK</option>
             <option value="Fujairah">Fujairah</option>
             <option value="UAQ">UAQ</option>
+            <option value="Accra">Accra</option>
+            <option value="Kumasi">Kumasi</option>
+            <option value="Tema">Tema</option>
           </select>
           <select id="listing-beds-filter" class="ld-select">
             <option value="">Any beds</option>
@@ -143,6 +150,41 @@
             </select>
           </div>
           <div id="leads-table" class="ld-table-wrap"></div>
+        </div>
+      </section>
+
+      <!-- Ghana viewings + deals -->
+      <section class="ld-view" id="view-viewings" hidden>
+        <div class="ld-card">
+          <div class="ld-toolbar">
+            <h2>Viewings (Ghana PIN)</h2>
+            <select id="viewing-status-filter" class="ld-select">
+              <option value="">All statuses</option>
+              <option value="awaiting_payment">awaiting_payment</option>
+              <option value="paid_awaiting_viewing">paid_awaiting_viewing</option>
+              <option value="completed">completed</option>
+            </select>
+          </div>
+          <p class="ld-muted">Client pays GH₵100, then gives the WhatsApp PIN to the listing agent at the property. Agent sends PIN + MoMo to platform WhatsApp to release GH₵50.</p>
+          <div id="viewings-table" class="ld-table-wrap"></div>
+        </div>
+        <div class="ld-card">
+          <h2>Record a close (10% split 50/50)</h2>
+          <form id="deal-form" class="ld-form">
+            <div class="ld-form-row">
+              <label>
+                Viewing ID
+                <input id="deal-viewing-id" class="ld-input" required placeholder="viewing uuid" />
+              </label>
+              <label>
+                Agreed monthly rent (GHS)
+                <input id="deal-amount" type="number" min="1" step="1" class="ld-input" required placeholder="1800" />
+              </label>
+            </div>
+            <button type="submit" class="ld-btn ld-btn-gold">Record deal</button>
+          </form>
+          <p id="deal-msg" class="ld-muted"></p>
+          <div id="deals-table" class="ld-table-wrap"></div>
         </div>
       </section>
 

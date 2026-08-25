@@ -20,6 +20,8 @@ export async function fetchText(url, { timeoutMs = 20000, headers = {} } = {}) {
     portalHeaders["Sec-Fetch-Site"] = "same-origin";
   } else if (/dubizzle\.com/i.test(u)) {
     portalHeaders.Referer = "https://dubai.dubizzle.com/";
+  } else if (/meqasa\.com/i.test(u)) {
+    portalHeaders.Referer = "https://meqasa.com/";
   }
 
   const response = await fetch(url, {

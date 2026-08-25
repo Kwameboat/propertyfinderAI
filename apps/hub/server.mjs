@@ -123,6 +123,18 @@ import {
   getReLead
 } from "../../packages/hub-db/index.mjs";
 import { handleRentChat, handleRentTranscribe, submitRentLead, formatListingCard, formatListingDetail } from "../../packages/real-estate/chat.mjs";
+import { publicMarketConfig, isGhanaMarket } from "../../packages/real-estate/market.mjs";
+import {
+  confirmGhanaViewingPayment,
+  handleGhanaPaystackWebhook,
+  parseAgentPinMessage,
+  redeemViewingPin,
+  listViewings,
+  createDeal,
+  listViewingLedger,
+  listDeals,
+  getViewing
+} from "../../packages/real-estate/ghana-viewing.mjs";
 import {
   createSavedSearchFromSession,
   listSavedSearches,
@@ -632,7 +644,7 @@ app.get("/agent-login", (req, res) => {
   res.sendFile(path.join(__dirname, "public", "agent-login.html"));
 });
 
-app.get("/rent", (req, res) => {
+app.get(["/rent", "/gh"], (req, res) => {
   const proto = String(req.headers["x-forwarded-proto"] || req.protocol || "http")
     .split(",")[0]
     .trim();
@@ -645,7 +657,7 @@ app.get("/rent", (req, res) => {
     /^(localhost|127\.0\.0\.1)$/i.test(host) ||
     host === httpsHost;
   if (!skipRedirect) {
-    const dest = new URL("/rent", RENT_HTTPS_ORIGIN);
+    const dest = new URL(req.path === "/gh" ? "/gh" : "/rent", RENT_HTTPS_ORIGIN);
     const q = req.originalUrl.indexOf("?");
     if (q >= 0) dest.search = req.originalUrl.slice(q);
     res.redirect(302, dest.toString());
@@ -699,6 +711,108 @@ function loginRateLimit(req, res, next) {
 }
 
 /** UAE Real Estate concierge — public PWA API (no agency auth). */
+/** UAE Real Estate concierge — public PWA API (no agency auth). */
+app.get("/api/rent/config", (req, res) => {
+  res.json({ ok: true, market: publicMarketConfig() });
+});
+
+app.get("/gh/thanks", (req, res) => {
+  res.type("html").send(`<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8"/><meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>KeyFinder Ghana</title></head>
+<body style="font-family:system-ui;padding:2rem;max-width:32rem;margin:auto">
+<h1>Payment received</h1>
+<p>If GH₵100 went through, your viewing PIN is being sent to WhatsApp. Give that PIN to the listing agent only when you see the room.</p>
+<p><a href="/gh">Back to KeyFinder Ghana</a></p>
+<script>
+const q = new URLSearchParams(location.search);
+const viewingId = q.get("viewing");
+const reference = q.get("reference");
+if (viewingId || reference) {
+  fetch("/api/rent/viewing/confirm", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ viewingId, reference })
+  }).catch(() => {});
+}
+</script>
+</body></html>`);
+});
+
+app.post("/api/rent/viewing/confirm", rentRateLimit, async (req, res) => {
+  try {
+    if (!isGhanaMarket()) {
+      res.status(400).json({ ok: false, error: "Ghana market only" });
+      return;
+    }
+    const result = await confirmGhanaViewingPayment(db, {
+      viewingId: req.body?.viewingId,
+      reference: req.body?.reference
+    });
+    res.json({
+      ok: true,
+      viewingId: result.viewing.id,
+      status: result.viewing.status,
+      already: result.already,
+      whatsappSent: result.whatsappSent,
+      pin: process.env.JAB_RE_GH_DEV_PAY ? result.pin : undefined
+    });
+  } catch (error) {
+    res.status(400).json({ ok: false, error: error.message });
+  }
+});
+
+app.post("/api/rent/viewing/redeem-pin", async (req, res) => {
+  try {
+    if (!isGhanaMarket()) {
+      res.status(400).json({ ok: false, error: "Ghana market only" });
+      return;
+    }
+    const token = String(req.headers["x-ingest-token"] || req.body?.token || "");
+    const ingestOk = Boolean(process.env.JAB_RE_INGEST_TOKEN && token === process.env.JAB_RE_INGEST_TOKEN);
+    if (!ingestOk && !req.session) {
+      res.status(401).json({ ok: false, error: "unauthorized" });
+      return;
+    }
+    const parsed = parseAgentPinMessage(String(req.body?.text || ""));
+    const pin = req.body?.pin || parsed.pin;
+    const momo = req.body?.momo || parsed.momo;
+    const viewing = redeemViewingPin(db, { pin, momo, fromPhone: req.body?.fromPhone || "" });
+    res.json({ ok: true, viewing });
+  } catch (error) {
+    res.status(400).json({ ok: false, error: error.message });
+  }
+});
+
+app.get("/api/admin/re/viewings", requireAgency, (req, res) => {
+  res.json({ ok: true, viewings: listViewings(db, { status: req.query.status, limit: 80 }) });
+});
+
+app.get("/api/admin/re/viewings/:id", requireAgency, (req, res) => {
+  const viewing = getViewing(db, req.params.id);
+  if (!viewing) {
+    res.status(404).json({ ok: false, error: "not found" });
+    return;
+  }
+  res.json({ ok: true, viewing, ledger: listViewingLedger(db, viewing.id) });
+});
+
+app.post("/api/admin/re/deals", requireAgency, (req, res) => {
+  try {
+    const deal = createDeal(db, {
+      viewingId: req.body?.viewingId,
+      agreedAmountGhs: req.body?.agreedAmountGhs
+    });
+    res.json({ ok: true, deal });
+  } catch (error) {
+    res.status(400).json({ ok: false, error: error.message });
+  }
+});
+
+app.get("/api/admin/re/deals", requireAgency, (req, res) => {
+  res.json({ ok: true, deals: listDeals(db, { limit: 80 }) });
+});
+
 app.post("/api/rent/session", rentRateLimit, (req, res) => {
   try {
     const session = createReSession(db, { userPhone: String(req.body?.userPhone || "") });
@@ -1199,6 +1313,7 @@ app.get("/api/rent/status", async (req, res) => {
       platforms: getN8nIngestSources(),
       supabase: isSupabaseEnabled(),
       ingest: Boolean(process.env.JAB_RE_INGEST_TOKEN),
+      market: publicMarketConfig(),
       apify: isApifyConfigured(),
       apifyFallback: isApifyConfigured() ? ["bayut", "dubizzle"] : [],
       mode: getModeSummary(),
@@ -2573,6 +2688,11 @@ app.post("/api/billing/paystack/webhook", async (req, res) => {
     }
     const event = req.body;
     if (event?.event === "charge.success") {
+      const ghana = await handleGhanaPaystackWebhook(db, event);
+      if (ghana.handled) {
+        res.json({ ok: true, ghana: true });
+        return;
+      }
       const reference = event?.data?.reference;
       const cust = getCustomerPaymentByReference(db, reference);
       if (cust) {

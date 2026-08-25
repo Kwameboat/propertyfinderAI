@@ -8,6 +8,7 @@ import { migrateAgentsFeatures } from "./agents-features.mjs";
 import { migrateSocial } from "./social.mjs";
 import { migratePa } from "./pa.mjs";
 import { migrateRealEstate } from "./real-estate.mjs";
+import { migrateGhanaViewing } from "./ghana-viewing.mjs";
 import {
   migratePlatformTenant,
   listPlatformTenants,
@@ -401,6 +402,7 @@ function migrate(db) {
   migrateSocial(db);
   migratePa(db);
   migrateRealEstate(db);
+  migrateGhanaViewing(db);
   migratePlatformTenant(db);
 }
 
@@ -428,6 +430,18 @@ export {
   deleteDemoListings,
   deleteInactiveListings
 } from "./real-estate.mjs";
+
+export {
+  createViewing,
+  getViewing,
+  getViewingByReference,
+  listViewings,
+  markViewingPaid,
+  redeemViewingPin,
+  createDeal,
+  listViewingLedger,
+  listDeals
+} from "./ghana-viewing.mjs";
 
 export function upsertClient(db, { instanceName, displayName = null, status = null, leadDistribution = undefined }) {
   const now = Date.now();

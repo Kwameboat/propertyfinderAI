@@ -3,6 +3,7 @@
  */
 
 import { UAE_EMIRATES } from "../hub-db/real-estate.mjs";
+import { getMarket, isGhanaMarket, GHANA_CITIES, GHANA_AREAS } from "./market.mjs";
 import {
   COMMUNITY_EMIRATE,
   extractEmiratesFromText,
@@ -30,10 +31,14 @@ export function extractCriteria(text = "", existing = {}) {
     next.transaction_type = "sale";
   else if (/\brent\b|lease|tenan/.test(lower)) next.transaction_type = "rent";
 
-  if (/\bstudio\b/.test(lower)) {
-    next.beds = 0;
-    next.property_type = "studio";
+  if (/\bstudio\b/.test(lower) || /self-?contain/.test(lower)) {
+    next.beds = next.beds ?? ( /self-?contain/.test(lower) ? 1 : 0);
+    if (/self-?contain/.test(lower)) next.property_type = "self-contain";
+    else next.property_type = "studio";
   }
+  if (/chamber\s*(and|&)\s*hall/.test(lower)) next.property_type = "chamber-and-hall";
+  if (/compound house/.test(lower)) next.property_type = "compound";
+  if (/single room/.test(lower)) next.property_type = "single-room";
 
   if (/\b(?:apartment|flat)s?\b/.test(lower)) next.property_type = next.property_type || "apartment";
   if (/\bvilla/.test(lower)) next.property_type = "villa";
@@ -65,14 +70,36 @@ export function extractCriteria(text = "", existing = {}) {
 
   const budgetK = lower.match(/(\d{2,3})\s*k\b/);
   const budgetAed = lower.match(/aed\s*([\d,]+)/i) || lower.match(/([\d,]+)\s*aed/i);
+  const budgetGhs = lower.match(/gh[s₵¢]?\s*([\d,]+)/i) || lower.match(/([\d,]+)\s*(?:ghs|cedis)/i);
   if (budgetK) {
     const val = Number(budgetK[1]) * 1000;
-    if (next.transaction_type === "rent") next.max_price = val;
-    else next.max_price = val;
+    next.max_price = val;
+  } else if (budgetGhs) {
+    next.max_price = Number(budgetGhs[1].replace(/,/g, ""));
   } else if (budgetAed) {
     next.max_price = Number(budgetAed[1].replace(/,/g, ""));
   } else if (/^\s*(\d{4,6})\s*$/.test(lower)) {
     next.max_price = Number(lower.trim());
+  }
+
+  if (isGhanaMarket()) {
+    for (const city of GHANA_CITIES) {
+      if (new RegExp(`\\b${city.replace(/\s+/g, "\\s+")}\\b`, "i").test(lower)) {
+        next.emirate = city;
+        delete next.emirates;
+        break;
+      }
+    }
+    for (const [city, areas] of Object.entries(GHANA_AREAS)) {
+      for (const area of areas) {
+        if (new RegExp(`\\b${area.replace(/[.*+?^${}()|[\]\\]/g, "\\$&").replace(/\s+/g, "\\s+")}\\b`, "i").test(lower)) {
+          next.community = area;
+          next.emirate = city;
+          delete next.emirates;
+          break;
+        }
+      }
+    }
   }
 
   const range = lower.match(/(\d{2,3})\s*[-–to]+\s*(\d{2,3})\s*k/);
@@ -200,4 +227,18 @@ export function normalizeUaePhone(raw) {
   return digits.startsWith("+") ? digits : `+${digits}`;
 }
 
-export { UAE_EMIRATES };
+export function normalizeGhanaPhone(raw) {
+  let digits = String(raw || "").replace(/\D/g, "");
+  if (!digits) return "";
+  if (digits.startsWith("00")) digits = digits.slice(2);
+  if (digits.startsWith("233")) return `+${digits}`;
+  if (digits.startsWith("0") && digits.length === 10) return `+233${digits.slice(1)}`;
+  if (digits.length === 9) return `+233${digits}`;
+  return digits.startsWith("+") ? digits : `+${digits}`;
+}
+
+export function normalizeMarketPhone(raw) {
+  return isGhanaMarket() ? normalizeGhanaPhone(raw) : normalizeUaePhone(raw);
+}
+
+export { UAE_EMIRATES, getMarket };

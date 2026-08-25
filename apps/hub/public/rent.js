@@ -15,6 +15,99 @@ const sendBtn = document.getElementById("send");
 const micBtn = document.getElementById("mic-btn");
 const recordingBar = document.getElementById("recording-bar");
 const recordingLabel = document.getElementById("recording-label");
+let marketConfig = {
+  code: "AE",
+  brand: "Dar Concierge AI",
+  currency: "AED",
+  payToView: false,
+  viewingFeeGhs: 0,
+  phoneLabel: "UAE phone",
+  phonePlaceholder: "+971 50 xxx xxxx",
+  consent: "I agree to share my details with the listing agent"
+};
+
+async function loadMarketConfig() {
+  try {
+    const res = await fetch("/api/rent/config");
+    const data = await res.json();
+    if (data.ok && data.market) marketConfig = { ...marketConfig, ...data.market };
+  } catch {
+    /* keep defaults */
+  }
+  applyMarketBranding();
+}
+
+function applyMarketBranding() {
+  const ghana = marketConfig.code === "GH";
+  document.title = marketConfig.brand || document.title;
+  document.querySelector('meta[name="description"]')?.setAttribute(
+    "content",
+    ghana
+      ? "KeyFinder Ghana — rooms, self-contains, and apartments. Pay GH₵100 to view."
+      : "Dar Concierge AI — Your UAE AI Property Assistant. Powered by KeyFinder AI."
+  );
+  document.querySelectorAll(".logo-link").forEach((a) => {
+    a.setAttribute("href", ghana ? "/gh" : "/rent");
+    a.setAttribute("aria-label", `${marketConfig.brand || "Home"} home`);
+  });
+  if (heroGreeting) {
+    heroGreeting.textContent = ghana
+      ? "Welcome. Looking for a self-contain in East Legon or a chamber and hall in Osu?"
+      : heroGreeting.textContent;
+  }
+  const powered = document.querySelector(".hero-powered");
+  if (powered && ghana) powered.innerHTML = "Rooms across Accra, Kumasi &amp; Tema";
+  const pills = document.querySelectorAll(".hero-suggestions .pill");
+  if (ghana && pills[0] && pills[1]) {
+    pills[0].textContent = "East Legon self-contain";
+    pills[0].dataset.msg = "Show me self-contain rooms for rent in East Legon";
+    pills[1].textContent = "Osu chamber and hall";
+    pills[1].dataset.msg = "I need a chamber and hall in Osu under GH₵1500";
+  }
+  const actions = document.querySelectorAll("#quick-actions .action-card");
+  if (ghana && actions.length >= 3) {
+    actions[0].dataset.msg = "What does a self-contain in East Legon usually cost per month?";
+    actions[0].querySelector("span:last-child").textContent = "Accra rents";
+    actions[1].dataset.msg = "How does the GH₵100 viewing fee and PIN work?";
+    actions[1].querySelector("span:last-child").textContent = "Viewing fee";
+    actions[2].dataset.msg = "Show 2 bedroom apartments in Spintex";
+    actions[2].querySelector("span:last-child").textContent = "Spintex 2-bed";
+  }
+  const exploreDubai = document.querySelector('.explore-filters [data-filter="Dubai"]');
+  if (ghana && exploreDubai) {
+    exploreDubai.textContent = "Accra";
+    exploreDubai.dataset.filter = "Accra";
+  }
+  if (input) input.placeholder = ghana ? "Ask KeyFinder Ghana…" : input.placeholder;
+  const disclaimer = document.querySelector(".profile-card .disclaimer");
+  if (disclaimer && ghana) {
+    disclaimer.textContent =
+      "KeyFinder Ghana connects you with listing agents. Pay GH₵100 to view. We are not a landlord.";
+  }
+  const pwaCopy = document.querySelector(".pwa-install-copy strong");
+  if (pwaCopy && ghana) pwaCopy.textContent = "Install KeyFinder Ghana";
+  const phoneInput = leadForm?.querySelector('input[name="phone"]');
+  const phoneLabel = phoneInput?.closest("label");
+  if (phoneInput) phoneInput.placeholder = marketConfig.phonePlaceholder || phoneInput.placeholder;
+  if (phoneLabel) {
+    const text = phoneLabel.childNodes[0];
+    if (text && text.nodeType === Node.TEXT_NODE) text.textContent = marketConfig.phoneLabel || "Phone";
+  }
+  const consentLabel = leadForm?.querySelector('input[name="consent"]')?.closest("label");
+  if (consentLabel && marketConfig.consent) {
+    const box = consentLabel.querySelector("input");
+    consentLabel.textContent = "";
+    if (box) consentLabel.append(box, " ", document.createTextNode(marketConfig.consent));
+  }
+  const muted = document.querySelector("#lead-form > p.muted");
+  if (muted && marketConfig.payToView) {
+    muted.textContent = `Pay GH₵${marketConfig.viewingFeeGhs || 100} to book. GH₵50 for KeyFinder, GH₵50 held for the agent until you view.`;
+  }
+  if (marketConfig.payToView) {
+    const btn = document.getElementById("lead-submit");
+    if (btn) btn.textContent = `Pay GH₵${marketConfig.viewingFeeGhs || 100}`;
+  }
+}
 const leadDialog = document.getElementById("lead-dialog");
 const leadForm = document.getElementById("lead-form");
 const leadCancel = document.getElementById("lead-cancel");
@@ -445,12 +538,21 @@ function appendComparisonToChat(comparison) {
   appendToChat(wrap);
 }
 
+function clusterNoteHtml(listing) {
+  const n = Number(listing?.other_agent_count || 0);
+  if (n < 1) return "";
+  return `<p class="muted cluster-note">Also listed by ${n} other agent${n === 1 ? "" : "s"} — booking binds to this offer.</p>`;
+}
+
 function formatPrice(listing) {
   if (!listing) return "";
+  const amount = Number(listing.price_aed).toLocaleString();
+  const cur = listing.currency || marketConfig.currency || "AED";
+  const symbol = cur === "GHS" ? "GH₵" : "AED";
   if (listing.transaction_type === "rent") {
-    return `AED ${Number(listing.price_aed).toLocaleString()}/${listing.price_period || "year"}`;
+    return `${symbol} ${amount}/${listing.price_period || (cur === "GHS" ? "month" : "year")}`;
   }
-  return `AED ${Number(listing.price_aed).toLocaleString()}`;
+  return `${symbol} ${amount}`;
 }
 
 function txLabel(type) {
@@ -469,6 +571,10 @@ function sourceLabel(source) {
     dubizzle: "Dubizzle",
     emaar: "Emaar",
     damac: "Damac",
+    jiji: "Jiji",
+    meqasa: "Meqasa",
+    ghanapropertycentre: "Ghana Property Centre",
+    tonaton: "Tonaton",
     seed: "Demo"
   };
   return map[source] || source.replace(/_/g, " ");
@@ -879,12 +985,13 @@ function buildFeatureCard(l) {
       <div class="feature-body">
         <h3>${escapeHtml(l.title)}</h3>
         <p class="feature-price">${escapeHtml(formatPrice(l))}</p>
-        <p class="feature-loc">📍 ${escapeHtml(l.community || l.emirate || "UAE")}</p>
+        <p class="feature-loc">📍 ${escapeHtml(l.community || l.emirate || (marketConfig.code === "GH" ? "Ghana" : "UAE"))}</p>
         <div class="feature-specs">
           ${beds ? `<span>🛏 ${beds}</span>` : ""}
           ${baths ? `<span>🛁 ${baths}</span>` : ""}
           ${sqft ? `<span>📐 ${sqft}</span>` : ""}
         </div>
+        ${clusterNoteHtml(l)}
         <button type="button" class="gold-btn" data-book="${escapeAttr(l.id)}">Book Viewing</button>
       </div>
     </article>
@@ -929,9 +1036,10 @@ function wireFeatureCards(container) {
 
 function formatAedShort(n) {
   const v = Number(n) || 0;
-  if (v >= 1_000_000) return `AED ${(v / 1_000_000).toFixed(1)}M`;
-  if (v >= 1000) return `AED ${Math.round(v / 1000)}k`;
-  return `AED ${v.toLocaleString()}`;
+  const symbol = marketConfig.currency === "GHS" ? "GH₵" : "AED";
+  if (v >= 1_000_000) return `${symbol} ${(v / 1_000_000).toFixed(1)}M`;
+  if (v >= 1000) return `${symbol} ${Math.round(v / 1000)}k`;
+  return `${symbol} ${v.toLocaleString()}`;
 }
 
 function appendChartToChat(chart) {
@@ -1027,6 +1135,7 @@ function renderMiniListings(listings = [], photoMode = false) {
           ${specHtml}
           ${l.description ? `<p class="photo-desc">${escapeHtml(String(l.description).slice(0, 160))}${l.description.length > 160 ? "…" : ""}</p>` : ""}
           ${amenityHtml ? `<div class="photo-amenities">${amenityHtml}</div>` : ""}
+          ${clusterNoteHtml(l)}
           <button type="button" class="photo-view-btn">View full listing</button>
           <button type="button" class="photo-book-btn" data-book="${escapeAttr(l.id)}">Book viewing</button>
         </div>
@@ -1049,6 +1158,7 @@ function renderMiniListings(listings = [], photoMode = false) {
           <h4>${escapeHtml(l.title)}</h4>
           <p class="price">${escapeHtml(formatPrice(l))}</p>
           <p class="muted">${escapeHtml(l.community || l.emirate || "")}</p>
+          ${clusterNoteHtml(l)}
         </div>
       `;
     }
@@ -1102,11 +1212,16 @@ const ALERT_PHONE_KEY = "uae_re_alert_phone";
 async function saveSearchAlert() {
   let phone = localStorage.getItem(ALERT_PHONE_KEY) || "";
   if (!phone) {
-    const raw = window.prompt("UAE mobile for WhatsApp alerts (e.g. 971501234567):", "");
+    const raw = window.prompt(
+      marketConfig.code === "GH"
+        ? "Ghana mobile for WhatsApp alerts (e.g. 0244111222):"
+        : "UAE mobile for WhatsApp alerts (e.g. 971501234567):",
+      ""
+    );
     if (!raw) return;
     phone = raw.replace(/\D/g, "");
     if (phone.length < 9) {
-      alert("Enter a valid UAE mobile number.");
+      alert(marketConfig.code === "GH" ? "Enter a valid Ghana mobile number." : "Enter a valid UAE mobile number.");
       return;
     }
     localStorage.setItem(ALERT_PHONE_KEY, phone);
@@ -1348,6 +1463,7 @@ function renderListingDetail(l) {
       ${l.description ? `<p class="listing-desc">${escapeHtml(l.description)}</p>` : ""}
       ${amenities}
       ${l.agency_name ? `<p class="listing-meta muted">Listed by ${escapeHtml(l.agency_name)}${source ? ` · ${escapeHtml(source)}` : ""}</p>` : source ? `<p class="listing-meta muted">Listed on ${escapeHtml(source)}</p>` : ""}
+      ${clusterNoteHtml(l)}
       <button type="button" class="listing-book" data-book="${escapeAttr(l.id)}">Book Viewing</button>
     </div>
   `;
@@ -1606,7 +1722,7 @@ leadForm.addEventListener("submit", async (e) => {
   const submitBtn = document.getElementById("lead-submit");
 
   if (!renterName || !renterPhone) {
-    addMessage("Please enter your name and UAE phone number.", "bot");
+    addMessage(`Please enter your name and ${marketConfig.phoneLabel || "phone number"}.`, "bot");
     return;
   }
   if (!consent) {
@@ -1649,6 +1765,21 @@ leadForm.addEventListener("submit", async (e) => {
       data.text ||
       `Viewing booked${pendingListingTitle ? ` for ${pendingListingTitle}` : ""} — we'll call ${renterPhone} to confirm, then reach out to the agent.`;
     addMessage(confirm, "bot");
+    if (data.payToView && data.authorizationUrl) {
+      addMessage("Opening MoMo / card payment for GH₵100…", "bot");
+      window.location.href = data.authorizationUrl;
+    } else if (data.payToView && data.devPay && data.viewing?.id) {
+      const paid = await fetch("/api/rent/viewing/confirm", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ viewingId: data.viewing.id })
+      }).then((r) => r.json());
+      if (paid.ok && paid.pin) {
+        addMessage(`Dev pay: your viewing PIN is ${paid.pin}. Give it to the agent only at the property.`, "bot");
+      } else if (paid.ok) {
+        addMessage("Payment marked. PIN will be sent to WhatsApp.", "bot");
+      }
+    }
     pendingListingId = null;
     pendingListingTitle = "";
     leadForm.reset();
@@ -1657,11 +1788,14 @@ leadForm.addEventListener("submit", async (e) => {
     addMessage(`Could not book viewing: ${error.message}. Please try again.`, "bot");
   } finally {
     submitBtn.disabled = false;
-    submitBtn.textContent = "Book Viewing";
+    submitBtn.textContent = marketConfig.payToView
+      ? `Pay GH₵${marketConfig.viewingFeeGhs || 100}`
+      : "Book Viewing";
   }
 });
 
 async function bootstrap() {
+  await loadMarketConfig();
   applyUiLanguage(userLanguage);
 
   const savedName = localStorage.getItem(PROFILE_KEY) || "";

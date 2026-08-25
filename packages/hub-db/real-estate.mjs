@@ -4,6 +4,8 @@
  */
 
 import { createHash, randomUUID } from "node:crypto";
+import { clusterKey } from "../real-estate/cluster.mjs";
+import { isGhanaMarket } from "../real-estate/market.mjs";
 
 export const UAE_EMIRATES = [
   "Dubai",
@@ -161,7 +163,8 @@ export function migrateRealEstate(db) {
     `ALTER TABLE re_listings ADD COLUMN listing_status TEXT NOT NULL DEFAULT 'available'`,
     `ALTER TABLE re_listings ADD COLUMN last_verified_at INTEGER`,
     `ALTER TABLE re_listings ADD COLUMN size_sqft REAL`,
-    `ALTER TABLE re_leads ADD COLUMN channel TEXT NOT NULL DEFAULT 'pwa'`
+    `ALTER TABLE re_leads ADD COLUMN channel TEXT NOT NULL DEFAULT 'pwa'`,
+    `ALTER TABLE re_listings ADD COLUMN cluster_id TEXT DEFAULT ''`
   ]) {
     try {
       db.exec(sql);
@@ -221,9 +224,11 @@ export function normalizeListingInput(input = {}) {
     lat: input.lat != null ? Number(input.lat) : null,
     lng: input.lng != null ? Number(input.lng) : null,
     scraped_at: Number(input.scraped_at || now),
-    is_active: input.is_active === false || input.is_active === 0 ? 0 : 1
+    is_active: input.is_active === false || input.is_active === 0 ? 0 : 1,
+    cluster_id: String(input.cluster_id || "").trim()
   };
   row.fingerprint = listingFingerprint(row);
+  if (!row.cluster_id) row.cluster_id = clusterKey(row);
   return row;
 }
 
@@ -253,7 +258,7 @@ export function upsertListing(db, input) {
         price_aed = ?, price_period = ?, handover_date = ?, payment_plan = ?, developer = ?,
         furnished = ?, amenities_json = ?, images_json = ?, description = ?,
         agent_name = ?, agent_phone = ?, agency_name = ?, rera_permit = ?,
-        lat = ?, lng = ?, fingerprint = ?, scraped_at = ?, is_active = 1, updated_at = ?
+        lat = ?, lng = ?, fingerprint = ?, cluster_id = ?, scraped_at = ?, is_active = 1, updated_at = ?
       WHERE source = ? AND external_id = ?
     `).run(
       row.source_url,
@@ -281,6 +286,7 @@ export function upsertListing(db, input) {
       row.lat,
       row.lng,
       row.fingerprint,
+      row.cluster_id,
       row.scraped_at,
       now,
       row.source,
@@ -296,9 +302,9 @@ export function upsertListing(db, input) {
       price_aed, price_period, handover_date, payment_plan, developer,
       furnished, amenities_json, images_json, description,
       agent_name, agent_phone, agency_name, rera_permit, lat, lng,
-      fingerprint, scraped_at, is_active, created_at, updated_at
+      fingerprint, cluster_id, scraped_at, is_active, created_at, updated_at
     ) VALUES (
-      ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?, ?
+      ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?, ?
     )
   `).run(
     row.id,
@@ -329,6 +335,7 @@ export function upsertListing(db, input) {
     row.lat,
     row.lng,
     row.fingerprint,
+    row.cluster_id,
     row.scraped_at,
     now,
     now
@@ -350,8 +357,13 @@ export function getListing(db, id) {
 }
 
 export function searchListings(db, criteria = {}, limit = 10) {
-  const clauses = ["is_active = 1", "source != 'seed'", "external_id NOT LIKE 'gen-%'"];
+  const clauses = ["is_active = 1"];
   const params = [];
+  const includeSeed = isGhanaMarket() || Boolean(criteria.include_seed);
+  if (!includeSeed) {
+    clauses.push("source != 'seed'");
+    clauses.push("external_id NOT LIKE 'gen-%'");
+  }
 
   if (criteria.transaction_type) {
     clauses.push("transaction_type = ?");
@@ -414,20 +426,18 @@ export function searchListings(db, criteria = {}, limit = 10) {
 }
 
 export function countActiveListings(db) {
-  return (
-    db
-      .prepare(
-        `SELECT COUNT(*) AS n FROM re_listings WHERE is_active = 1 AND source != 'seed' AND external_id NOT LIKE 'gen-%'`
-      )
-      .get()?.n || 0
-  );
+  const sql = isGhanaMarket()
+    ? `SELECT COUNT(*) AS n FROM re_listings WHERE is_active = 1`
+    : `SELECT COUNT(*) AS n FROM re_listings WHERE is_active = 1 AND source != 'seed' AND external_id NOT LIKE 'gen-%'`;
+  return db.prepare(sql).get()?.n || 0;
 }
 
 export function countListingsBySource(db) {
+  const where = isGhanaMarket()
+    ? `WHERE is_active = 1`
+    : `WHERE is_active = 1 AND source != 'seed' AND external_id NOT LIKE 'gen-%'`;
   return db
-    .prepare(
-      `SELECT source, COUNT(*) AS count FROM re_listings WHERE is_active = 1 AND source != 'seed' AND external_id NOT LIKE 'gen-%' GROUP BY source ORDER BY count DESC`
-    )
+    .prepare(`SELECT source, COUNT(*) AS count FROM re_listings ${where} GROUP BY source ORDER BY count DESC`)
     .all();
 }
 
@@ -678,10 +688,10 @@ export function searchKnowledge(db, query, limit = 5) {
 export function formatListingsForPrompt(listings = []) {
   if (!listings.length) return "";
   const lines = listings.slice(0, 8).map((l, i) => {
+    const currency = isGhanaMarket() ? "GH₵" : "AED";
+    const period = l.price_period || (l.transaction_type === "rent" ? (isGhanaMarket() ? "month" : "year") : "total");
     const price =
-      l.transaction_type === "rent"
-        ? `AED ${l.price_aed}/${l.price_period || "year"}`
-        : `AED ${l.price_aed}`;
+      l.transaction_type === "rent" ? `${currency} ${l.price_aed}/${period}` : `${currency} ${l.price_aed}`;
     const amenities = (l.amenities || []).slice(0, 8).join(", ");
     const specs = [
       l.beds != null ? `${l.beds} bed` : null,
@@ -690,7 +700,10 @@ export function formatListingsForPrompt(listings = []) {
     ]
       .filter(Boolean)
       .join(", ");
-    return `${i + 1}. ${l.beds || "?"}BR ${l.property_type || "home"} in ${l.community || l.emirate} (${l.emirate}) — ${price}${specs ? ` · ${specs}` : ""}${amenities ? ` · Amenities: ${amenities}` : ""} · id=${l.id}`;
+    const cluster = Number(l.other_agent_count || 0)
+      ? ` · also listed by ${l.other_agent_count} other agents (same unit, this offer)`
+      : "";
+    return `${i + 1}. ${l.beds || "?"}BR ${l.property_type || "home"} in ${l.community || l.emirate} (${l.emirate}) — ${price}${specs ? ` · ${specs}` : ""}${amenities ? ` · Amenities: ${amenities}` : ""}${cluster} · id=${l.id}`;
   });
   return ["Properties for this search (cards show in app):", ...lines].join("\n");
 }

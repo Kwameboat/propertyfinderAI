@@ -11,7 +11,7 @@ import {
   getListing
 } from "../hub-db/real-estate.mjs";
 import { intentNeedsWeb, intentNeedsKnowledge, intentNeedsListings, intentNeedsDeveloperIntel, transactionTypeForIntent, intentNeedsChart } from "./intent.mjs";
-import { extractCriteria, scoreLead, normalizeUaePhone } from "./qualification.mjs";
+import { extractCriteria, scoreLead, normalizeMarketPhone } from "./qualification.mjs";
 import { retrieveKnowledge, formatKnowledgeBlockForPrompt } from "./rag.mjs";
 import { searchUaeRealEstateWeb, formatWebBlockForPrompt } from "./web.mjs";
 import { buildRealEstateSystemPrompt, buildLeadDraftMessage } from "./prompt.mjs";
@@ -39,6 +39,9 @@ import {
   formatComparisonBlockForPrompt
 } from "./listing-compare.mjs";
 import { formatListingTitle, polishListingsForChat } from "./listing-polish.mjs";
+import { getMarket, isGhanaMarket, formatMoney, ghanaSystemPromptPrefix } from "./market.mjs";
+import { attachClusterMeta, groupListingsByCluster } from "./cluster.mjs";
+import { startGhanaViewing } from "./ghana-viewing.mjs";
 import { aiDisclaimerText } from "./disclaimer.mjs";
 import { classifyChatTurn, loadRecentListings, sessionHasBooking } from "./chat-turn.mjs";
 import { enrichListingsWithDetail } from "./listing-detail-enrich.mjs";
@@ -220,7 +223,11 @@ export async function handleRentChat(db, { sessionId, message, userPhone = "" } 
 
     listingsBlock = formatListingsForPrompt(listings);
 
-    if (devListingsSnapshot.length) {
+    if (isGhanaMarket()) {
+      const grouped = groupListingsByCluster(listings);
+      listings = grouped.map((g) => attachClusterMeta(g.listing, g.offers));
+      listingsBlock = formatListingsForPrompt(listings);
+    } else if (devListingsSnapshot.length) {
       const byKey = new Map(listings.map((l) => [`${l.source}:${l.external_id}`, l]));
       for (const row of devListingsSnapshot) {
         byKey.set(`${row.source}:${row.external_id}`, row);
@@ -406,6 +413,10 @@ export function formatListingCard(l, criteria = {}) {
     size_sqft: l.size_sqft,
     price_aed: l.price_aed,
     price_period: l.price_period,
+    currency: getMarket().currency,
+    cluster_id: l.cluster_id || null,
+    other_agent_count: l.other_agent_count || 0,
+    other_agents: l.other_agents || [],
     furnished: l.furnished,
     developer: l.developer,
     handover_date: l.handover_date,
@@ -495,8 +506,8 @@ export async function submitRentLead(db, { sessionId, listingId, renterName, ren
   const session = getSession(db, sessionId);
   if (!session) throw new Error("Session not found");
 
-  const phone = normalizeUaePhone(renterPhone);
-  if (!phone) throw new Error("Valid UAE phone number required");
+  const phone = normalizeMarketPhone(renterPhone);
+  if (!phone) throw new Error(isGhanaMarket() ? "Valid Ghana phone number required" : "Valid UAE phone number required");
 
   const { listing, resolvedId } = await resolveListingForLead(db, session, listingId);
 
@@ -523,6 +534,48 @@ export async function submitRentLead(db, { sessionId, listingId, renterName, ren
   });
 
   const listingTitle = listing ? formatListingTitle(listing, criteria) : "";
+  if (isGhanaMarket()) {
+    const pay = await startGhanaViewing(db, {
+      lead,
+      listing,
+      sessionId,
+      renterName,
+      renterPhone: phone,
+      notes
+    });
+    const confirmText = listingTitle
+      ? `Pay GH₵100 to confirm your viewing for ${listingTitle}. GH₵50 stays with KeyFinder; GH₵50 is paid to the listing agent after you visit and they send your PIN.`
+      : `Pay GH₵100 to confirm this viewing. You will get a PIN on WhatsApp after payment.`;
+    updateSession(db, sessionId, {
+      status: "awaiting_payment",
+      userPhone: phone,
+      criteria: {
+        ...criteria,
+        booked_listing_id: resolvedId || listingId || null,
+        booked_listing_title: listingTitle || "",
+        viewing_id: pay.viewing.id
+      },
+      appendMessage: {
+        role: "assistant",
+        body: confirmText,
+        at: Date.now()
+      }
+    });
+    return {
+      ok: true,
+      payToView: true,
+      text: confirmText,
+      lead,
+      listing: listing ? formatListingCard(listing) : null,
+      viewing: pay.viewing,
+      authorizationUrl: pay.authorizationUrl,
+      reference: pay.reference,
+      amountGhs: pay.amountGhs,
+      paystackConfigured: pay.paystackConfigured,
+      devPay: pay.devPay,
+      draft_message: draft
+    };
+  }
   const confirmText = listingTitle
     ? `Viewing booked for ${listingTitle} — we'll call ${phone} to confirm, then reach out to the agent. I won't keep sending more homes unless you ask to keep looking.`
     : `Viewing booked — we'll call ${phone} to confirm, then reach out to the agent. I won't keep sending more homes unless you ask to keep looking.`;

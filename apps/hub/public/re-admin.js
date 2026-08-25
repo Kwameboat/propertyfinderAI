@@ -22,6 +22,9 @@ function fmtDate(v) {
 function fmtPrice(n, tx) {
   const p = Number(n);
   if (!Number.isFinite(p)) return "—";
+  if (marketCode === "GH") {
+    return tx === "sale" ? `GH₵ ${p.toLocaleString()}` : `GH₵ ${p.toLocaleString()}/mo`;
+  }
   return tx === "rent" ? `AED ${p.toLocaleString()}/yr` : `AED ${p.toLocaleString()}`;
 }
 
@@ -45,9 +48,12 @@ const VIEW_TITLES = {
   overview: "Overview",
   listings: "Listings",
   leads: "Leads",
+  viewings: "Viewings",
   ingest: "Ingest",
   scrapes: "Scrape runs"
 };
+
+let marketCode = "AE";
 
 const LEAD_STATUSES = [
   "new",
@@ -79,6 +85,7 @@ function switchView(name) {
   if (name === "leads") loadLeads();
   if (name === "listings") loadListings();
   if (name === "scrapes") loadScrapes();
+  if (name === "viewings") loadViewings();
 }
 
 function listingFilters() {
@@ -130,6 +137,12 @@ function renderListingCard(l) {
 }
 
 async function loadDashboard() {
+  try {
+    const cfg = await api("/api/rent/config");
+    if (cfg.market?.code) marketCode = cfg.market.code;
+  } catch {
+    /* keep AE */
+  }
   const data = await api("/api/admin/re/dashboard");
   dashboardCache = data;
   document.getElementById("kpi-listings").textContent = data.listings ?? "0";
@@ -355,6 +368,47 @@ async function loadLeads() {
   });
 }
 
+async function loadViewings() {
+  const status = document.getElementById("viewing-status-filter")?.value || "";
+  const q = status ? `?status=${encodeURIComponent(status)}` : "";
+  const [viewingData, dealData] = await Promise.all([
+    api(`/api/admin/re/viewings${q}`),
+    api("/api/admin/re/deals")
+  ]);
+
+  document.getElementById("viewings-table").innerHTML = renderTable(
+    ["Renter", "Phone", "Status", "Agent MoMo", "Paid", "Redeemed", "ID"],
+    (viewingData.viewings || []).map((v) => [
+      esc(v.renter_name || "—"),
+      esc(v.renter_phone || ""),
+      `<span class="ld-status-pill">${esc(v.status)}</span>`,
+      esc(v.agent_momo || "—"),
+      fmtDate(v.paid_at),
+      fmtDate(v.redeemed_at),
+      `<button type="button" class="ld-link-row viewing-id-btn" data-viewing-id="${esc(v.id)}">${esc(String(v.id).slice(0, 8))}…</button>`
+    ])
+  );
+
+  document.querySelectorAll(".viewing-id-btn").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const input = document.getElementById("deal-viewing-id");
+      if (input) input.value = btn.dataset.viewingId;
+    });
+  });
+
+  document.getElementById("deals-table").innerHTML = renderTable(
+    ["Viewing", "Agreed GHS", "Commission", "Platform", "Agent", "Status"],
+    (dealData.deals || []).map((d) => [
+      esc(String(d.viewing_id || "").slice(0, 8)),
+      String(d.agreed_amount_ghs ?? ""),
+      String(d.commission_ghs ?? ""),
+      String(d.platform_share_ghs ?? ""),
+      String(d.agent_share_ghs ?? ""),
+      esc(d.status || "")
+    ])
+  );
+}
+
 async function loadScrapes() {
   const data = await api("/api/admin/re/scrape-runs?limit=25");
   document.getElementById("scrapes-table").innerHTML = renderTable(
@@ -379,6 +433,7 @@ document.getElementById("refresh-btn").addEventListener("click", async () => {
   if (active === "leads") await loadLeads();
   if (active === "listings") await loadListings();
   if (active === "scrapes") await loadScrapes();
+  if (active === "viewings") await loadViewings();
 });
 
 document.getElementById("logout-btn").addEventListener("click", async () => {
@@ -470,6 +525,29 @@ document.getElementById("listings-next").addEventListener("click", () => {
 
 document.getElementById("lead-status-filter").addEventListener("change", () => {
   loadLeads().catch(console.error);
+});
+
+document.getElementById("viewing-status-filter")?.addEventListener("change", () => {
+  loadViewings().catch(console.error);
+});
+
+document.getElementById("deal-form")?.addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const msg = document.getElementById("deal-msg");
+  msg.textContent = "Saving…";
+  try {
+    const data = await api("/api/admin/re/deals", {
+      method: "POST",
+      body: JSON.stringify({
+        viewingId: document.getElementById("deal-viewing-id").value.trim(),
+        agreedAmountGhs: Number(document.getElementById("deal-amount").value)
+      })
+    });
+    msg.textContent = `Deal recorded. Commission GH₵${data.deal.commission_ghs} (platform ${data.deal.platform_share_ghs} / agent ${data.deal.agent_share_ghs}).`;
+    await loadViewings();
+  } catch (err) {
+    msg.textContent = err.message;
+  }
 });
 
 async function runPull(dryRun) {

@@ -21,6 +21,8 @@ import {
 } from "./listing-polish.mjs";
 import { getLivePullFromCache, setLivePullCache, isLiveCacheEnabled } from "./live-cache.mjs";
 import { filterShowableListings } from "./listing-verify-filter.mjs";
+import { isGhanaMarket } from "./market.mjs";
+import { pullGhanaListingsForChat } from "./ghana-search.mjs";
 
 const MIN_RESULTS = 3;
 const PORTAL_HOST = /propertyfinder\.ae|bayut\.com|dubizzle\.com/i;
@@ -85,6 +87,9 @@ export async function pullLiveListingsForChat(db, criteria = {}, options = {}) {
 }
 
 async function pullLiveListingsForChatInner(db, criteria = {}, options = {}) {
+  if (isGhanaMarket()) {
+    return pullGhanaListingsForChat(db, criteria, { limit: options.limit || 8 });
+  }
   const limit = options.limit || 8;
   const wantsPhotos = options.wantsPhotos !== false;
   const sources = [];

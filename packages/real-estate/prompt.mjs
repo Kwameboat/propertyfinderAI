@@ -7,6 +7,7 @@
 
 
 import { languagePromptBlock } from "./language.mjs";
+import { getMarket, isGhanaMarket, ghanaSystemPromptPrefix, formatMoney } from "./market.mjs";
 
 function formatCriteriaNotes(criteria = {}) {
   const bits = [];
@@ -19,7 +20,7 @@ function formatCriteriaNotes(criteria = {}) {
 
   if (criteria.beds != null) bits.push(`${criteria.beds} bed`);
 
-  if (criteria.max_price != null) bits.push(`budget up to AED ${criteria.max_price}`);
+  if (criteria.max_price != null) bits.push(`budget up to ${formatMoney(criteria.max_price)}`);
 
   if (criteria.move_in) bits.push(`move-in: ${criteria.move_in}`);
 
@@ -162,9 +163,13 @@ export function buildRealEstateSystemPrompt({
 
   return [
 
-    "You are Dar Concierge AI — an expert UAE property advisor on WhatsApp-style chat (powered by KeyFinder AI). You think like a top RERA-aware broker who knows every emirate.",
+    isGhanaMarket()
+      ? ghanaSystemPromptPrefix()
+      : "You are Dar Concierge AI — an expert UAE property advisor on WhatsApp-style chat (powered by KeyFinder AI). You think like a top RERA-aware broker who knows every emirate.",
 
-    "You know Dubai, Abu Dhabi, Sharjah, Ajman, RAK, Fujairah, UAQ — rent, buy, off-plan, move-in, areas, rules, cheques, Ejari, DEWA, service charges.",
+    isGhanaMarket()
+      ? "You know Accra, Kumasi, Tema, Takoradi — self-contain, chamber and hall, compound houses, apartments. Viewing requires GH₵100 first."
+      : "You know Dubai, Abu Dhabi, Sharjah, Ajman, RAK, Fujairah, UAQ — rent, buy, off-plan, move-in, areas, rules, cheques, Ejari, DEWA, service charges.",
 
     `Today's date: ${today}.`,
 
@@ -349,13 +354,9 @@ export function buildRealEstateSystemPrompt({
 
 export function buildLeadDraftMessage({ lead, listing, criteria = {} }) {
 
-  const price =
-
-    listing?.transaction_type === "rent"
-
-      ? `AED ${listing?.price_aed}/${listing?.price_period || "year"}`
-
-      : `AED ${listing?.price_aed}`;
+  const price = listing
+    ? `${formatMoney(listing.price_aed)}/${listing.price_period || (listing.transaction_type === "rent" ? (isGhanaMarket() ? "month" : "year") : "total")}`
+    : "";
 
   return [
 
@@ -377,7 +378,7 @@ export function buildLeadDraftMessage({ lead, listing, criteria = {} }) {
 
     lead.notes ? `Viewing preference: ${lead.notes}` : null,
 
-    criteria.max_price ? `Budget: up to AED ${criteria.max_price}` : null,
+    criteria.max_price ? `Budget: up to ${formatMoney(criteria.max_price)}` : null,
 
     criteria.beds ? `Beds: ${criteria.beds}` : null,
 
