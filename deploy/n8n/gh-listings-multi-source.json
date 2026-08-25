@@ -1,0 +1,134 @@
+{
+  "id": "d4e5f6a7-b8c9-0123-defa-234567890123",
+  "name": "FIE AI Ghana — portals → Supabase",
+  "active": true,
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "manual-trigger",
+      "name": "Manual Run",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [240, 200]
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [{ "field": "hours", "hoursInterval": 6 }]
+        }
+      },
+      "id": "schedule-trigger",
+      "name": "Every 6 hours",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [240, 520]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://host.docker.internal:3001/api/rent/ingest/scrape",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "Content-Type", "value": "application/json" },
+            { "name": "X-Ingest-Token", "value": "REPLACE_WITH_JAB_RE_INGEST_TOKEN" }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\"source\":\"ghanapropertycentre\",\"types\":[\"rent\"],\"maxPages\":3}",
+        "options": { "timeout": 600000 }
+      },
+      "id": "scrape-gpc",
+      "name": "1 Ghana Property Centre",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [560, 200],
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://host.docker.internal:3001/api/rent/ingest/scrape",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "Content-Type", "value": "application/json" },
+            { "name": "X-Ingest-Token", "value": "REPLACE_WITH_JAB_RE_INGEST_TOKEN" }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\"source\":\"meqasa\",\"types\":[\"rent\"],\"maxPages\":2}",
+        "options": { "timeout": 600000 }
+      },
+      "id": "scrape-meqasa",
+      "name": "2 Meqasa",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [560, 360],
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://host.docker.internal:3001/api/rent/ingest/scrape",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "Content-Type", "value": "application/json" },
+            { "name": "X-Ingest-Token", "value": "REPLACE_WITH_JAB_RE_INGEST_TOKEN" }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\"source\":\"jiji\",\"types\":[\"rent\"],\"maxPages\":2}",
+        "options": { "timeout": 300000 }
+      },
+      "id": "scrape-jiji",
+      "name": "3 Jiji Ghana",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [560, 520],
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://host.docker.internal:3001/api/rent/ingest/stale",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [{ "name": "X-Ingest-Token", "value": "REPLACE_WITH_JAB_RE_INGEST_TOKEN" }]
+        },
+        "options": { "timeout": 60000 }
+      },
+      "id": "stale-cleanup",
+      "name": "4 Mark stale Ghana listings",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [560, 680],
+      "continueOnFail": true
+    }
+  ],
+  "connections": {
+    "Manual Run": {
+      "main": [[{ "node": "1 Ghana Property Centre", "type": "main", "index": 0 }]]
+    },
+    "Every 6 hours": {
+      "main": [[{ "node": "1 Ghana Property Centre", "type": "main", "index": 0 }]]
+    },
+    "1 Ghana Property Centre": {
+      "main": [[{ "node": "2 Meqasa", "type": "main", "index": 0 }]]
+    },
+    "2 Meqasa": {
+      "main": [[{ "node": "3 Jiji Ghana", "type": "main", "index": 0 }]]
+    },
+    "3 Jiji Ghana": {
+      "main": [[{ "node": "4 Mark stale Ghana listings", "type": "main", "index": 0 }]]
+    }
+  },
+  "settings": { "executionOrder": "v1" },
+  "staticData": null,
+  "tags": [],
+  "meta": { "templateCredsSetupCompleted": true }
+}

@@ -3,6 +3,8 @@
  * When SUPABASE_URL + SUPABASE_SERVICE_ROLE_KEY are set, upserts mirror local SQLite.
  */
 
+import { isGhanaMarket, GHANA_PORTALS, UAE_PORTALS } from "./market.mjs";
+
 function cfg() {
   const url = String(process.env.SUPABASE_URL || "").trim().replace(/\/$/, "");
   const key = String(
@@ -20,7 +22,6 @@ export function isSupabaseEnabled() {
   return Boolean(url && key);
 }
 
-/** Demo/seed rows — never show or re-ingest in production scrape mode. */
 export function isDemoListingRow(row = {}) {
   const source = String(row.source || "").trim();
   const externalId = String(row.external_id || "").trim();
@@ -167,6 +168,11 @@ export async function searchListingsSupabase(criteria = {}, limit = 10) {
   params.set("order", "scraped_at.desc");
   params.set("and", "(source.neq.seed,external_id.not.like.gen-*)");
 
+  if (criteria.sources?.length) {
+    params.set("source", `in.(${criteria.sources.join(",")})`);
+  } else if (isGhanaMarket()) {
+    params.set("source", `in.(${GHANA_PORTALS.join(",")})`);
+  }
   if (criteria.transaction_type) params.set("transaction_type", `eq.${criteria.transaction_type}`);
   if (criteria.emirates?.length > 1) {
     params.set("emirate", `in.(${criteria.emirates.map((e) => `"${e}"`).join(",")})`);
@@ -430,13 +436,18 @@ export async function finishScrapeRunSupabase(
 }
 
 /** Mark listings inactive when not refreshed within maxAgeHours. */
-export async function markStaleListingsSupabase({ maxAgeHours = 72 } = {}) {
+export async function markStaleListingsSupabase({ maxAgeHours = 72, sources } = {}) {
   if (!isSupabaseEnabled()) return 0;
   const cutoff = new Date(Date.now() - maxAgeHours * 3600 * 1000).toISOString();
-  await supabaseRequest(`listings?scraped_at=lt.${encodeURIComponent(cutoff)}&is_active=eq.true`, {
-    method: "PATCH",
-    body: { is_active: false }
-  });
+  const portalSources = sources?.length ? sources : isGhanaMarket() ? GHANA_PORTALS : UAE_PORTALS;
+  const sourceFilter = `source=in.(${portalSources.join(",")})`;
+  await supabaseRequest(
+    `listings?scraped_at=lt.${encodeURIComponent(cutoff)}&is_active=eq.true&${sourceFilter}`,
+    {
+      method: "PATCH",
+      body: { is_active: false }
+    }
+  );
   return null;
 }
 

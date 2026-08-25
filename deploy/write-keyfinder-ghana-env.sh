@@ -27,11 +27,11 @@ env["JAB_HUB_PUBLIC_URL"] = "http://169.58.81.179:3001"
 env["JAB_RENT_HTTPS_ORIGIN"] = "off"
 env["JAB_RE_PUPPETEER_SCRAPE"] = "0"
 env["JAB_RE_ZERO_COST_MODE"] = "1"
-env["SUPABASE_URL"] = ""
-env["SUPABASE_PUBLISHABLE_KEY"] = ""
-env["SUPABASE_SECRET_KEY"] = ""
-env["SUPABASE_ACCESS_TOKEN"] = ""
-env["N8N_LIVE_SEARCH_WEBHOOK"] = ""
+env["JAB_RE_N8N_SOURCES"] = "meqasa,jiji,ghanapropertycentre,tonaton"
+env["JAB_RE_SCRAPE_EMIRATES"] = "Accra,Kumasi,Tema"
+env["N8N_LIVE_SEARCH_WEBHOOK"] = "http://127.0.0.1:5678/webhook/gh-live-search"
+# Keep Supabase keys from the live Hub copy so Ghana listings land in the same project.
+# Do not inherit UAE live-search webhook or Apify portal scrape lists.
 for k in (
     "JAB_RE_MARKET",
     "JAB_RE_GH_DEV_PAY",
@@ -39,6 +39,9 @@ for k in (
     "JAB_HUB_DATA_DIR",
     "JAB_HUB_PUBLIC_URL",
     "JAB_RENT_HTTPS_ORIGIN",
+    "JAB_RE_N8N_SOURCES",
+    "JAB_RE_SCRAPE_EMIRATES",
+    "N8N_LIVE_SEARCH_WEBHOOK",
 ):
     if k not in order:
         order.append(k)

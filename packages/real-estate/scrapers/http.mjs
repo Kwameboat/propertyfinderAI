@@ -22,6 +22,10 @@ export async function fetchText(url, { timeoutMs = 20000, headers = {} } = {}) {
     portalHeaders.Referer = "https://dubai.dubizzle.com/";
   } else if (/meqasa\.com/i.test(u)) {
     portalHeaders.Referer = "https://meqasa.com/";
+  } else if (/ghanapropertycentre\.com/i.test(u)) {
+    portalHeaders.Referer = "https://ghanapropertycentre.com/";
+  } else if (/jiji\.com\.gh|tonaton\.com/i.test(u)) {
+    portalHeaders.Referer = "https://jiji.com.gh/";
   }
 
   const response = await fetch(url, {

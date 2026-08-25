@@ -1,27 +1,35 @@
 /**
- * Ghana listings ingest.
+ * Ghana listings ingest → SQLite + Supabase when configured.
  *
  *   node scripts/scrape-ghana-listings.mjs
- *   node scripts/scrape-ghana-listings.mjs --sources=seed,meqasa
+ *   node scripts/scrape-ghana-listings.mjs --sources=meqasa,jiji,ghanapropertycentre
  */
 
 import { openHubDb, upsertListing, startScrapeRun, finishScrapeRun } from "../packages/hub-db/index.mjs";
-import { scrapeMeqasaHtml } from "../packages/real-estate/scrapers/meqasa-html.mjs";
 import { GHANA_SEED_LISTINGS } from "../packages/real-estate/data/seed-ghana-listings.mjs";
 import { clusterKey } from "../packages/real-estate/cluster.mjs";
 import { loadHubEnv } from "../packages/real-estate/env.mjs";
+import { scrapeSourceToRows, GHANA_INGEST_SOURCES } from "../packages/real-estate/scrape-runner.mjs";
+import { isSupabaseEnabled, batchSyncListingsToSupabase } from "../packages/real-estate/supabase.mjs";
+import { prepareListing } from "../packages/real-estate/ingest.mjs";
+import { getN8nIngestSources } from "../packages/real-estate/mode.mjs";
 
 loadHubEnv();
 
 const args = process.argv.slice(2);
 const sourcesArg = args.find((a) => a.startsWith("--sources="));
-const sources = sourcesArg ? sourcesArg.split("=")[1].split(",") : ["seed", "meqasa"];
-const cities = ["Accra", "Kumasi", "Tema"];
+const includeSeed = args.includes("--seed");
+const defaultSources = getN8nIngestSources().filter((s) => GHANA_INGEST_SOURCES.includes(s));
+const sources = sourcesArg
+  ? sourcesArg.split("=")[1].split(",").map((s) => s.trim()).filter(Boolean)
+  : includeSeed
+    ? ["seed", ...defaultSources]
+    : defaultSources;
 
 const { db } = openHubDb();
 let upserted = 0;
 
-function saveRows(rows) {
+function saveSqlite(rows) {
   for (const row of rows) {
     const listing = upsertListing(db, { ...row, cluster_id: clusterKey(row) });
     if (listing?.id) {
@@ -31,28 +39,50 @@ function saveRows(rows) {
   }
 }
 
+async function saveSupabase(rows) {
+  if (!isSupabaseEnabled()) return 0;
+  const prepared = rows.map((row) => prepareListing(row)).filter(Boolean);
+  if (!prepared.length) return 0;
+  const result = await batchSyncListingsToSupabase(prepared);
+  return result.upserted || 0;
+}
+
+const summary = [];
+
 for (const source of sources) {
   const runId = startScrapeRun(db, { source, emirate: "Ghana", transaction_type: "rent" });
   const errors = [];
   let found = 0;
+  let supabaseUpserted = 0;
   try {
     if (source === "seed") {
-      saveRows(GHANA_SEED_LISTINGS);
+      saveSqlite(GHANA_SEED_LISTINGS);
       found = GHANA_SEED_LISTINGS.length;
-    } else if (source === "meqasa") {
-      for (const city of cities) {
-        const result = await scrapeMeqasaHtml({ city, transactionType: "rent", pages: 2 });
-        found += result.listings.length;
-        errors.push(...result.errors);
-        saveRows(result.listings);
-      }
     } else {
-      errors.push(`unknown source ${source}`);
+      const scrape = await scrapeSourceToRows(source, { types: ["rent"], maxPages: 3 });
+      found = scrape.found;
+      errors.push(...(scrape.errors || []));
+      saveSqlite(scrape.rows);
+      supabaseUpserted = await saveSupabase(scrape.rows);
     }
     finishScrapeRun(db, runId, { listings_found: found, listings_upserted: upserted, errors });
+    summary.push({ source, found, sqlite: upserted, supabase: supabaseUpserted, errors });
   } catch (error) {
     finishScrapeRun(db, runId, { listings_found: found, listings_upserted: upserted, errors: [error.message] });
+    summary.push({ source, found, error: error.message, errors });
   }
 }
 
-console.log(JSON.stringify({ ok: true, upserted, sources }, null, 2));
+console.log(
+  JSON.stringify(
+    {
+      ok: true,
+      upserted,
+      supabase: isSupabaseEnabled(),
+      sources,
+      summary
+    },
+    null,
+    2
+  )
+);

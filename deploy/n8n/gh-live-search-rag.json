@@ -1,0 +1,173 @@
+{
+  "id": "e5f6a7b8-c9d0-1234-efab-345678901234",
+  "name": "FIE AI Ghana — Live Search RAG",
+  "active": true,
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "gh-live-search",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "webhook-trigger",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [200, 400],
+      "webhookId": "gh-live-search-webhook"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "query-field",
+              "name": "query",
+              "value": "={{ $json.body?.query || $json.query || $json.body?.message || $json.message || 'Accra self-contain East Legon rent' }}",
+              "type": "string"
+            },
+            {
+              "id": "emirate-field",
+              "name": "emirate",
+              "value": "={{ $json.body?.emirate || $json.emirate || 'Accra' }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "set-query",
+      "name": "Set Query",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [420, 400]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "=http://searxng:8080/search",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            { "name": "q", "value": "={{ $json.query }} Ghana property site:ghanapropertycentre.com OR site:meqasa.com OR site:jiji.com.gh" },
+            { "name": "format", "value": "json" },
+            { "name": "language", "value": "en" }
+          ]
+        },
+        "options": { "timeout": 30000 }
+      },
+      "id": "searx-search",
+      "name": "SearXNG Search",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [640, 400],
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "jsCode": "const searx = $input.first().json || {};\nconst results = Array.isArray(searx.results) ? searx.results : [];\nconst query = $('Set Query').first().json.query;\nconst emirate = $('Set Query').first().json.emirate;\n\nconst blocked = /google\\.com\\/search|webcache|translate\\.google|\\/search\\?/i;\nconst listingPath = /\\/pl\\/\\d+|\\/plp\\/|property\\/details|property-for-rent|property-for-sale|\\/to-rent\\/|\\/for-sale\\//i;\nconst urls = results\n  .filter((r) => r.url && /^https?:\\/\\//i.test(r.url) && !blocked.test(r.url))\n  .filter((r) => /ghanapropertycentre|meqasa|jiji\.com\.gh|tonaton/i.test(r.url))\n  .filter((r) => listingPath.test(r.url))\n  .slice(0, 6)\n  .map((r) => ({\n    json: {\n      query,\n      emirate,\n      url: r.url,\n      searx_title: r.title || '',\n      searx_snippet: r.content || ''\n    }\n  }));\n\nif (!urls.length) {\n  return [{ json: { query, emirate, url: '', skip: true, error: 'No listing URLs from SearXNG' } }];\n}\nreturn urls;"
+      },
+      "id": "extract-urls",
+      "name": "Top 6 Listing URLs",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [860, 400]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": { "caseSensitive": true, "leftValue": "", "typeValidation": "strict" },
+          "conditions": [
+            {
+              "id": "has-url",
+              "leftValue": "={{ $json.url }}",
+              "rightValue": "",
+              "operator": { "type": "string", "operation": "notEmpty" }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "if-has-url",
+      "name": "Has URL?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [1080, 400]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://host.docker.internal:3001/api/rent/enrich-url",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "Content-Type", "value": "application/json" },
+            { "name": "X-Ingest-Token", "value": "REPLACE_WITH_JAB_RE_INGEST_TOKEN" }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ url: $json.url, sync: true, partial: { description: ($json.searx_title || '') + ' ' + ($json.searx_snippet || ''), emirate: $json.emirate } }) }}",
+        "options": { "timeout": 120000 }
+      },
+      "id": "hub-enrich",
+      "name": "Hub Enrich URL",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1300, 300],
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const query = $('Set Query').first().json.query;\nconst enriched = $('Hub Enrich URL').all().map((i) => i.json).filter((r) => r && r.ok && r.listing);\nconst listings = enriched.map((r) => r.listing);\nconst inventory = enriched.map((r) => r.inventory).filter(Boolean);\n\nreturn [{\n  json: {\n    ok: listings.length > 0,\n    query,\n    count: listings.length,\n    listings,\n    inventory,\n    errors: $('Hub Enrich URL').all().map((i) => i.json).filter((r) => r && !r.ok).map((r) => r.error || 'enrich failed'),\n    at: new Date().toISOString()\n  }\n}];"
+      },
+      "id": "build-response",
+      "name": "Build Response",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1520, 400]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json }}",
+        "options": { "responseCode": 200 }
+      },
+      "id": "respond-webhook",
+      "name": "Respond",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [1740, 400]
+    },
+    {
+      "parameters": {
+        "jsCode": "return [{ json: { ok: false, query: $('Set Query').first().json.query, listings: [], inventory: [], error: 'No valid listing URLs to process' } }];"
+      },
+      "id": "no-urls-response",
+      "name": "No URLs",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1300, 520]
+    }
+  ],
+  "connections": {
+    "Webhook": { "main": [[{ "node": "Set Query", "type": "main", "index": 0 }]] },
+    "Set Query": { "main": [[{ "node": "SearXNG Search", "type": "main", "index": 0 }]] },
+    "SearXNG Search": { "main": [[{ "node": "Top 6 Listing URLs", "type": "main", "index": 0 }]] },
+    "Top 6 Listing URLs": { "main": [[{ "node": "Has URL?", "type": "main", "index": 0 }]] },
+    "Has URL?": {
+      "main": [
+        [{ "node": "Hub Enrich URL", "type": "main", "index": 0 }],
+        [{ "node": "No URLs", "type": "main", "index": 0 }]
+      ]
+    },
+    "Hub Enrich URL": { "main": [[{ "node": "Build Response", "type": "main", "index": 0 }]] },
+    "No URLs": { "main": [[{ "node": "Build Response", "type": "main", "index": 0 }]] },
+    "Build Response": { "main": [[{ "node": "Respond", "type": "main", "index": 0 }]] }
+  },
+  "settings": { "executionOrder": "v1" },
+  "meta": { "templateCredsSetupCompleted": false }
+}

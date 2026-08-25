@@ -23,11 +23,15 @@ cd apps/hub && npm start
 # open http://127.0.0.1:3000/gh
 ```
 
-Scrape Meqasa (best-effort):
+Scrape Ghana portals into the listing store (SQLite + Supabase when configured):
 
 ```bash
-node scripts/scrape-ghana-listings.mjs --sources=seed,meqasa
+node scripts/scrape-ghana-listings.mjs --sources=meqasa,jiji,ghanapropertycentre
 ```
+
+n8n on the VPS (`:5678`) now runs **FIE AI Ghana** workflows against Hub `:3001`. Dar Concierge UAE scrape workflows are deactivated. Hourly UAE systemd scrape timers stay disabled.
+
+Live Ghana inventory: Ghana Property Centre HTML/JSON-LD is the reliable public source. Meqasa and Jiji are attempted each run; Jiji often 403s from datacenter IPs.
 
 ## Money
 

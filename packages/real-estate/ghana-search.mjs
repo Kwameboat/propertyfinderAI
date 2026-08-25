@@ -6,12 +6,13 @@
 import { searchListingsStore } from "./listings-store.mjs";
 import { formatListingTitle } from "./listing-polish.mjs";
 import { attachClusterMeta, groupListingsByCluster } from "./cluster.mjs";
-import { isGhanaMarket } from "./market.mjs";
+import { isGhanaMarket, GHANA_PORTALS } from "./market.mjs";
 
 function ghanaQuery(criteria = {}) {
   const query = {
     transaction_type: criteria.transaction_type || "rent",
-    include_seed: true
+    include_seed: true,
+    sources: GHANA_PORTALS
   };
   const city = String(criteria.emirate || "").trim();
   if (city && !/^(dubai|abu dhabi|sharjah|ajman|rak|fujairah|uaq)$/i.test(city)) {
@@ -45,7 +46,11 @@ export async function pullGhanaListingsForChat(db, criteria = {}, { limit = 8 } 
   const query = ghanaQuery(criteria);
   let listings = await searchListingsStore(db, query, 24);
   if (!listings.length && (query.emirate || query.community || query.beds != null)) {
-    listings = await searchListingsStore(db, { transaction_type: query.transaction_type, include_seed: true }, 24);
+    listings = await searchListingsStore(
+      db,
+      { transaction_type: query.transaction_type, include_seed: true, sources: GHANA_PORTALS },
+      24
+    );
   }
 
   listings = withTitles(listings, criteria);

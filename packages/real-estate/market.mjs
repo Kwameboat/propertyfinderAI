@@ -53,7 +53,7 @@ const MARKETS = {
     phonePlaceholder: "+971 50 xxx xxxx",
     phoneRegion: "AE",
     cities: ["Dubai", "Abu Dhabi", "Sharjah", "Ajman", "Ras Al Khaimah", "Fujairah", "Umm Al Quwain"],
-    portals: ["bayut", "propertyfinder", "dubizzle"],
+    portals: ["bayut", "propertyfinder", "dubizzle", "emaar", "damac"],
     viewingFeeGhs: 0,
     commissionRate: 0,
     payToView: false,
@@ -71,7 +71,7 @@ const MARKETS = {
     phonePlaceholder: "024 xxx xxxx",
     phoneRegion: "GH",
     cities: GHANA_CITIES,
-    portals: ["meqasa", "jiji", "ghanapropertycentre"],
+    portals: ["meqasa", "jiji", "ghanapropertycentre", "tonaton"],
     viewingFeeGhs: 100,
     platformShareGhs: 50,
     agentShareGhs: 50,
@@ -93,6 +93,13 @@ export function getMarket() {
 
 export function isGhanaMarket() {
   return getMarketCode() === "GH";
+}
+
+export const GHANA_PORTALS = MARKETS.GH.portals;
+export const UAE_PORTALS = MARKETS.AE.portals;
+
+export function marketPortalSources(market = getMarket()) {
+  return [...(market.portals || [])];
 }
 
 export function formatMoney(amount, market = getMarket()) {

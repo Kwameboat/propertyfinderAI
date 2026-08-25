@@ -13,6 +13,10 @@ import { scrapePropertyFinderApi, isPropertyFinderApiConfigured } from "./scrape
 import { scrapeBayutApify, scrapeDubizzleApify, scrapePropertyFinderApify, isApifyPrimaryPortal, propertyFinderUsesApify } from "./apify-scrape.mjs";
 import { getScrapeEmirates } from "./mode.mjs";
 import { isPuppeteerScrapeEnabled, isPuppeteerIngestSource, PUPPETEER_INGEST_SOURCES } from "./puppeteer-mode.mjs";
+import { scrapeMeqasaHtml } from "./scrapers/meqasa-html.mjs";
+import { scrapeGhanaPropertyCentreHtml } from "./scrapers/ghanapropertycentre-html.mjs";
+import { scrapeJijiHtml, scrapeTonatonHtml } from "./scrapers/jiji-html.mjs";
+import { GHANA_PORTALS } from "./market.mjs";
 
 async function scrapeBayutCombined(db, upsert, options) {
   const emirates = options.emirates || getScrapeEmirates();
@@ -126,6 +130,8 @@ async function scrapePropertyFinderCombined(db, upsert, options) {
 }
 
 /** Sources n8n cron branches call independently. */
+export const GHANA_INGEST_SOURCES = [...GHANA_PORTALS];
+
 export const INGEST_SOURCES = [
   "bayut",
   "propertyfinder",
@@ -133,7 +139,8 @@ export const INGEST_SOURCES = [
   "emaar",
   "damac",
   "bayut_api",
-  "propertyfinder_api"
+  "propertyfinder_api",
+  ...GHANA_INGEST_SOURCES
 ];
 
 export const DEFAULT_N8N_SOURCES = ["bayut", "propertyfinder", "dubizzle", "emaar", "damac"];
@@ -158,6 +165,25 @@ async function runPuppeteerSource(source, stubDb, upsert, options) {
   const fn = map[source];
   if (!fn) return { found: 0, upserted: 0, errors: [`Unknown puppeteer source: ${source}`] };
   return fn();
+}
+
+async function scrapeGhanaSource(scrapeFn, stubDb, upsert, options) {
+  const cities = options.emirates?.length ? options.emirates : getScrapeEmirates();
+  const types = options.types?.length ? options.types : ["rent"];
+  const pages = options.maxPages || 3;
+  const errors = [];
+  let found = 0;
+  for (const city of cities) {
+    for (const transactionType of types) {
+      const result = await scrapeFn({ city, transactionType, pages });
+      errors.push(...(result.errors || []));
+      for (const row of result.listings || []) {
+        upsert(stubDb, row);
+        found += 1;
+      }
+    }
+  }
+  return { found, upserted: found, errors };
 }
 
 function collectRows() {
@@ -186,7 +212,11 @@ export async function scrapeSourceToRows(source, options = {}) {
     damac: () => scrapeDevelopers(stubDb, upsert, { sources: ["damac"] }),
     bayut_api: () => scrapeBayutApi(stubDb, upsert, { emirates: portalEmirates, maxPages: options.maxPages || 2 }),
     propertyfinder_api: () =>
-      scrapePropertyFinderApi(stubDb, upsert, { emirates: portalEmirates, maxPages: options.maxPages || 2 })
+      scrapePropertyFinderApi(stubDb, upsert, { emirates: portalEmirates, maxPages: options.maxPages || 2 }),
+    meqasa: () => scrapeGhanaSource(scrapeMeqasaHtml, stubDb, upsert, options),
+    jiji: () => scrapeGhanaSource(scrapeJijiHtml, stubDb, upsert, options),
+    ghanapropertycentre: () => scrapeGhanaSource(scrapeGhanaPropertyCentreHtml, stubDb, upsert, options),
+    tonaton: () => scrapeGhanaSource(scrapeTonatonHtml, stubDb, upsert, options)
   };
 
   const fn = runners[source];

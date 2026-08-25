@@ -2,7 +2,7 @@
  * Fetch property listing images from portal pages (Jina Reader + URL patterns).
  */
 
-const CDN_HINTS = /images\.bayut|propertyfinder|dubizzle|cloudinary|akamai|amazonaws/i;
+const CDN_HINTS = /images\.bayut|propertyfinder|dubizzle|cloudinary|akamai|amazonaws|ghanapropertycentre|meqasa|jiji/i;
 const LISTING_IMAGE = /\/listing\/|images\.bayut\.com\/|media\/images\/listing|\/photos?\//i;
 const JUNK_IMAGE =
   /nav_header|mf-logo|serp-hero|placeholder|banner\.webp|static\/nav|growth\.propertyfinder|\.svg(?:\?|$)|favicon|apple-touch|1x1|sprite|avatar|logo|unsplash|pexels|pixabay|shutterstock|gettyimages|stock-photo|placeholder\.com|via\.placeholder/i;
@@ -33,9 +33,9 @@ export function extractImagesFromText(text = "") {
 }
 
 const PORTAL_HOST =
-  /(?:^|\.)(?:bayut\.com|bayutcdn\.com|propertyfinder\.ae|propertyfinder\.com|dubizzle\.com|dubizzle\.ae)$/i;
+  /(?:^|\.)(?:bayut\.com|bayutcdn\.com|propertyfinder\.ae|propertyfinder\.com|dubizzle\.com|dubizzle\.ae|ghanapropertycentre\.com|meqasa\.com|jiji\.com\.gh|tonaton\.com)$/i;
 const PORTAL_LISTING_CDN =
-  /images\.bayut\.com|bayutcdn|static\.shared\.propertyfinder|static\.propertyfinder|propertyfinder\.ae\/(?:property|images|photos?|picture)|media\.images\.listing|\/listing\/|dubizzle\.(?:com|ae).*\/(?:photos?|images?|pictures?)/i;
+  /images\.bayut\.com|bayutcdn|static\.shared\.propertyfinder|static\.propertyfinder|propertyfinder\.ae\/(?:property|images|photos?|picture)|media\.images\.listing|\/listing\/|dubizzle\.(?:com|ae).*\/(?:photos?|images?|pictures?)|images\.ghanapropertycentre\.com|dve7rykno93gs\.cloudfront\.net|img\.jiji/i;
 
 export function isValidListingImage(url = "") {
   const u = String(url).trim();

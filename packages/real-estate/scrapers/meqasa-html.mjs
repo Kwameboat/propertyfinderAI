@@ -18,8 +18,12 @@ const CITY_SLUG = {
 function searchUrl(city, transactionType, page = 1) {
   const slug = CITY_SLUG[city] || "accra";
   const purpose = transactionType === "sale" ? "for-sale" : "for-rent";
-  const base = `https://meqasa.com/properties-${purpose}-in-${slug}`;
-  return page > 1 ? `${base}?page=${page}` : base;
+  const bases = [
+    `https://meqasa.com/properties-${purpose}-in-${slug}`,
+    `https://meqasa.com/apartments-${purpose}-in-${city.replace(/\s+/g, "-")}`,
+    `https://meqasa.com/houses-${purpose}-in-${city.replace(/\s+/g, "-")}`
+  ];
+  return bases.map((base) => (page > 1 ? `${base}?page=${page}` : base));
 }
 
 function parsePrice(text) {
@@ -30,11 +34,14 @@ function parsePrice(text) {
 function parseListings(html, city, transactionType) {
   const rows = [];
   const seen = new Set();
-  const hrefRe = /href="(https?:\/\/meqasa\.com\/[^"]+)"/gi;
+  const hrefRe = /href="((?:https?:\/\/meqasa\.com)?\/?[^"]+)"/gi;
   let match;
   while ((match = hrefRe.exec(html))) {
-    const url = match[1].split("?")[0];
-    if (!/meqasa\.com\/(apartment|house|room|self-contain|chamber|property|listing)/i.test(url)) continue;
+    let url = match[1].split("?")[0];
+    if (url.startsWith("/")) url = `https://meqasa.com${url}`;
+    if (!/meqasa\.com\/.+/i.test(url)) continue;
+    if (!/(apartment|house|room|self-contain|chamber|property|listing|bedroom)/i.test(url)) continue;
+    if (/properties-for-|apartments-for-|houses-for-|offices-for-|for-rent-in-|for-sale-in-/i.test(url)) continue;
     if (seen.has(url)) continue;
     seen.add(url);
     const id = url.replace(/https?:\/\/meqasa\.com\//i, "").slice(0, 180);
@@ -42,6 +49,7 @@ function parseListings(html, city, transactionType) {
     const price = parsePrice(around.match(/GH[S₵¢]?\s*([\d,]+)/i)?.[0] || around.match(/([\d,]{3,9})/)?.[1]);
     const bedsMatch = around.match(/(\d+)\s*(?:bed|br)/i);
     const titleMatch = around.match(/>([A-Za-z0-9][^<]{8,80})</);
+    const image = around.match(/src="(https?:\/\/[^"]+\.(?:jpg|jpeg|png|webp)[^"]*)"/i)?.[1];
     rows.push(
       normalizeListingRow({
         source: "meqasa",
@@ -58,6 +66,7 @@ function parseListings(html, city, transactionType) {
         community: titleMatch?.[1]?.trim().slice(0, 80) || city,
         price_aed: price,
         price_period: transactionType === "rent" ? "monthly" : "total",
+        images: image && !/logo|icon/i.test(image) ? [image] : [],
         description: titleMatch?.[1] || "",
         agent_name: "",
         agency_name: "Meqasa listing"
@@ -71,13 +80,14 @@ export async function scrapeMeqasaHtml({ city = "Accra", transactionType = "rent
   const listings = [];
   const errors = [];
   for (let page = 1; page <= pages; page += 1) {
-    const url = searchUrl(city, transactionType, page);
-    try {
-      const html = await fetchText(url, { timeoutMs: 25000 });
-      listings.push(...parseListings(html, city, transactionType));
-      await sleep(Number(process.env.JAB_RE_SCRAPE_DELAY_MS || 2500));
-    } catch (error) {
-      errors.push(`${url}: ${error.message}`);
+    for (const url of searchUrl(city, transactionType, page)) {
+      try {
+        const html = await fetchText(url, { timeoutMs: 25000 });
+        listings.push(...parseListings(html, city, transactionType));
+        await sleep(Number(process.env.JAB_RE_SCRAPE_DELAY_MS || 2500));
+      } catch (error) {
+        errors.push(`${url}: ${error.message}`);
+      }
     }
   }
   const uniq = new Map();

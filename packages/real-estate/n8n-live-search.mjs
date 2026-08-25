@@ -32,7 +32,7 @@ export async function fetchN8nLiveSearch(db, query = "", criteria = {}, session 
   const searchQuery = buildLiveSearchQuery(query, criteria, session);
   const body = {
     query: searchQuery,
-    emirate: criteria.emirate || criteria.emirates?.[0] || "Dubai",
+    emirate: criteria.emirate || criteria.emirates?.[0] || (String(process.env.JAB_RE_MARKET || "").toUpperCase() === "GH" ? "Accra" : "Dubai"),
     message: searchQuery
   };
 

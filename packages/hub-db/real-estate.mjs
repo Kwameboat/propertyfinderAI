@@ -365,6 +365,10 @@ export function searchListings(db, criteria = {}, limit = 10) {
     clauses.push("external_id NOT LIKE 'gen-%'");
   }
 
+  if (criteria.sources?.length) {
+    clauses.push(`source IN (${criteria.sources.map(() => "?").join(",")})`);
+    params.push(...criteria.sources);
+  }
   if (criteria.transaction_type) {
     clauses.push("transaction_type = ?");
     params.push(criteria.transaction_type);
