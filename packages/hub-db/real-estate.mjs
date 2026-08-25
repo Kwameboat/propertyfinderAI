@@ -234,12 +234,13 @@ export function normalizeListingInput(input = {}) {
 
 function mapListingRow(r) {
   if (!r) return null;
+  const { images_json, amenities_json, ...rest } = r;
   return {
-    ...r,
+    ...rest,
     furnished: r.furnished == null ? null : Boolean(r.furnished),
     is_active: Boolean(r.is_active),
-    amenities: parseJson(r.amenities_json, []),
-    images: parseJson(r.images_json, [])
+    amenities: parseJson(amenities_json, []),
+    images: parseJson(images_json, [])
   };
 }
 

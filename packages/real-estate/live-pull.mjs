@@ -59,7 +59,11 @@ function persistGhanaListingGalleries(db, listings = []) {
     if (!listing?.source || !listing?.external_id) continue;
     if (!Array.isArray(listing.images) || !listing.images.length) continue;
     try {
-      upsertListing(db, listing);
+      upsertListing(db, {
+        ...listing,
+        images: listing.images,
+        images_json: JSON.stringify(listing.images)
+      });
     } catch (error) {
       console.error(
         JSON.stringify({
