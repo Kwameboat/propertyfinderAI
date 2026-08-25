@@ -125,8 +125,18 @@ export function formatMoney(amount, market = getMarket()) {
   return market.code === "GH" ? `GH₵ ${formatted}` : `AED ${formatted}`;
 }
 
+/** Public WhatsApp number for FIE chat (wa.me). Accepts 024… or 233… */
+export function ghanaWaPhoneDigits(raw = process.env.JAB_RE_WA_PHONE || process.env.JAB_RE_GH_WA_PHONE || "") {
+  let digits = String(raw || "").replace(/\D/g, "");
+  if (digits.startsWith("00")) digits = digits.slice(2);
+  if (digits.startsWith("0") && digits.length === 10) digits = `233${digits.slice(1)}`;
+  if (digits.length === 9 && /^[235]/.test(digits)) digits = `233${digits}`;
+  return digits;
+}
+
 export function publicMarketConfig() {
   const m = getMarket();
+  const whatsappPhone = m.code === "GH" ? ghanaWaPhoneDigits() : "";
   return {
     code: m.code,
     brand: m.brand,
@@ -141,6 +151,7 @@ export function publicMarketConfig() {
     viewingFeeGhs: m.viewingFeeGhs,
     pwaPath: m.pwaPath,
     logo: m.logo || "/dar-concierge-logo.png",
+    whatsappPhone: whatsappPhone || null,
     consent:
       m.code === "GH"
         ? "I agree to pay GH₵100 to book this viewing (GH₵50 platform, GH₵50 held for the listing agent until I visit)."

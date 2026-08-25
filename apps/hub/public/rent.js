@@ -156,6 +156,16 @@ function applyMarketBranding() {
     el.classList.toggle("hidden", !ghana);
     el.hidden = !ghana;
   });
+  const waBtn = document.getElementById("gh-whatsapp-btn");
+  const waDigits = String(marketConfig.whatsappPhone || "").replace(/\D/g, "");
+  if (waBtn) {
+    const showWa = ghana && waDigits.length >= 10;
+    waBtn.classList.toggle("hidden", !showWa);
+    waBtn.hidden = !showWa;
+    if (showWa) {
+      waBtn.href = `https://wa.me/${waDigits}?text=${encodeURIComponent("Hi FIE, I need a room")}`;
+    }
+  }
   fillOwnerListingCities();
   const menuNav = document.querySelector(".side-menu-nav");
   if (ghana && menuNav && !document.getElementById("gh-agent-link")) {
@@ -165,6 +175,16 @@ function applyMarketBranding() {
     a.href = "/gh/agent";
     a.textContent = "Listing agent: enter PIN";
     menuNav.appendChild(a);
+  }
+  if (ghana && menuNav && !document.getElementById("gh-whatsapp-link") && waDigits.length >= 10) {
+    const wa = document.createElement("a");
+    wa.id = "gh-whatsapp-link";
+    wa.className = "side-menu-link";
+    wa.href = `https://wa.me/${waDigits}?text=${encodeURIComponent("Hi FIE, I need a room")}`;
+    wa.target = "_blank";
+    wa.rel = "noopener noreferrer";
+    wa.textContent = "Chat on WhatsApp";
+    menuNav.appendChild(wa);
   }
 }
 const leadDialog = document.getElementById("lead-dialog");

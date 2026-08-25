@@ -26,7 +26,7 @@ import {
 import { formatComparisonWhatsApp } from "./listing-compare.mjs";
 import { sendMetaCloudText } from "../meta-cloud.mjs";
 import { aiDisclaimerText } from "./disclaimer.mjs";
-import { isGhanaMarket } from "./market.mjs";
+import { formatMoney, getMarket, isGhanaMarket } from "./market.mjs";
 
 const JAB_SALES_RE =
   /\b(jab|digital hub|digitalhub|waba|paystack|onboard|onboarding|setup fee|agency pricing|become a client|sign up|signup|top[\s-]?up)\b/i;
@@ -37,6 +37,29 @@ const RE_PROPERTY_RE =
 export function isReWhatsAppInstance(instance = "") {
   const target = String(process.env.JAB_RE_WA_INSTANCE || "").trim();
   return Boolean(target && instance === target);
+}
+
+/** Dedicated FIE Ghana Evolution instance — routed by the UAE bridge to Hub :3001. */
+export function ghanaReWhatsAppInstanceName() {
+  return String(process.env.JAB_RE_GH_WA_INSTANCE || "").trim();
+}
+
+export function isGhanaReWhatsAppInstance(instance = "") {
+  const target = ghanaReWhatsAppInstanceName();
+  return Boolean(target && instance === target);
+}
+
+export function ghanaHubWhatsAppUrl() {
+  return String(process.env.JAB_RE_GH_HUB_URL || "http://127.0.0.1:3001").replace(/\/$/, "");
+}
+
+export function ghanaWhatsAppInboundToken() {
+  return String(process.env.JAB_RE_WA_INBOUND_TOKEN || process.env.AUTHENTICATION_API_KEY || "").trim();
+}
+
+export function isLoopbackAddress(addr = "") {
+  const raw = String(addr || "").replace(/^::ffff:/i, "");
+  return raw === "127.0.0.1" || raw === "::1" || raw === "localhost";
 }
 
 export function isReWhatsAppOnAgencyEnabled() {
@@ -76,15 +99,22 @@ function stripMarkdown(text = "") {
 }
 
 export function formatListingWhatsAppCaption(card, index = 0) {
+  const market = getMarket();
+  const amount = Number(card.price_aed || 0);
   const price =
-    card.transaction_type === "rent"
-      ? `AED ${Number(card.price_aed || 0).toLocaleString()}/yr`
-      : `AED ${Number(card.price_aed || 0).toLocaleString()}`;
+    market.code === "GH"
+      ? card.transaction_type === "rent"
+        ? `${formatMoney(amount, market)}/mo`
+        : formatMoney(amount, market)
+      : card.transaction_type === "rent"
+        ? `AED ${amount.toLocaleString()}/yr`
+        : `AED ${amount.toLocaleString()}`;
+  const area = card.community || card.emirate || "";
   const parts = [
     index ? `${index}. ` : "",
     card.title || "Property",
     ` — ${price}`,
-    card.community ? ` · ${card.community}` : "",
+    area ? ` · ${area}` : "",
     card.furnished === true ? " · Furnished" : card.furnished === false ? " · Unfurnished" : "",
     card.source_url ? `\n${card.source_url}` : ""
   ];
@@ -214,7 +244,9 @@ async function handleWaCommands(db, { userPhone, inboundText, session, pushName,
     if (!criteria.max_price && !criteria.community && !criteria.emirates?.length && criteria.beds == null) {
       return {
         handled: true,
-        text: 'Search first (e.g. "2 bed Marina under 120k"), then reply "alert me".'
+        text: isGhanaMarket()
+          ? 'Search first (e.g. "self-contain East Legon under 2000"), then reply "alert me".'
+          : 'Search first (e.g. "2 bed Marina under 120k"), then reply "alert me".'
       };
     }
     const { saved, duplicate } = createSavedSearchFromSession(db, {
@@ -250,6 +282,12 @@ async function handleWaCommands(db, { userPhone, inboundText, session, pushName,
         notes: "Via WhatsApp RE channel",
         channel: "whatsapp"
       });
+      if (isGhanaMarket()) {
+        return {
+          handled: true,
+          text: `To book a viewing, pay GH₵100 in the FIE AI app (https://wa.jabdigitalhub.com/gh). After payment your PIN comes on this WhatsApp. Give that PIN to the listing agent only when you see the room.`
+        };
+      }
       return {
         handled: true,
         text: `Thanks ${name.split(" ")[0]} — we have your number (+${phone}). Our team will call before contacting the listing agent.`
@@ -309,7 +347,9 @@ export async function handleReWhatsAppInbound({
 
   let replyText = stripMarkdown(result.text || "");
   if (result.leadReady) {
-    replyText += "\n\nReply YES to book a viewing — we'll call you before contacting the agent.";
+    replyText += isGhanaMarket()
+      ? "\n\nReply YES to start a viewing. You will pay GH₵100 in the FIE app, then get a PIN here."
+      : "\n\nReply YES to book a viewing — we'll call you before contacting the agent.";
   }
   if (result.showListings && (result.listings || []).length) {
     replyText += "\n\nSending photos below…";

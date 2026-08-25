@@ -138,6 +138,20 @@ html, body {
   width: 100%;
 }
 
+.market-gh .wa-chat-cta {
+  margin-top: 8px;
+  width: 100%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
+  box-sizing: border-box;
+}
+
+.market-gh .wa-chat-cta.hidden {
+  display: none;
+}
+
 .market-gh .list-property-hint {
   margin: 8px 0 0;
   font-size: 0.75rem;

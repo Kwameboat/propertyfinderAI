@@ -8,11 +8,12 @@ Cloudflare Tunnel routes `/gh*` to Hub `:3001` so the PWA is a secure context (i
 ## Turn it on
 
 ```bash
-# .env
+# .env (Ghana Hub)
 JAB_RE_MARKET=GH
 PAYSTACK_SECRET_KEY=sk_test_...
 PAYSTACK_PUBLIC_KEY=pk_test_...
-JAB_RE_WA_INSTANCE=your-evolution-instance
+JAB_RE_WA_INSTANCE=fie-ghana-wa
+JAB_RE_WA_PHONE=23324xxxxxxx
 
 # local test without Paystack
 JAB_RE_GH_DEV_PAY=1
@@ -83,6 +84,49 @@ Agency dashboard: **Viewings** tab at `/admin/re` — PIN status, MoMo, and reco
 ## UAE
 
 Leave `JAB_RE_MARKET` unset on the UAE VPS.
+
+## WhatsApp (FIE chat number)
+
+Ghanaians will message WhatsApp before they open the PWA. FIE needs its **own +233 number** — do not scan the UAE `dar-concierge-wa` or **JAB Agent Number** lines.
+
+How it is wired on this VPS:
+
+1. Evolution already runs at `:8080`. The global webhook goes to `jab-hub-bridge` (`:8787`).
+2. Create a **new** Evolution instance named `fie-ghana-wa` (Baileys QR is the fast path).
+3. On the phone that will be FIE: WhatsApp → Linked devices → Link a device → scan the QR.
+4. Ghana Hub (`/opt/keyfinder-ghana/.env`) must have `JAB_RE_WA_INSTANCE=fie-ghana-wa`.
+5. UAE Hub / bridge (`/opt/jab-hub/.env`) must have:
+   - `JAB_RE_WA_INSTANCE=dar-concierge-wa` (unchanged)
+   - `JAB_RE_GH_WA_INSTANCE=fie-ghana-wa`
+   - `JAB_RE_GH_HUB_URL=http://127.0.0.1:3001`
+6. Set `JAB_RE_WA_PHONE=233…` on the Ghana Hub so `/gh` shows **Chat on WhatsApp**.
+7. Restart **only** `keyfinder-ghana` and `jab-hub-bridge`. Do not restart the UAE dashboard.
+
+```bash
+cd /opt/keyfinder-ghana
+sudo -u jabhub bash deploy/create-instance.sh fie-ghana-wa
+# Then open Evolution Manager → fie-ghana-wa → scan QR
+# https://wa.jabdigitalhub.com/manager
+# (login = AUTHENTICATION_API_KEY from .env)
+
+# After the instance shows "open":
+# Ghana .env
+JAB_RE_WA_INSTANCE=fie-ghana-wa
+JAB_RE_WA_PHONE=23324xxxxxxx
+
+# UAE / bridge .env  (do not change JAB_RE_WA_INSTANCE)
+JAB_RE_GH_WA_INSTANCE=fie-ghana-wa
+JAB_RE_GH_HUB_URL=http://127.0.0.1:3001
+
+sudo systemctl restart keyfinder-ghana jab-hub-bridge
+journalctl -u jab-hub-bridge -f   # send "self-contain East Legon" to the Ghana number
+```
+
+Do **not** run `deploy/get-qr.sh dar-concierge-wa` — that logs out the live UAE concierge number.
+
+Official Meta Cloud API (harder, more ban-resistant) is in `deploy/META-WHATSAPP.md`. Same instance name `fie-ghana-wa`, integration **WhatsApp Business** instead of Baileys.
+
+Inbound path: WhatsApp → Evolution → `jab-hub-bridge` → `http://127.0.0.1:3001/api/rent/whatsapp/inbound` → FIE listings (not Dar Concierge).
 
 ## Live test (Contabo)
 

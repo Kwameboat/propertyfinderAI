@@ -94,7 +94,10 @@ import {
 import { resolvePlatformRoute } from "../packages/platform-router.mjs";
 import { checkMetaToken } from "../packages/pipeline-health.mjs";
 import {
+  ghanaHubWhatsAppUrl,
+  ghanaWhatsAppInboundToken,
   handleReWhatsAppInbound,
+  isGhanaReWhatsAppInstance,
   isReWhatsAppInstance,
   isReWhatsAppOnAgencyEnabled,
   shouldRouteInboundToRealEstate
@@ -140,6 +143,38 @@ function hubStore() {
     console.error(JSON.stringify({ at: new Date().toISOString(), hubDbError: error.message }));
     return null;
   }
+}
+
+async function proxyGhanaReWhatsAppInbound({
+  instance,
+  number,
+  replyJid,
+  inboundText,
+  pushName
+}) {
+  const base = ghanaHubWhatsAppUrl();
+  const token = ghanaWhatsAppInboundToken();
+  if (!token) throw new Error("ghana_wa_inbound_token_missing");
+  const response = await fetch(`${base}/api/rent/whatsapp/inbound`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "x-jab-re-inbound": token
+    },
+    body: JSON.stringify({ instance, number, replyJid, inboundText, pushName }),
+    signal: AbortSignal.timeout(120_000)
+  });
+  const body = await response.text();
+  let parsed = {};
+  try {
+    parsed = JSON.parse(body);
+  } catch {
+    parsed = { raw: body.slice(0, 300) };
+  }
+  if (!response.ok) {
+    throw new Error(parsed.error || `ghana_hub_${response.status}`);
+  }
+  return parsed;
 }
 const PORT = Number(process.env.JAB_HUB_BRIDGE_PORT || 8787);
 const SYNC_MS = Number(process.env.JAB_HUB_SYNC_MS || 30000);
@@ -2429,6 +2464,47 @@ async function handleEvolutionPayload(payload) {
   });
   const pushName = data.pushName || payload.pushName || "WhatsApp contact";
   const store = hubStore();
+
+  // Dedicated FIE Ghana WhatsApp instance — same chat engine as /gh, Ghana listing store.
+  if (isGhanaReWhatsAppInstance(instance)) {
+    try {
+      const reResult = await proxyGhanaReWhatsAppInbound({
+        instance,
+        number,
+        replyJid,
+        inboundText,
+        pushName
+      });
+      await recordOutbound({ instance, number });
+      console.log(
+        JSON.stringify({
+          at: new Date().toISOString(),
+          reWhatsApp: true,
+          ghana: true,
+          instance,
+          number,
+          sessionId: reResult.sessionId,
+          listings: reResult.listings
+        })
+      );
+      return { ...reResult, instance, number, replyJid, ghana: true };
+    } catch (error) {
+      console.error(JSON.stringify({ at: new Date().toISOString(), ghanaWhatsAppError: error.message }));
+      try {
+        await sendEvolutionText({
+          evoApiUrl,
+          apiKey,
+          instance,
+          number: replyJid,
+          text: "Sorry — FIE property search hit a snag. Try again in a moment.",
+          isAgency: true
+        });
+      } catch {
+        /* ignore */
+      }
+      return { sent: false, reChat: true, ghana: true, error: error.message, instance, number };
+    }
+  }
 
   // Dedicated UAE Real Estate WhatsApp instance — full concierge (listings, alerts, viewings).
   if (store && isReWhatsAppInstance(instance)) {

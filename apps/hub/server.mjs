@@ -125,6 +125,8 @@ import {
 } from "../../packages/hub-db/index.mjs";
 import { handleRentChat, handleRentTranscribe, submitRentLead, formatListingCard, formatListingDetail } from "../../packages/real-estate/chat.mjs";
 import { publicMarketConfig, isGhanaMarket } from "../../packages/real-estate/market.mjs";
+import { handleReWhatsAppInbound, ghanaWhatsAppInboundToken, isLoopbackAddress } from "../../packages/real-estate/re-wa.mjs";
+import { getEvolutionConfig, resolveEvolutionInstanceToken, sendEvolutionText } from "../../packages/evolution-client.mjs";
 import {
   fillGhanaServiceWorker,
   ghanaAdminPath,
@@ -1071,6 +1073,54 @@ app.post("/api/rent/chat", rentRateLimit, async (req, res) => {
       sessionId,
       message,
       userPhone: String(req.body?.userPhone || "")
+    });
+    res.json({ ok: true, ...result });
+  } catch (error) {
+    res.status(500).json({ ok: false, error: error.message });
+  }
+});
+
+function ghanaWhatsAppInboundAuth(req, res, next) {
+  const expected = ghanaWhatsAppInboundToken();
+  const got = String(req.headers["x-jab-re-inbound"] || "").trim();
+  const remote = req.socket?.remoteAddress || req.ip || "";
+  if (!expected || !isLoopbackAddress(remote) || got.length !== expected.length) {
+    res.status(401).json({ ok: false, error: "unauthorized" });
+    return;
+  }
+  if (!timingSafeEqual(Buffer.from(got), Buffer.from(expected))) {
+    res.status(401).json({ ok: false, error: "unauthorized" });
+    return;
+  }
+  next();
+}
+
+/** Evolution bridge → FIE Hub. Localhost only. Same chat engine as /gh. */
+app.post("/api/rent/whatsapp/inbound", ghanaWhatsAppInboundAuth, async (req, res) => {
+  try {
+    if (!isGhanaMarket()) {
+      res.status(400).json({ ok: false, error: "not ghana market" });
+      return;
+    }
+    const instance = String(req.body?.instance || process.env.JAB_RE_WA_INSTANCE || "").trim();
+    const number = String(req.body?.number || "").trim();
+    const inboundText = String(req.body?.inboundText || req.body?.message || "").trim();
+    if (!instance || !number || !inboundText) {
+      res.status(400).json({ ok: false, error: "instance, number, and inboundText required" });
+      return;
+    }
+    const env = getEvolutionConfig();
+    const { token } = await resolveEvolutionInstanceToken(env.evoApiUrl, env.globalKey, instance);
+    const result = await handleReWhatsAppInbound({
+      db,
+      instance,
+      number,
+      replyJid: req.body?.replyJid || number,
+      inboundText,
+      pushName: String(req.body?.pushName || ""),
+      evoApiUrl: env.evoApiUrl,
+      apiKey: token,
+      sendText: sendEvolutionText
     });
     res.json({ ok: true, ...result });
   } catch (error) {
