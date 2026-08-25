@@ -49,6 +49,7 @@ const VIEW_TITLES = {
   listings: "Listings",
   leads: "Leads",
   viewings: "Viewings",
+  live: "Live search",
   ingest: "Ingest",
   scrapes: "Scrape runs"
 };
@@ -86,6 +87,7 @@ function switchView(name) {
   if (name === "listings") loadListings();
   if (name === "scrapes") loadScrapes();
   if (name === "viewings") loadViewings();
+  if (name === "live") document.getElementById("live-query")?.focus();
 }
 
 function listingFilters() {
@@ -136,20 +138,71 @@ function renderListingCard(l) {
   </article>`;
 }
 
+function ghanaLiveLabel(data) {
+  if (marketCode === "GH") {
+    return data.liveSearch?.n8n || data.n8nLiveSearch ? "ON" : "GPC";
+  }
+  return data.puppeteer?.enabled ? "ON" : "OFF";
+}
+
+function applyDashboardMarket(market, data) {
+  const ghana = market.code === "GH" || data.market === "GH";
+  document.body.classList.toggle("market-gh", ghana);
+  document.querySelectorAll(".ld-gh-only").forEach((el) => {
+    el.hidden = !ghana;
+  });
+  document.querySelectorAll(".ld-uae-only").forEach((el) => {
+    el.hidden = ghana;
+  });
+  if (!ghana) return;
+  document.title = "FIE AI — Listing Dashboard";
+  const logo = document.getElementById("dash-logo");
+  if (logo) {
+    logo.src = market.logo || "/fie-ai-logo.webp";
+    logo.alt = "FIE AI";
+  }
+  const sub = document.querySelector(".ld-brand-sub");
+  if (sub) sub.textContent = "FIE AI listing dashboard";
+  const eye = document.getElementById("dash-eyebrow");
+  if (eye) eye.textContent = "FIE AI · Ghana";
+  const pfLabel = document.getElementById("kpi-pf-label");
+  if (pfLabel) pfLabel.textContent = "Ghana Property Centre";
+  document.getElementById("kpi-pf").textContent = data.sources?.ghanapropertycentre ?? "0";
+  const liveLabel = document.getElementById("kpi-live-label");
+  if (liveLabel) liveLabel.textContent = "Live search";
+  const ingestHelp = document.getElementById("ingest-help");
+  if (ingestHelp) {
+    ingestHelp.textContent = "Paste a Ghana Property Centre for-rent or for-sale search URL, or use Live search.";
+  }
+  const liveStatus = document.getElementById("live-status");
+  if (liveStatus) {
+    liveStatus.textContent = data.liveSearch?.n8n
+      ? "n8n + SearXNG is on. Live search also reads Ghana Property Centre rent and sale pages."
+      : "Live search reads Ghana Property Centre rent and sale pages. n8n webhook is not set.";
+  }
+}
+
 async function loadDashboard() {
+  let market = {};
   try {
     const cfg = await api("/api/rent/config");
-    if (cfg.market?.code) marketCode = cfg.market.code;
+    market = cfg.market || {};
+    if (market.code) marketCode = market.code;
   } catch {
     /* keep AE */
   }
   const data = await api("/api/admin/re/dashboard");
   dashboardCache = data;
+  if (data.market === "GH") marketCode = "GH";
+  applyDashboardMarket(market, data);
   document.getElementById("kpi-listings").textContent = data.listings ?? "0";
-  document.getElementById("kpi-pf").textContent = data.sources?.propertyfinder ?? "0";
+  const ghana = marketCode === "GH" || data.market === "GH";
+  document.getElementById("kpi-pf").textContent = ghana
+    ? (data.sources?.ghanapropertycentre ?? "0")
+    : (data.sources?.propertyfinder ?? "0");
   document.getElementById("kpi-leads").textContent = data.leads?.total ?? "0";
   document.getElementById("kpi-new-leads").textContent = data.leads?.byStatus?.new ?? "0";
-  document.getElementById("kpi-puppeteer").textContent = data.puppeteer?.enabled ? "ON" : "OFF";
+  document.getElementById("kpi-puppeteer").textContent = ghanaLiveLabel(data);
   document.getElementById("store-badge").textContent = data.store || "local";
 
   document.getElementById("sources-list").innerHTML = Object.entries(data.sources || {})
@@ -444,6 +497,65 @@ document.getElementById("logout-btn").addEventListener("click", async () => {
 document.getElementById("close-listing-drawer").addEventListener("click", closeDrawers);
 document.getElementById("close-lead-drawer").addEventListener("click", closeDrawers);
 document.getElementById("drawer-backdrop").addEventListener("click", closeDrawers);
+
+document.getElementById("btn-live-search")?.addEventListener("click", () => switchView("live"));
+
+document.getElementById("btn-ghana-scrape")?.addEventListener("click", async () => {
+  const el = document.getElementById("action-msg");
+  el.textContent = "Scraping Ghana Property Centre rent and sale pages…";
+  try {
+    const data = await api("/api/admin/re/ingest/ghana", {
+      method: "POST",
+      body: JSON.stringify({ source: "ghanapropertycentre", types: ["rent", "sale"], maxPages: 2 })
+    });
+    el.textContent = `Ghana scrape — found ${data.found ?? 0}, saved ${data.upserted ?? 0}.`;
+    await loadDashboard();
+  } catch (e) {
+    el.textContent = e.message;
+  }
+});
+
+document.getElementById("live-search-form")?.addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const msg = document.getElementById("live-msg");
+  const grid = document.getElementById("live-results");
+  const query = document.getElementById("live-query").value.trim();
+  const city = document.getElementById("live-city").value;
+  const tx = document.getElementById("live-tx").value;
+  msg.textContent = "Searching Ghana Property Centre now…";
+  grid.innerHTML = '<p class="ld-muted">Pulling priced listings…</p>';
+  try {
+    const data = await api("/api/admin/re/live-search", {
+      method: "POST",
+      body: JSON.stringify({
+        query,
+        message: query,
+        city,
+        emirate: city,
+        transaction_type: tx,
+        purpose: tx,
+        limit: 12
+      })
+    });
+    const listings = data.listings || [];
+    const via = (data.sources || []).filter(Boolean).join(", ") || "Ghana Property Centre";
+    msg.textContent = listings.length
+      ? `Found ${listings.length} priced listing${listings.length === 1 ? "" : "s"} via ${via}${data.upserted ? ` · saved ${data.upserted}` : ""}.`
+      : data.error || "No priced listings found. Try another area.";
+    if (!listings.length) {
+      grid.innerHTML = '<p class="ld-muted">No live results. Try East Legon, Osu, or Spintex — or scrape Ghana portals from Overview.</p>';
+    } else {
+      grid.innerHTML = listings.map(renderListingCard).join("");
+      grid.querySelectorAll(".ld-card-item").forEach((el) => {
+        el.addEventListener("click", () => openListingDrawer(el.dataset.listingId));
+      });
+    }
+    await loadDashboard();
+  } catch (err) {
+    msg.textContent = err.message;
+    grid.innerHTML = "";
+  }
+});
 
 document.getElementById("btn-puppeteer").addEventListener("click", async () => {
   const el = document.getElementById("action-msg");

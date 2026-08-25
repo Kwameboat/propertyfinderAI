@@ -21,7 +21,13 @@ const ALLOWED_HOSTS = [
   "dubai.dubizzle.com",
   "abudhabi.dubizzle.com",
   "sharjah.dubizzle.com",
-  "ajman.dubizzle.com"
+  "ajman.dubizzle.com",
+  "ghanapropertycentre.com",
+  "www.ghanapropertycentre.com",
+  "meqasa.com",
+  "www.meqasa.com",
+  "jiji.com.gh",
+  "www.jiji.com.gh"
 ];
 
 export function detectPortalFromUrl(rawUrl = "") {
@@ -31,6 +37,9 @@ export function detectPortalFromUrl(rawUrl = "") {
     if (host === "propertyfinder.ae") return { portal: "propertyfinder", host: u.hostname };
     if (host === "bayut.com") return { portal: "bayut", host: u.hostname };
     if (host.endsWith(".dubizzle.com") || host === "dubizzle.com") return { portal: "dubizzle", host: u.hostname };
+    if (host === "ghanapropertycentre.com") return { portal: "ghanapropertycentre", host: u.hostname };
+    if (host === "meqasa.com") return { portal: "meqasa", host: u.hostname };
+    if (host === "jiji.com.gh") return { portal: "jiji", host: u.hostname };
     return { portal: null, host: u.hostname };
   } catch {
     return { portal: null, host: "" };
@@ -45,7 +54,7 @@ export function validatePortalUrl(rawUrl = "") {
     if (!["http:", "https:"].includes(u.protocol)) return { ok: false, error: "HTTP/HTTPS only" };
     const allowed = ALLOWED_HOSTS.some((h) => u.hostname === h || u.hostname.endsWith(`.${h.replace(/^www\./, "")}`));
     if (!allowed) {
-      return { ok: false, error: `Host not allowed. Use Property Finder, Bayut, or Dubizzle.` };
+      return { ok: false, error: `Host not allowed. Use Ghana Property Centre, Meqasa, Property Finder, Bayut, or Dubizzle.` };
     }
     const { portal } = detectPortalFromUrl(url);
     if (!portal) return { ok: false, error: "Unrecognized portal URL" };
@@ -57,6 +66,12 @@ export function validatePortalUrl(rawUrl = "") {
 
 function inferEmirateFromUrl(url = "") {
   const s = String(url).toLowerCase();
+  if (/ghanapropertycentre|meqasa|jiji\.com\.gh|tonaton/.test(s)) {
+    if (/kumasi|ashanti/.test(s)) return "Kumasi";
+    if (/tema/.test(s)) return "Tema";
+    if (/takoradi|western/.test(s)) return "Takoradi";
+    return "Accra";
+  }
   const map = [
     ["abu-dhabi", "Abu Dhabi"],
     ["dubai", "Dubai"],
@@ -185,6 +200,38 @@ async function parsePageRows(html, portal, meta, format) {
 export async function scrapeListingsFromUrl(rawUrl, options = {}) {
   const check = validatePortalUrl(rawUrl);
   if (!check.ok) return { ok: false, errors: [check.error], found: 0, upserted: 0 };
+
+  if (check.portal === "ghanapropertycentre") {
+    const { fetchText } = await import("./scrapers/http.mjs");
+    const { parseGpcSearchHtml } = await import("./scrapers/ghanapropertycentre-html.mjs");
+    const transactionType = options.transactionType || inferTransactionType(check.url);
+    const emirate = options.emirate || inferEmirateFromUrl(check.url);
+    const html = await fetchText(check.url, { timeoutMs: 25000 });
+    const collected = parseGpcSearchHtml(html, { city: emirate, transactionType }).filter((r) => Number(r.price_aed) > 0);
+    let upserted = 0;
+    if (collected.length && options.dryRun !== true) {
+      const batch = await ingestListingBatch(collected, { source: "manual_url_ghanapropertycentre" });
+      upserted = batch.upserted || 0;
+    }
+    return {
+      ok: upserted > 0 || (options.dryRun && collected.length > 0),
+      portal: "ghanapropertycentre",
+      url: check.url,
+      found: collected.length,
+      upserted,
+      errors: [],
+      engine: "gpc-html",
+      preview: collected.slice(0, 5).map((r) => ({
+        source: r.source,
+        external_id: r.external_id,
+        emirate: r.emirate,
+        community: r.community,
+        beds: r.beds,
+        price_aed: r.price_aed,
+        source_url: r.source_url
+      }))
+    };
+  }
 
   const maxListings = Math.min(Math.max(Number(options.maxListings || 50), 1), 100);
   const maxPages = Math.min(Math.max(Number(options.maxPages || 5), 1), 10);

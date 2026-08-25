@@ -41,7 +41,8 @@
         err.hidden = false;
         return;
       }
-      location.href = "/";
+      const next = new URLSearchParams(location.search).get("next") || "/";
+      location.href = next.startsWith("/") && !next.startsWith("//") ? next : "/";
     });
   </script>
 </body>

@@ -23,6 +23,8 @@ import { getLivePullFromCache, setLivePullCache, isLiveCacheEnabled } from "./li
 import { filterShowableListings } from "./listing-verify-filter.mjs";
 import { isGhanaMarket } from "./market.mjs";
 import { pullGhanaListingsForChat } from "./ghana-search.mjs";
+import { runGhanaLiveSearch } from "./ghana-live-search.mjs";
+import { attachClusterMeta, groupListingsByCluster } from "./cluster.mjs";
 
 const MIN_RESULTS = 3;
 const PORTAL_HOST = /propertyfinder\.ae|bayut\.com|dubizzle\.com/i;
@@ -88,7 +90,42 @@ export async function pullLiveListingsForChat(db, criteria = {}, options = {}) {
 
 async function pullLiveListingsForChatInner(db, criteria = {}, options = {}) {
   if (isGhanaMarket()) {
-    return pullGhanaListingsForChat(db, criteria, { limit: options.limit || 8 });
+    const limit = options.limit || 8;
+    const store = await pullGhanaListingsForChat(db, criteria, { limit });
+    let listings = store.listings || [];
+    const sources = store.ok ? ["ghana_store"] : [];
+    const thin = listings.length < 3;
+    const wantsLive = thin || options.forcePortal || options.forceLive || Boolean(criteria.community);
+    if (wantsLive) {
+      try {
+        const live = await runGhanaLiveSearch(db, {
+          message: options.message || "",
+          criteria,
+          session: options.session || {},
+          limit
+        });
+        if (live.listings?.length) {
+          listings = mergeByKey(listings, live.listings);
+          sources.push(...(live.sources || ["gpc_live"]));
+        }
+      } catch (error) {
+        console.error(JSON.stringify({ at: new Date().toISOString(), ghanaLivePullError: error.message }));
+      }
+    }
+    const grouped = groupListingsByCluster(listings);
+    listings = grouped.map((g) => attachClusterMeta(g.listing, g.offers)).slice(0, limit);
+    const loc = criteria.community || criteria.emirate || "Ghana";
+    const tx = criteria.transaction_type === "sale" ? "homes for sale" : criteria.transaction_type === "rent" ? "rentals" : "listings";
+    return {
+      ok: listings.length > 0,
+      listings,
+      sources,
+      searchMessage: sources.includes("gpc_live") || sources.includes("n8n")
+        ? `Live-searched Ghana ${tx} in ${loc}.`
+        : store.searchMessage || `Searched Ghana ${tx} in ${loc}.`,
+      searched: true,
+      fetchedAt: new Date().toISOString()
+    };
   }
   const limit = options.limit || 8;
   const wantsPhotos = options.wantsPhotos !== false;

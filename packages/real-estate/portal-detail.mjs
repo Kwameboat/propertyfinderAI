@@ -12,6 +12,7 @@ import {
   normalizeListingRow
 } from "./scrapers/normalize.mjs";
 import { filterValidPortalImages, extractImagesFromText } from "./listing-images.mjs";
+import { parseGpcSearchHtml } from "./scrapers/ghanapropertycentre-html.mjs";
 
 const EMIRATE_FROM_SLUG = {
   dubai: "Dubai",
@@ -264,6 +265,24 @@ export async function enrichListingFromPortalUrl(sourceUrl = "", partial = {}) {
 
   try {
     const { html, engine, format } = await fetchDetailHtml(url);
+
+    const isGpcSerp =
+      portal === "ghanapropertycentre" &&
+      /\/(?:for-rent|for-sale)\//i.test(url) &&
+      !/\d{3,}-/.test(url);
+    if (isGpcSerp && html) {
+      const rows = parseGpcSearchHtml(html, {
+        city: partial.emirate || emirateFromUrl(url),
+        transactionType: inferTransactionType(url)
+      }).filter((r) => Number(r.price_aed) > 0);
+      return {
+        ok: rows.length > 0,
+        listing: rows[0] || partial,
+        listings: rows,
+        portal,
+        engine: engine || "gpc-serp"
+      };
+    }
 
     if (format === "markdown") {
       const fromMd = filterValidPortalImages(extractImagesFromText(html));

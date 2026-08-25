@@ -2,6 +2,7 @@
  * Build a property search query from session context (not raw "show me photos").
  */
 
+import { isGhanaMarket } from "./market.mjs";
 import { userWantsPhotos, userExplicitlySearching } from "./intent.mjs";
 import {
   extractEmiratesFromText,
@@ -50,6 +51,7 @@ export function extractAreaFromText(blob = "") {
 }
 
 export function buildLiveSearchQuery(inbound = "", criteria = {}, session = {}) {
+  if (isGhanaMarket()) return buildGhanaLiveSearchQuery(inbound, criteria, session);
   const text = String(inbound || "").trim();
   const wantsPhotos = userWantsPhotos(text);
   const explicitSearch = userExplicitlySearching(text);
@@ -86,6 +88,24 @@ export function buildLiveSearchQuery(inbound = "", criteria = {}, session = {}) 
     return `${parts.join(" ")} UAE property site:bayut.com OR site:propertyfinder.ae OR site:dubizzle.com`;
   }
   return text;
+}
+
+function buildGhanaLiveSearchQuery(inbound = "", criteria = {}, session = {}) {
+  const text = String(inbound || "").trim();
+  const merged = mergeCriteriaFromSession(criteria, session, { currentMessage: inbound });
+  if (text && /ghanapropertycentre|meqasa|jiji|for sale|for rent|self-contain|east legon|osu|spintex/i.test(text)) {
+    return `${text} Ghana property site:ghanapropertycentre.com OR site:meqasa.com`;
+  }
+  const parts = [];
+  if (merged.property_type) parts.push(String(merged.property_type).replace(/-/g, " "));
+  if (merged.beds != null) parts.push(merged.beds === 0 ? "studio" : `${merged.beds} bedroom`);
+  if (merged.community) parts.push(merged.community);
+  parts.push(merged.emirate || "Accra");
+  if (merged.transaction_type === "sale") parts.push("for sale");
+  else parts.push("for rent");
+  if (merged.max_price) parts.push(`under GH₵ ${merged.max_price}`);
+  const q = parts.filter(Boolean).join(" ") || text || "Accra property for rent";
+  return `${q} Ghana property site:ghanapropertycentre.com OR site:meqasa.com`;
 }
 
 /** Pull area/budget/property type from recent chat (incl. assistant messages). */

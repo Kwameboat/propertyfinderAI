@@ -4,6 +4,12 @@ import { parseGpcSearchHtml } from "../packages/real-estate/scrapers/ghanaproper
 import { getN8nIngestSources, getScrapeEmirates } from "../packages/real-estate/mode.mjs";
 import { GHANA_PORTALS, GHANA_DIRECT_SOURCE, ghanaListingSources } from "../packages/real-estate/market.mjs";
 import { INGEST_SOURCES, GHANA_SCRAPE_TYPES } from "../packages/real-estate/scrape-runner.mjs";
+import {
+  isGpcDetailUrl,
+  isGpcSearchUrl,
+  gpcLiveSearchUrls
+} from "../packages/real-estate/ghana-live-search.mjs";
+import { buildLiveSearchQuery } from "../packages/real-estate/live-search-query.mjs";
 
 const GPC_FIXTURE = `
 <script type="application/ld+json">{"@context":"https://schema.org","@type":"ItemList","numberOfItems":2,"itemListElement":[
@@ -37,6 +43,44 @@ test("GPC JSON-LD search HTML parses priced Ghana sales", () => {
   assert.equal(rows[0].community, "East Legon");
   assert.equal(rows[0].price_aed, 850000);
   assert.equal(rows[0].price_period, "total");
+});
+
+test("GPC live search URLs target area showtype pages, not fake details", () => {
+  const urls = gpcLiveSearchUrls({ city: "Accra", area: "East Legon", transactionType: "sale" });
+  assert.equal(urls.length, 2);
+  assert.ok(urls.every((u) => isGpcSearchUrl(u)));
+  assert.ok(urls.every((u) => !isGpcDetailUrl(u)));
+  assert.ok(urls.some((u) => u.includes("/for-sale/") && u.includes("east-legon") && u.includes("showtype")));
+});
+
+test("GPC classifiers keep index pages out of detail enrich", () => {
+  const showtype = "https://ghanapropertycentre.com/for-sale/houses/greater-accra/east-legon/showtype";
+  const inCity = "https://ghanapropertycentre.com/for-sale/houses/in/accra";
+  const detail = "https://ghanapropertycentre.com/for-sale/houses/greater-accra/east-legon/88001-3-bedroom-house";
+  assert.equal(isGpcSearchUrl(showtype), true);
+  assert.equal(isGpcDetailUrl(showtype), false);
+  assert.equal(isGpcSearchUrl(inCity), true);
+  assert.equal(isGpcDetailUrl(inCity), false);
+  assert.equal(isGpcDetailUrl(detail), true);
+  assert.equal(isGpcSearchUrl(detail), false);
+});
+
+test("Ghana live search query uses Ghana portals not Bayut", async () => {
+  const prev = process.env.JAB_RE_MARKET;
+  process.env.JAB_RE_MARKET = "GH";
+  try {
+    const q = buildLiveSearchQuery(
+      "houses for sale in East Legon",
+      { transaction_type: "sale", emirate: "Accra", community: "East Legon" },
+      {}
+    );
+    assert.match(q, /ghanapropertycentre\.com/);
+    assert.match(q, /East Legon/i);
+    assert.doesNotMatch(q, /bayut\.com/);
+  } finally {
+    if (prev == null) delete process.env.JAB_RE_MARKET;
+    else process.env.JAB_RE_MARKET = prev;
+  }
 });
 
 test("Ghana ingest sources are the Ghana portals", async () => {

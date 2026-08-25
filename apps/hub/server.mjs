@@ -125,6 +125,7 @@ import {
 import { handleRentChat, handleRentTranscribe, submitRentLead, formatListingCard, formatListingDetail } from "../../packages/real-estate/chat.mjs";
 import { publicMarketConfig, isGhanaMarket } from "../../packages/real-estate/market.mjs";
 import { submitOwnerListing, sanitizeOwnerPhotoUrls } from "../../packages/real-estate/owner-listing.mjs";
+import { runGhanaLiveSearch } from "../../packages/real-estate/ghana-live-search.mjs";
 import { attachClusterMeta, groupListingsByCluster } from "../../packages/real-estate/cluster.mjs";
 import {
   confirmGhanaViewingPayment,
@@ -1431,7 +1432,8 @@ app.get("/api/rent/status", async (req, res) => {
       livePull: {
         endpoint: "/api/rent/live-pull",
         enrichUrl: "/api/rent/enrich-url",
-        matrixIngest: "/api/rent/ingest/matrix"
+        matrixIngest: "/api/rent/ingest/matrix",
+        n8nWebhook: Boolean(String(process.env.N8N_LIVE_SEARCH_WEBHOOK || "").trim())
       }
     });
   } catch (error) {
@@ -1623,6 +1625,62 @@ app.post("/api/admin/re/ingest/apify", requireAgency, async (req, res) => {
       maxPages: req.body?.maxPages,
       maxResults: req.body?.maxResults,
       actorId: req.body?.actorId
+    });
+    res.json({ ok: result.ok, ...result });
+  } catch (error) {
+    res.status(500).json({ ok: false, error: error.message });
+  }
+});
+
+app.post("/api/admin/re/live-search", requireAgency, async (req, res) => {
+  try {
+    if (!isGhanaMarket()) {
+      const result = await pullLiveListingsForChat(db, req.body?.criteria || {}, {
+        limit: Math.min(Number(req.body?.limit) || 8, 12),
+        message: String(req.body?.query || req.body?.message || ""),
+        forcePortal: true,
+        forceLive: true
+      });
+      res.json({
+        ok: result.ok,
+        listings: (result.listings || []).map((l) => formatListingCard(l)),
+        sources: result.sources,
+        count: result.listings?.length || 0
+      });
+      return;
+    }
+    const result = await runGhanaLiveSearch(db, {
+      query: String(req.body?.query || req.body?.message || "").trim(),
+      message: String(req.body?.query || req.body?.message || "").trim(),
+      criteria: {
+        emirate: req.body?.emirate || req.body?.city,
+        community: req.body?.community || req.body?.area,
+        transaction_type: req.body?.transaction_type || req.body?.purpose
+      },
+      limit: Math.min(Number(req.body?.limit) || 12, 24)
+    });
+    res.json({
+      ok: result.ok,
+      ...result,
+      listings: (result.listings || []).map((l) => formatListingCard(l))
+    });
+  } catch (error) {
+    res.status(500).json({ ok: false, error: error.message });
+  }
+});
+
+app.post("/api/admin/re/ingest/ghana", requireAgency, async (req, res) => {
+  try {
+    const source = String(req.body?.source || "ghanapropertycentre").trim();
+    const allowed = ["ghanapropertycentre", "meqasa", "jiji"];
+    if (!allowed.includes(source)) {
+      res.status(400).json({ ok: false, error: "source must be ghanapropertycentre, meqasa, or jiji" });
+      return;
+    }
+    const result = await runIngestScrape(source, {
+      emirates: req.body?.emirates || req.body?.cities,
+      types: req.body?.types || ["rent", "sale"],
+      maxPages: req.body?.maxPages || 2
     });
     res.json({ ok: result.ok, ...result });
   } catch (error) {

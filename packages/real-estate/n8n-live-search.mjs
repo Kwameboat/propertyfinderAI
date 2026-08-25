@@ -6,7 +6,8 @@ import { mapInventoryRowsToListings } from "./inventory-map.mjs";
 import { searchListingsStore } from "./listings-store.mjs";
 import { enrichInventoryRows } from "./enrich-url.mjs";
 import { buildLiveSearchQuery } from "./live-search-query.mjs";
-import { filterValidPortalImages } from "./listing-images.mjs";
+import { filterValidPortalImages, isChatListingImage } from "./listing-images.mjs";
+import { isGhanaMarket } from "./market.mjs";
 
 const WEBHOOK = () => String(process.env.N8N_LIVE_SEARCH_WEBHOOK || "").trim();
 const TIMEOUT_MS = Math.min(Math.max(Number(process.env.N8N_LIVE_SEARCH_TIMEOUT_MS || 120000), 30000), 180000);
@@ -66,7 +67,9 @@ export async function fetchN8nLiveSearch(db, query = "", criteria = {}, session 
       listings = mapInventoryRowsToListings(inventory);
     }
 
-    const needsEnrich = listings.some((l) => filterValidPortalImages(l.images || []).length < 1);
+    const needsEnrich = isGhanaMarket()
+      ? false
+      : listings.some((l) => filterValidPortalImages(l.images || []).length < 1);
     if (needsEnrich && inventory.length) {
       const enriched = await enrichInventoryRows(inventory, { sync: true });
       if (enriched.listings?.length) listings = enriched.listings;
@@ -90,7 +93,11 @@ export async function fetchN8nLiveSearch(db, query = "", criteria = {}, session 
       );
     }
 
-    listings = listings.filter((l) => filterValidPortalImages(l.images || (l.image ? [l.image] : [])).length > 0);
+    listings = listings.filter((l) =>
+      isGhanaMarket()
+        ? Number(l.price_aed) > 0 || (l.images || []).some(isChatListingImage)
+        : filterValidPortalImages(l.images || (l.image ? [l.image] : [])).length > 0
+    );
     if (!listings.length && Array.isArray(data.listings) && data.listings.length) {
       listings = data.listings;
     }

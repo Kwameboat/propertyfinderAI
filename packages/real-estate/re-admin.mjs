@@ -19,6 +19,9 @@ import {
 import { runPuppeteerIngestAll } from "./puppeteer-scrape.mjs";
 import { runIngestStaleCleanup } from "./ingest.mjs";
 import { scrapeListingsFromUrl, validatePortalUrl } from "./url-scrape.mjs";
+import { liveSearchStatus } from "./ghana-live-search.mjs";
+import { isN8nLiveSearchEnabled } from "./n8n-live-search.mjs";
+import { isGhanaMarket } from "./market.mjs";
 
 export { scrapeListingsFromUrl, validatePortalUrl };
 
@@ -57,7 +60,10 @@ export async function getReAdminDashboard(db) {
       enabled: isPuppeteerScrapeEnabled(),
       cronSources: getPuppeteerCronSources(),
       allSources: PUPPETEER_INGEST_SOURCES
-    }
+    },
+    liveSearch: liveSearchStatus(),
+    n8nLiveSearch: isN8nLiveSearchEnabled(),
+    market: isGhanaMarket() ? "GH" : "AE"
   };
 }
 
