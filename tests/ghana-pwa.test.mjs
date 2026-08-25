@@ -9,7 +9,7 @@ import {
 } from "../packages/real-estate/pwa-host.mjs";
 
 test("Ghana public prefix maps APIs and uploads under /gh", () => {
-  assert.equal(stripGhanaPublicPrefix("/gh/api/rent/config"), "/api/rent/config");
+  assert.equal(stripGhanaPublicPrefix("/gh/api/rent/photo?u=https%3A%2F%2Fx.jpg"), "/api/rent/photo?u=https%3A%2F%2Fx.jpg");
   assert.equal(stripGhanaPublicPrefix("/gh/api/rent/chat?x=1"), "/api/rent/chat?x=1");
   assert.equal(stripGhanaPublicPrefix("/gh/uploads/owner-listings/a.jpg"), "/uploads/owner-listings/a.jpg");
   assert.equal(stripGhanaPublicPrefix("/gh/sw.js"), "/gh/sw.js");

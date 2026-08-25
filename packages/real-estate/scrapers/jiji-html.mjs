@@ -66,15 +66,33 @@ function cityFromJijiAd(ad, fallback = "Accra") {
   return fallback || "Accra";
 }
 
+function pushJijiUrl(urls, value) {
+  const url = typeof value === "string" ? value : value?.url_large || value?.big_url || value?.original || value?.url;
+  if (url) urls.push(String(url));
+}
+
 function imagesFromJijiAd(ad) {
   const urls = [];
-  if (ad?.image_obj?.url) urls.push(ad.image_obj.url);
-  if (ad?.image_url) urls.push(ad.image_url);
-  for (const img of ad?.images || []) {
-    const url = typeof img === "string" ? img : img?.url;
-    if (url) urls.push(url);
+  pushJijiUrl(urls, ad?.image_obj);
+  pushJijiUrl(urls, ad?.image_obj?.url_large);
+  pushJijiUrl(urls, ad?.image_url);
+  for (const img of [...(ad?.images || []), ...(ad?.pictures || []), ...(ad?.photos || [])]) {
+    pushJijiUrl(urls, img);
   }
-  return [...new Set(urls.filter(Boolean))];
+  const unique = [...new Set(urls.filter(Boolean))];
+  unique.sort((a, b) => jijiUrlWidth(b) - jijiUrlWidth(a));
+  return unique;
+}
+
+function jijiUrlWidth(url = "") {
+  const m = String(url).match(/_([A-Za-z0-9+/=]+)\.(?:jpe?g|png|webp)(?:\?|$)/i);
+  if (!m) return 0;
+  try {
+    const w = Number(Buffer.from(m[1], "base64").toString("utf8").split("-")[0]);
+    return Number.isFinite(w) ? w : 0;
+  } catch {
+    return 0;
+  }
 }
 
 function listingUrl(ad, host) {

@@ -135,6 +135,8 @@ import {
   rewriteRentHtmlForGhana,
   stripGhanaPublicPrefix
 } from "../../packages/real-estate/pwa-host.mjs";
+import { enhanceListingPhoto, enhanceImageBuffer } from "./listing-photo.mjs";
+import { isEnhanceableRemotePhoto, upgradePortalImageUrl } from "../../packages/real-estate/listing-photo-url.mjs";
 import { submitOwnerListing, sanitizeOwnerPhotoUrls } from "../../packages/real-estate/owner-listing.mjs";
 import { runGhanaLiveSearch } from "../../packages/real-estate/ghana-live-search.mjs";
 import { attachClusterMeta, groupListingsByCluster } from "../../packages/real-estate/cluster.mjs";
@@ -855,9 +857,17 @@ async function saveOwnerListingPhotos(files = []) {
   for (const file of files) {
     const ext = path.extname(file.originalname || file.filename || "").toLowerCase();
     if (![".jpg", ".jpeg", ".png", ".webp"].includes(ext)) continue;
-    const name = `${Date.now()}-${saved.length}${ext === ".jpeg" ? ".jpg" : ext}`;
-    await writeFile(path.join(dir, name), await readFile(file.path));
-    saved.push(`/uploads/owner-listings/${folder}/${name}`);
+    const buf = await readFile(file.path);
+    const sharpened = await enhanceImageBuffer(buf, { strong: true });
+    if (sharpened?.length) {
+      const name = `${Date.now()}-${saved.length}.webp`;
+      await writeFile(path.join(dir, name), sharpened);
+      saved.push(`/uploads/owner-listings/${folder}/${name}`);
+    } else {
+      const name = `${Date.now()}-${saved.length}${ext === ".jpeg" ? ".jpg" : ext}`;
+      await writeFile(path.join(dir, name), buf);
+      saved.push(`/uploads/owner-listings/${folder}/${name}`);
+    }
   }
   return saved;
 }
@@ -885,7 +895,27 @@ function loginRateLimit(req, res, next) {
 }
 
 /** UAE Real Estate concierge — public PWA API (no agency auth). */
-/** UAE Real Estate concierge — public PWA API (no agency auth). */
+app.get("/api/rent/photo", async (req, res) => {
+  const src = String(req.query.u || req.query.url || "").trim();
+  const upgraded = upgradePortalImageUrl(src);
+  if (!isEnhanceableRemotePhoto(upgraded)) {
+    res.status(400).json({ ok: false, error: "unsupported photo host" });
+    return;
+  }
+  try {
+    const file = await enhanceListingPhoto(upgraded, { uploadsDir: paths.uploadsDir });
+    if (file) {
+      res.setHeader("Cache-Control", "public, max-age=86400, immutable");
+      res.type("image/webp");
+      res.sendFile(file);
+      return;
+    }
+  } catch (error) {
+    console.error(JSON.stringify({ at: new Date().toISOString(), listingPhotoError: error.message }));
+  }
+  res.redirect(302, upgraded);
+});
+
 app.get("/api/rent/config", (req, res) => {
   res.json({ ok: true, market: publicMarketConfig() });
 });

@@ -22,6 +22,7 @@ import { pullLiveListingsForChat } from "./live-pull.mjs";
 import { mergeCriteriaFromSession } from "./live-search-query.mjs";
 import { normalizeSearchCriteria, filterListingsByEmirate, resolveEmirateScope, extractEmiratesFromText } from "./emirate-scope.mjs";
 import { enrichListingsWithImages, filterValidPortalImages, isValidListingImage, isLocalGhanaMedia, isChatListingImage } from "./listing-images.mjs";
+import { listingPhotoSrcs } from "./listing-photo-url.mjs";
 import { userWantsPhotos } from "./intent.mjs";
 import { syncSessionToSupabase, syncLeadToSupabase, syncListingToSupabase, isSupabaseEnabled } from "./supabase.mjs";
 import { resolveSessionLanguage } from "./language.mjs";
@@ -441,7 +442,7 @@ export function formatListingCard(l, criteria = {}) {
   const local = rawImages.filter(isLocalGhanaMedia);
   const portal = filterValidPortalImages(rawImages);
   const loose = [...new Set(rawImages)].filter(isChatListingImage);
-  const images = local.length ? local : portal.length ? portal : loose;
+  const images = listingPhotoSrcs(local.length ? local : portal.length ? portal : loose);
   return {
     id: (l.id && !isCompositeListingId(l.id) ? l.id : null) || listingKey(l) || l.id,
     title,
