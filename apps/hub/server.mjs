@@ -302,7 +302,11 @@ function requireAuth(req, res, next) {
       res.status(401).json({ ok: false, error: "unauthorized" });
       return;
     }
-    res.redirect("/login");
+    const nextPath = req.originalUrl || req.path || "/";
+    const safe = nextPath.startsWith("/") && !nextPath.startsWith("//") && !nextPath.startsWith("/api")
+      ? nextPath
+      : "/";
+    res.redirect(`/login?next=${encodeURIComponent(safe)}`);
     return;
   }
   req.session = session;

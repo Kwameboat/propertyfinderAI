@@ -7,7 +7,7 @@ import { fetchText } from "./scrapers/http.mjs";
 import { parseGpcSearchHtml } from "./scrapers/ghanapropertycentre-html.mjs";
 import { fetchN8nLiveSearch, isN8nLiveSearchEnabled } from "./n8n-live-search.mjs";
 import { prepareListing } from "./ingest.mjs";
-import { isSupabaseEnabled, batchSyncListingsToSupabase } from "./supabase.mjs";
+import { isSupabaseEnabled, batchSyncListingsToSupabaseWithReturn } from "./supabase.mjs";
 import { extractCriteria } from "./qualification.mjs";
 import { isGhanaMarket } from "./market.mjs";
 import { buildLiveSearchQuery } from "./live-search-query.mjs";
@@ -176,8 +176,19 @@ export async function runGhanaLiveSearch(db, { query = "", message = "", criteri
   if (rows.length && isSupabaseEnabled()) {
     const prepared = rows.map((row) => prepareListing(row)).filter(Boolean);
     if (prepared.length) {
-      const sync = await batchSyncListingsToSupabase(prepared);
-      upserted = sync.upserted || 0;
+      const synced = await batchSyncListingsToSupabaseWithReturn(prepared);
+      upserted = synced.length;
+      const byKey = new Map(synced.map((l) => [`${l.source}:${l.external_id}`, l]));
+      rows = rows.map((row) => {
+        const dbRow = byKey.get(`${row.source}:${row.external_id}`);
+        if (!dbRow) return row;
+        return {
+          ...row,
+          ...dbRow,
+          title: row.title || dbRow.title,
+          images: (row.images || []).length ? row.images : dbRow.images
+        };
+      });
     }
   }
 

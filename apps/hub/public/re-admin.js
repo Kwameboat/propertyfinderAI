@@ -6,7 +6,7 @@ async function api(path, options = {}) {
   });
   const data = await res.json().catch(() => ({}));
   if (res.status === 401) {
-    location.href = "/login.html?next=" + encodeURIComponent(location.pathname);
+    location.href = "/login?next=" + encodeURIComponent(location.pathname);
     throw new Error("Unauthorized");
   }
   if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
@@ -72,6 +72,13 @@ let dashboardCache = null;
 let listingsPage = 0;
 const LISTINGS_PAGE_SIZE = 24;
 let listingsSearchTimer = null;
+const liveListingCache = new Map();
+
+function rememberListings(listings = []) {
+  for (const l of listings) {
+    if (l?.id) liveListingCache.set(String(l.id), l);
+  }
+}
 
 function switchView(name) {
   document.querySelectorAll(".ld-nav-item").forEach((b) => {
@@ -229,6 +236,7 @@ async function loadListings() {
   const data = await api(`/api/admin/re/listings?${listingQueryString()}`);
   const listings = data.listings || [];
   const total = data.total ?? listings.length;
+  rememberListings(listings);
 
   document.getElementById("listings-count").textContent =
     `${total.toLocaleString()} listing${total === 1 ? "" : "s"} · showing ${listings.length}`;
@@ -268,8 +276,18 @@ async function openListingDrawer(id) {
   body.innerHTML = '<p class="ld-muted">Loading…</p>';
   openDrawer("listing-drawer");
 
+  let l = null;
   try {
-    const { listing: l } = await api(`/api/admin/re/listings/${encodeURIComponent(id)}`);
+    l = (await api(`/api/admin/re/listings/${encodeURIComponent(id)}`)).listing;
+  } catch (e) {
+    l = liveListingCache.get(String(id)) || null;
+    if (!l) {
+      body.innerHTML = `<p class="ld-muted">${esc(e.message)}</p>`;
+      return;
+    }
+  }
+
+  try {
     document.getElementById("drawer-listing-title").textContent =
       l.community || l.building || "Listing";
 
@@ -538,6 +556,7 @@ document.getElementById("live-search-form")?.addEventListener("submit", async (e
       })
     });
     const listings = data.listings || [];
+    rememberListings(listings);
     const via = (data.sources || []).filter(Boolean).join(", ") || "Ghana Property Centre";
     msg.textContent = listings.length
       ? `Found ${listings.length} priced listing${listings.length === 1 ? "" : "s"} via ${via}${data.upserted ? ` · saved ${data.upserted}` : ""}.`
