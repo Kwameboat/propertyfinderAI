@@ -224,8 +224,11 @@ export async function handleRentChat(db, { sessionId, message, userPhone = "" } 
     listingsBlock = formatListingsForPrompt(listings);
 
     if (isGhanaMarket()) {
-      const grouped = groupListingsByCluster(listings);
-      listings = grouped.map((g) => attachClusterMeta(g.listing, g.offers));
+      const alreadyClustered = listings.some((l) => Number(l.other_agent_count || 0) > 0 || (l.other_agents || []).length);
+      if (!alreadyClustered) {
+        const grouped = groupListingsByCluster(listings);
+        listings = grouped.map((g) => attachClusterMeta(g.listing, g.offers));
+      }
       listingsBlock = formatListingsForPrompt(listings);
     } else if (devListingsSnapshot.length) {
       const byKey = new Map(listings.map((l) => [`${l.source}:${l.external_id}`, l]));
