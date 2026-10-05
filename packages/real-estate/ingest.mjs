@@ -10,6 +10,7 @@ import {
 } from "./supabase.mjs";
 import { scrapeSourceToRows } from "./scrape-runner.mjs";
 import { getN8nIngestSources, getStaleHours } from "./mode.mjs";
+import { clusterKey } from "./cluster.mjs";
 
 import { isDemoListingRow } from "./supabase.mjs";
 
@@ -22,6 +23,7 @@ export function prepareListing(input = {}) {
 
   return {
     ...normalized,
+    cluster_id: input.cluster_id || normalized.cluster_id || clusterKey(normalized),
     fingerprint: listingFingerprint(normalized),
     scraped_at: Date.now(),
     is_active: true,

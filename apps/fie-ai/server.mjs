@@ -1,7 +1,6 @@
 /**
  * FIE AI — standalone Ghana housing PWA + API for Vercel (or local Node).
- * Consumer surface only: chat, browse, viewing pay, owner list, agent PIN.
- * Scrapers / Evolution WhatsApp / n8n stay off this deploy.
+ * Chat/browse/viewing + Ghana scrapers that write to Supabase.
  */
 import { applyFieStandaloneEnv } from "./lib/env.mjs";
 
@@ -26,7 +25,8 @@ import {
 } from "../../packages/real-estate/chat.mjs";
 import {
   searchListingsStore,
-  getListingStore
+  getListingStore,
+  getListingsStatus
 } from "../../packages/real-estate/listings-store.mjs";
 import { groupListingsByCluster, attachClusterMeta } from "../../packages/real-estate/cluster.mjs";
 import { isSupabaseEnabled } from "../../packages/real-estate/supabase.mjs";
@@ -37,6 +37,18 @@ import {
 } from "../../packages/real-estate/ghana-viewing.mjs";
 import { submitOwnerListing } from "../../packages/real-estate/owner-listing.mjs";
 import { verifyPaystackSignature } from "../../packages/paystack.mjs";
+import {
+  verifyIngestToken,
+  runIngestScrape,
+  runIngestStaleCleanup
+} from "../../packages/real-estate/ingest.mjs";
+import { GHANA_INGEST_SOURCES } from "../../packages/real-estate/scrape-runner.mjs";
+import {
+  runGhanaScrapeTick,
+  runGhanaScrapeAll,
+  ghanaIngestSources,
+  ingestGhanaListingBatch
+} from "../../packages/real-estate/ghana-ingest.mjs";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const PUBLIC_DIR = path.join(__dirname, "public");
@@ -73,18 +85,132 @@ app.use((req, res, next) => {
   next();
 });
 
-app.get("/api/health", (_req, res) => {
+function rentIngestAuth(req, res, next) {
+  const token =
+    req.headers["x-ingest-token"] ||
+    String(req.headers.authorization || "").replace(/^Bearer\s+/i, "");
+  const cronSecret = String(process.env.CRON_SECRET || "").trim();
+  if (cronSecret && token === cronSecret) {
+    next();
+    return;
+  }
+  if (!verifyIngestToken(token)) {
+    res.status(401).json({ ok: false, error: "Invalid or missing ingest token (X-Ingest-Token)" });
+    return;
+  }
+  next();
+}
+
+app.get("/api/health", async (_req, res) => {
+  let inventory = null;
+  try {
+    inventory = await getListingsStatus(db);
+  } catch (error) {
+    inventory = { error: error.message };
+  }
   res.json({
     ok: true,
     app: "fie-ai",
     market: "GH",
     standalone: true,
-    store: isSupabaseEnabled() ? "supabase" : "sqlite"
+    store: isSupabaseEnabled() ? "supabase" : "sqlite",
+    supabase: isSupabaseEnabled(),
+    scrapeSources: ghanaIngestSources(),
+    inventory
   });
 });
 
 app.get("/api/rent/config", (_req, res) => {
-  res.json({ ok: true, market: publicMarketConfig() });
+  res.json({
+    ok: true,
+    market: publicMarketConfig(),
+    store: isSupabaseEnabled() ? "supabase" : "sqlite",
+    scrapeSources: ghanaIngestSources()
+  });
+});
+
+app.post("/api/rent/ingest", rentIngestAuth, async (req, res) => {
+  try {
+    if (!isSupabaseEnabled()) {
+      res.status(503).json({ ok: false, error: "Supabase required for ingest" });
+      return;
+    }
+    const listings = Array.isArray(req.body?.listings) ? req.body.listings : [];
+    const source = String(req.body?.source || "batch").trim();
+    if (!listings.length) {
+      res.status(400).json({ ok: false, error: "listings array required" });
+      return;
+    }
+    const result = await ingestGhanaListingBatch(listings, { source });
+    res.json({ ok: true, ...result });
+  } catch (error) {
+    res.status(500).json({ ok: false, error: error.message });
+  }
+});
+
+app.post("/api/rent/ingest/scrape", rentIngestAuth, async (req, res) => {
+  try {
+    if (!isSupabaseEnabled()) {
+      res.status(503).json({ ok: false, error: "Supabase required for scrape" });
+      return;
+    }
+    const source = String(req.body?.source || req.query?.source || "").trim();
+    const allowed = ghanaIngestSources({ includeJiji: true });
+    if (!source) {
+      res.status(400).json({ ok: false, error: "source required", allowed });
+      return;
+    }
+    if (!GHANA_INGEST_SOURCES.includes(source) && source !== "tonaton") {
+      res.status(400).json({ ok: false, error: `Unknown source: ${source}`, allowed });
+      return;
+    }
+    const result = await runIngestScrape(source, {
+      emirates: req.body?.emirates,
+      types: req.body?.types || ["rent", "sale"],
+      maxPages: req.body?.maxPages != null ? Number(req.body.maxPages) : 1
+    });
+    res.json({ ok: result.ok, ...result });
+  } catch (error) {
+    res.status(500).json({ ok: false, error: error.message });
+  }
+});
+
+app.post("/api/rent/ingest/scrape-all", rentIngestAuth, async (req, res) => {
+  try {
+    const result = await runGhanaScrapeAll({
+      sources: Array.isArray(req.body?.sources) ? req.body.sources : undefined,
+      emirates: req.body?.emirates,
+      types: req.body?.types,
+      maxPages: req.body?.maxPages != null ? Number(req.body.maxPages) : 2
+    });
+    res.json(result);
+  } catch (error) {
+    res.status(500).json({ ok: false, error: error.message });
+  }
+});
+
+app.post("/api/rent/ingest/stale", rentIngestAuth, async (req, res) => {
+  try {
+    const result = await runIngestStaleCleanup();
+    res.json(result);
+  } catch (error) {
+    res.status(500).json({ ok: false, error: error.message });
+  }
+});
+
+/** Cron-friendly tick (also available at /api/cron/scrape as a dedicated function). */
+app.all("/api/cron/scrape", rentIngestAuth, async (req, res) => {
+  try {
+    const result = await runGhanaScrapeTick({
+      sources: Array.isArray(req.body?.sources) ? req.body.sources : undefined,
+      emirates: Array.isArray(req.body?.emirates) ? req.body.emirates : undefined,
+      types: Array.isArray(req.body?.types) ? req.body.types : undefined,
+      maxPages: req.body?.maxPages != null ? Number(req.body.maxPages) : undefined
+    });
+    res.json({ ...result, configuredSources: ghanaIngestSources() });
+  } catch (error) {
+    res.status(500).json({ ok: false, error: error.message });
+  }
 });
 
 app.post("/api/rent/session", rentRateLimit, (req, res) => {

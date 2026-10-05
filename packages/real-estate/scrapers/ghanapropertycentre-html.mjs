@@ -5,15 +5,16 @@
 import { fetchText, extractJsonLd, sleep } from "./http.mjs";
 import { normalizeListingRow } from "./normalize.mjs";
 
-const CITY_SLUG = {
-  Accra: "accra",
-  Kumasi: "kumasi",
-  Tema: "tema",
-  Takoradi: "takoradi",
-  "Cape Coast": "cape-coast",
-  Tamale: "tamale",
-  Kasoa: "kasoa",
-  Madina: "madina"
+/** City → GPC region slug (site no longer uses /in/{city}). */
+const CITY_REGION = {
+  Accra: "greater-accra",
+  Kumasi: "ashanti",
+  Tema: "greater-accra",
+  Takoradi: "western-region",
+  "Cape Coast": "central-region",
+  Tamale: "northern-region",
+  Kasoa: "greater-accra",
+  Madina: "greater-accra"
 };
 
 const REGION_CITY = {
@@ -22,20 +23,24 @@ const REGION_CITY = {
   ashanti: "Kumasi",
   kumasi: "Kumasi",
   tema: "Tema",
+  "western-region": "Takoradi",
   western: "Takoradi",
   takoradi: "Takoradi",
+  "central-region": "Cape Coast",
   central: "Cape Coast",
+  "northern-region": "Tamale",
   northern: "Tamale",
   tamale: "Tamale"
 };
 
 function searchUrls(city, transactionType, page) {
-  const slug = CITY_SLUG[city] || "accra";
+  const region = CITY_REGION[city] || "greater-accra";
   const purpose = transactionType === "sale" ? "for-sale" : "for-rent";
+  // Current GPC SERP shape: /for-rent/greater-accra, /for-rent/flats-apartments/greater-accra
   const paths = [
-    `/${purpose}/flats-apartments/in/${slug}`,
-    `/${purpose}/houses/in/${slug}`,
-    `/${purpose}/flats-apartments/self-contained/in/${slug}`
+    `/${purpose}/${region}`,
+    `/${purpose}/flats-apartments/${region}`,
+    `/${purpose}/houses/${region}`
   ];
   return paths.map((path) => {
     const base = `https://ghanapropertycentre.com${path}`;

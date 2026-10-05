@@ -9,7 +9,9 @@
     "predev": "npm run build",
     "dev": "node --watch server.mjs",
     "start": "node server.mjs",
-    "prestart": "npm run build"
+    "prestart": "npm run build",
+    "scrape": "node scripts/scrape-to-supabase.mjs",
+    "scrape:all": "node scripts/scrape-to-supabase.mjs --all"
   },
   "engines": {
     "node": "22.x"

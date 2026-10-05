@@ -104,6 +104,7 @@ export function listingToSupabaseRow(listing) {
     scraped_at: new Date(listing.scraped_at || Date.now()).toISOString(),
     is_active: listing.is_active !== false
   };
+  if (listing.cluster_id) row.cluster_id = listing.cluster_id;
   if (listing.listing_status) row.listing_status = listing.listing_status;
   if (listing.last_verified_at) {
     row.last_verified_at = new Date(listing.last_verified_at).toISOString();
@@ -241,6 +242,7 @@ export function mapSupabaseListing(row) {
     lat: row.lat,
     lng: row.lng,
     fingerprint: row.fingerprint,
+    cluster_id: row.cluster_id || null,
     scraped_at: row.scraped_at,
     is_active: row.is_active !== false,
     listing_status: row.listing_status || "available",

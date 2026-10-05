@@ -1,47 +1,88 @@
 # FIE AI (standalone)
 
-Ghana housing AI agent as a **standalone PWA** for **Vercel**.
+Ghana housing AI agent as a **standalone PWA** for **Vercel**, with **Supabase** inventory and **portal scrapers**.
 
-This is the Vercel architecture for FIE AI. The Contabo `/gh` dual-hub layout in [GHANA.md](../../GHANA.md) remains available for VPS deploys; this app does not depend on Dar Concierge, Evolution, or FlareSolverr.
+## Architecture
 
-## What runs on Vercel
+```
+Browser PWA (/)
+  → /api/rent/*  (chat, browse, viewing)
+  → reads listings from Supabase
 
-| Piece | How |
-|-------|-----|
-| PWA shell | Static `public/` (`index.html`, SW, manifest) |
-| Chat / browse / viewing | Serverless Express in `api/index.mjs` → `server.mjs` |
-| Listings | Supabase when configured, else SQLite seed in `/tmp` |
-| Voice | Gemini |
-| Viewing fee | Paystack (or `JAB_RE_GH_DEV_PAY=1` for demo PIN) |
+Vercel Cron (every 2h)
+  → /api/cron/scrape
+  → one tick: source × city × rent|sale
+  → Ghana Property Centre / Meqasa HTML
+  → upsert into Supabase `listings`
+```
 
-## What stays off Vercel
+Jiji needs FlareSolverr, so it is **off by default** on Vercel. Enable with `FLARESOLVERR_URL` pointing at a reachable solver, or scrape Jiji from Contabo into the same Supabase project.
 
-- Portal scrapers (`scripts/scrape-ghana-listings.mjs`, FlareSolverr, n8n)
-- Evolution WhatsApp inbound (`fie-ghana-wa`)
-- Agency dashboard (`/admin/re`)
+## Supabase setup
 
-Point scrapers at Supabase; the PWA reads the same store.
+1. Create a Supabase project.
+2. Run migrations in order from [`supabase/migrations`](../../supabase/migrations):
+   - `001_real_estate.sql`
+   - `002_listing_availability.sql` (if present)
+   - `004_ghana_cluster.sql`
+3. Copy **Project URL** + **service role key** into Vercel env.
 
-## Local
+## Vercel env
+
+| Variable | Required | Purpose |
+|----------|----------|---------|
+| `JAB_RE_MARKET=GH` | yes | Ghana market |
+| `JAB_FIE_STANDALONE=1` | yes | Root PWA paths |
+| `GEMINI_API_KEY` | yes | Chat / voice |
+| `SUPABASE_URL` | yes | Listing store |
+| `SUPABASE_SERVICE_ROLE_KEY` | yes | Scrape upserts + reads |
+| `JAB_RE_INGEST_TOKEN` | yes | Manual scrape auth |
+| `CRON_SECRET` | recommended | Vercel Cron auth |
+| `PAYSTACK_*` | optional | Viewing fee |
+
+Root Directory: `apps/fie-ai`.
+
+## Scrape API
+
+```bash
+# One cron tick (recommended on Vercel)
+curl -X POST https://YOUR_APP.vercel.app/api/cron/scrape \
+  -H "Authorization: Bearer $CRON_SECRET"
+
+# Explicit source
+curl -X POST https://YOUR_APP.vercel.app/api/rent/ingest/scrape \
+  -H "X-Ingest-Token: $JAB_RE_INGEST_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"source":"ghanapropertycentre","emirates":["Accra"],"types":["rent"],"maxPages":1}'
+
+# Push pre-scraped rows
+curl -X POST https://YOUR_APP.vercel.app/api/rent/ingest \
+  -H "X-Ingest-Token: $JAB_RE_INGEST_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"source":"batch","listings":[...]}'
+```
+
+Local CLI (same path):
 
 ```bash
 cd apps/fie-ai
-cp .env.example .env   # set GEMINI_API_KEY
+export SUPABASE_URL=... SUPABASE_SERVICE_ROLE_KEY=...
+node scripts/scrape-to-supabase.mjs          # one tick
+node scripts/scrape-to-supabase.mjs --all    # all safe sources
+node scripts/scrape-to-supabase.mjs --source=ghanapropertycentre --city=Accra --type=rent
+```
+
+## Local app
+
+```bash
+cd apps/fie-ai
+cp .env.example .env   # GEMINI + Supabase
 npm install
 npm run dev
 # http://127.0.0.1:3010
 ```
 
-## Vercel
-
-1. Import this GitHub repo in Vercel.
-2. Set **Root Directory** to `apps/fie-ai`.
-3. Add env: `JAB_RE_MARKET=GH`, `JAB_FIE_STANDALONE=1`, `GEMINI_API_KEY`, optional Supabase + Paystack.
-4. Deploy. Installable PWA at the deployment URL (`start_url: /`).
-
-```bash
-cd apps/fie-ai && npx vercel --prod
-```
+Without Supabase, Explore falls back to SQLite demo seed. With Supabase configured, browse/chat use live portal inventory.
 
 ## Routes
 
@@ -51,4 +92,6 @@ cd apps/fie-ai && npx vercel --prod
 | `/agent` | Listing-agent PIN + MoMo |
 | `/thanks` | Paystack return |
 | `/api/rent/*` | Chat, browse, lead, viewing |
-| `/api/health` | Liveness |
+| `/api/rent/ingest/*` | Scrape / batch ingest |
+| `/api/cron/scrape` | Vercel Cron tick |
+| `/api/health` | Liveness + inventory counts |

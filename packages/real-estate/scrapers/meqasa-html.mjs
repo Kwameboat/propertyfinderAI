@@ -34,21 +34,75 @@ function parsePrice(text) {
 function parseListings(html, city, transactionType) {
   const rows = [];
   const seen = new Set();
-  const hrefRe = /href="((?:https?:\/\/meqasa\.com)?\/?[^"]+)"/gi;
+  const src = String(html || "");
+
+  // Prefer JSON-LD ItemList when Meqasa exposes it
+  const ldBlocks = [...src.matchAll(/<script[^>]*type=["']application\/ld\+json["'][^>]*>([\s\S]*?)<\/script>/gi)];
+  for (const block of ldBlocks) {
+    try {
+      const data = JSON.parse(block[1]);
+      const list = Array.isArray(data) ? data : [data];
+      for (const node of list) {
+        const items = node?.itemListElement || node?.mainEntity?.itemListElement || [];
+        for (const el of items) {
+          const item = el?.item || el;
+          const url = String(item?.url || item?.["@id"] || "").split("?")[0];
+          if (!/meqasa\.com\//i.test(url) || seen.has(url)) continue;
+          seen.add(url);
+          const id = url.replace(/https?:\/\/meqasa\.com\//i, "").slice(0, 180);
+          const price = parsePrice(item?.offers?.price || item?.price);
+          const name = String(item?.name || "");
+          rows.push(
+            normalizeListingRow({
+              source: "meqasa",
+              external_id: id,
+              source_url: url,
+              transaction_type: transactionType,
+              property_type: /self-?contain/i.test(`${url} ${name}`)
+                ? "self-contain"
+                : /chamber/i.test(`${url} ${name}`)
+                  ? "chamber-and-hall"
+                  : /house/i.test(`${url} ${name}`)
+                    ? "house"
+                    : "apartment",
+              beds: Number(String(name).match(/(\d+)\s*-?\s*bed/i)?.[1]) || null,
+              emirate: city,
+              community: name.slice(0, 80) || city,
+              price_aed: price,
+              price_period: transactionType === "rent" ? "monthly" : "total",
+              images: item?.image
+                ? [Array.isArray(item.image) ? item.image[0] : item.image].filter(Boolean)
+                : [],
+              description: name,
+              agency_name: "Meqasa listing"
+            })
+          );
+        }
+      }
+    } catch {
+      /* ignore bad JSON-LD */
+    }
+  }
+
+  const hrefRe = /href="((?:https?:\/\/meqasa\.com)?\/[^"]+)"/gi;
   let match;
-  while ((match = hrefRe.exec(html))) {
+  while ((match = hrefRe.exec(src))) {
     let url = match[1].split("?")[0];
     if (url.startsWith("/")) url = `https://meqasa.com${url}`;
     if (!/meqasa\.com\/.+/i.test(url)) continue;
-    if (!/(apartment|house|room|self-contain|chamber|property|listing|bedroom)/i.test(url)) continue;
-    if (/properties-for-|apartments-for-|houses-for-|offices-for-|for-rent-in-|for-sale-in-/i.test(url)) continue;
+    if (!/(apartment|house|room|self-contain|chamber|bedroom|listing)/i.test(url)) continue;
+    if (/properties-for-|apartments-for-|houses-for-|offices-for-|for-rent-in-|for-sale-in-|\/login|\/signup/i.test(url)) {
+      continue;
+    }
     if (seen.has(url)) continue;
     seen.add(url);
     const id = url.replace(/https?:\/\/meqasa\.com\//i, "").slice(0, 180);
-    const around = html.slice(Math.max(0, match.index - 400), match.index + 900);
-    const price = parsePrice(around.match(/GH[S₵¢]?\s*([\d,]+)/i)?.[0] || around.match(/([\d,]{3,9})/)?.[1]);
+    const around = src.slice(Math.max(0, match.index - 500), match.index + 1200);
+    const price = parsePrice(
+      around.match(/GH[S₵¢]\s*([\d,]+)/i)?.[1] || around.match(/([\d,]{3,9})/)?.[1]
+    );
     const bedsMatch = around.match(/(\d+)\s*(?:bed|br)/i);
-    const titleMatch = around.match(/>([A-Za-z0-9][^<]{8,80})</);
+    const titleMatch = around.match(/>([A-Za-z0-9][^<]{8,90})</);
     const image = around.match(/src="(https?:\/\/[^"]+\.(?:jpg|jpeg|png|webp)[^"]*)"/i)?.[1];
     rows.push(
       normalizeListingRow({
@@ -60,20 +114,23 @@ function parseListings(html, city, transactionType) {
           ? "self-contain"
           : /chamber/i.test(url + around)
             ? "chamber-and-hall"
-            : "apartment",
+            : /house/i.test(url + around)
+              ? "house"
+              : "apartment",
         beds: bedsMatch ? Number(bedsMatch[1]) : null,
         emirate: city,
         community: titleMatch?.[1]?.trim().slice(0, 80) || city,
         price_aed: price,
         price_period: transactionType === "rent" ? "monthly" : "total",
-        images: image && !/logo|icon/i.test(image) ? [image] : [],
+        images: image && !/logo|icon|avatar/i.test(image) ? [image] : [],
         description: titleMatch?.[1] || "",
         agent_name: "",
         agency_name: "Meqasa listing"
       })
     );
   }
-  return rows.filter((r) => Number(r.price_aed) > 0);
+  // Keep priced rows; also keep image-backed rows when price is only on detail pages
+  return rows.filter((r) => Number(r.price_aed) > 0 || (r.images || []).length > 0);
 }
 
 export async function scrapeMeqasaHtml({ city = "Accra", transactionType = "rent", pages = 2 } = {}) {

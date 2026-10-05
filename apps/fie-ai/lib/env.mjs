@@ -13,6 +13,13 @@ export function applyFieStandaloneEnv() {
   if (!process.env.JAB_RE_GH_DEV_PAY && !process.env.PAYSTACK_SECRET_KEY) {
     process.env.JAB_RE_GH_DEV_PAY = "1";
   }
+  // Faster ticks on serverless (still polite to portals).
+  if (!process.env.JAB_RE_SCRAPE_DELAY_MS) {
+    process.env.JAB_RE_SCRAPE_DELAY_MS = process.env.VERCEL ? "800" : "1500";
+  }
+  if (!process.env.JAB_RE_SCRAPE_EMIRATES) {
+    process.env.JAB_RE_SCRAPE_EMIRATES = "Accra,Kumasi,Tema";
+  }
 }
 
 function pathJoinHome(subdir) {

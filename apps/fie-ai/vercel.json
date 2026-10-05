@@ -4,7 +4,14 @@
   "installCommand": "npm install",
   "buildCommand": "npm run build",
   "outputDirectory": "public",
+  "crons": [
+    {
+      "path": "/api/cron/scrape",
+      "schedule": "0 */2 * * *"
+    }
+  ],
   "rewrites": [
+    { "source": "/api/cron/scrape", "destination": "/api/cron/scrape" },
     { "source": "/api/(.*)", "destination": "/api" },
     { "source": "/thanks", "destination": "/api" },
     { "source": "/agent", "destination": "/agent.html" },
@@ -28,6 +35,11 @@
       "maxDuration": 60,
       "memory": 1024,
       "includeFiles": "{lib/**,server.mjs,../../packages/**}"
+    },
+    "api/cron/scrape.mjs": {
+      "maxDuration": 60,
+      "memory": 1024,
+      "includeFiles": "{lib/**,../../packages/**}"
     }
   }
 }
