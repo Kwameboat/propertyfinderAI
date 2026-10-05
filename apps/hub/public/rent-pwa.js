@@ -9,6 +9,7 @@ const DEFAULT_HTTPS_ORIGIN = "https://wa.jabdigitalhub.com";
 
 function isGhanaPwa() {
   return (
+    window.__FIE_STANDALONE === true ||
     window.__RENT_BASE === "/gh" ||
     location.pathname === "/gh" ||
     location.pathname.startsWith("/gh/")
@@ -22,6 +23,7 @@ function httpsOrigin() {
 }
 
 function pwaStartPath() {
+  if (window.__FIE_STANDALONE === true || window.__RENT_BASE === "") return "/";
   return isGhanaPwa() ? "/gh" : "/rent";
 }
 

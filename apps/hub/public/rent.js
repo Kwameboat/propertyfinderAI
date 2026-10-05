@@ -1,7 +1,14 @@
 import { initPwaInstall, registerRentServiceWorker } from "./rent-pwa.js";
 
-const RENT_BASE = window.__RENT_BASE || (location.pathname === "/gh" || location.pathname.startsWith("/gh/") ? "/gh" : "");
-const RENT_API = window.__RENT_API || `${RENT_BASE}/api/rent`;
+const RENT_BASE =
+  window.__FIE_STANDALONE === true
+    ? ""
+    : window.__RENT_BASE ||
+      (location.pathname === "/gh" || location.pathname.startsWith("/gh/") ? "/gh" : "");
+const RENT_API =
+  window.__FIE_STANDALONE === true
+    ? "/api/rent"
+    : window.__RENT_API || `${RENT_BASE}/api/rent`;
 
 function assetUrl(src) {
   if (!src || typeof src !== "string") return src;

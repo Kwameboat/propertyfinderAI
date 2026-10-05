@@ -1,0 +1,20 @@
+{
+  "name": "@jab-hub/fie-ai",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "FIE AI — standalone Ghana real-estate PWA for Vercel",
+  "scripts": {
+    "build": "node scripts/build-public.mjs",
+    "predev": "npm run build",
+    "dev": "node --watch server.mjs",
+    "start": "node server.mjs",
+    "prestart": "npm run build"
+  },
+  "engines": {
+    "node": "22.x"
+  },
+  "dependencies": {
+    "express": "^5.1.0"
+  }
+}

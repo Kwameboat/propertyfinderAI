@@ -2,6 +2,20 @@
 
 Ghana housing PWA on the same Dar Concierge engine. **Does not replace the live UAE product.** Default market stays `AE`. Brand: **FIE AI** — your AI real estate agent in Ghana.
 
+## Standalone on Vercel (preferred public app)
+
+FIE AI also ships as a **standalone PWA** under [`apps/fie-ai`](apps/fie-ai/README.md):
+
+- Root Directory in Vercel: `apps/fie-ai`
+- PWA at `/` (not `/gh`)
+- Serverless API for chat / browse / viewing
+- Set `JAB_FIE_STANDALONE=1` + `JAB_RE_MARKET=GH`
+- Scrapers and Evolution WhatsApp stay on Contabo/workers; point inventory at Supabase
+
+The Contabo dual-hub layout below remains valid for VPS testing.
+
+## Contabo / shared host (`/gh`)
+
 Public path: `/gh` on the same HTTPS host as Dar Concierge (`https://wa.jabdigitalhub.com/gh`).
 Cloudflare Tunnel routes `/gh*` to Hub `:3001` so the PWA is a secure context (install + microphone). Dar Concierge stays at `https://wa.jabdigitalhub.com/rent`.
 

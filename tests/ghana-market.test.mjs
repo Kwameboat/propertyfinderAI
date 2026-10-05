@@ -11,7 +11,7 @@ import { pullGhanaListingsForChat } from "../packages/real-estate/ghana-search.m
 import { resolveEmirateScope } from "../packages/real-estate/emirate-scope.mjs";
 import { GHANA_SEED_LISTINGS } from "../packages/real-estate/data/seed-ghana-listings.mjs";
 import { buildOwnerListing, submitOwnerListing } from "../packages/real-estate/owner-listing.mjs";
-import { GHANA_DIRECT_SOURCE } from "../packages/real-estate/market.mjs";
+import { GHANA_DIRECT_SOURCE, getMarket, isFieStandalone } from "../packages/real-estate/market.mjs";
 
 function withMarket(code, fn) {
   const prev = process.env.JAB_RE_MARKET;
@@ -23,6 +23,21 @@ function withMarket(code, fn) {
       else process.env.JAB_RE_MARKET = prev;
     });
 }
+
+test("standalone FIE AI hosts the PWA at origin root", async () => {
+  const prevStand = process.env.JAB_FIE_STANDALONE;
+  process.env.JAB_FIE_STANDALONE = "1";
+  try {
+    await withMarket("GH", () => {
+      assert.equal(isFieStandalone(), true);
+      assert.equal(getMarket().pwaPath, "/");
+      assert.equal(getMarket().logo, "/fie-ai-logo.webp");
+    });
+  } finally {
+    if (prevStand == null) delete process.env.JAB_FIE_STANDALONE;
+    else process.env.JAB_FIE_STANDALONE = prevStand;
+  }
+});
 
 test("Ghana phones normalize to +233", () => {
   assert.equal(normalizeGhanaPhone("0244111222"), "+233244111222");

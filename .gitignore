@@ -19,5 +19,8 @@ tmp/
 !apps/hub/public/apple-touch-icon.png
 !apps/hub/public/fie-pwa-icon*.png
 !apps/hub/public/fie-apple-touch-icon.png
+!apps/fie-ai/public/fie-pwa-icon*.png
+!apps/fie-ai/public/fie-apple-touch-icon.png
+apps/fie-ai/.fie-ai-data/
 scripts/last-instance.json
 scripts/tmp-*.mjs

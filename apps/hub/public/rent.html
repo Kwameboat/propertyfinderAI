@@ -17,10 +17,14 @@
   <script>
     (function () {
       window.__darPwa = window.__darPwa || { promptEvent: null };
-      var gh = location.pathname === "/gh" || location.pathname.indexOf("/gh/") === 0;
-      if (gh) {
-        window.__RENT_BASE = window.__RENT_BASE || "/gh";
-        window.__RENT_API = window.__RENT_API || "/gh/api/rent";
+      var standalone = window.__FIE_STANDALONE === true;
+      var gh = standalone || location.pathname === "/gh" || location.pathname.indexOf("/gh/") === 0;
+      if (standalone) {
+        window.__RENT_BASE = "";
+        window.__RENT_API = "/api/rent";
+      } else if (gh) {
+        if (window.__RENT_BASE == null) window.__RENT_BASE = "/gh";
+        if (window.__RENT_API == null) window.__RENT_API = "/gh/api/rent";
       }
       window.addEventListener("beforeinstallprompt", function (e) {
         e.preventDefault();

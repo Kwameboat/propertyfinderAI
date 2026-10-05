@@ -92,13 +92,27 @@ const MARKETS = {
   }
 };
 
+/** Standalone FIE AI (Vercel) hosts the PWA at origin root, not under /gh. */
+export function isFieStandalone() {
+  return (
+    process.env.JAB_FIE_STANDALONE === "1" ||
+    process.env.JAB_FIE_STANDALONE === "true" ||
+    Boolean(process.env.VERCEL && String(process.env.JAB_RE_MARKET || "").toUpperCase().startsWith("GH"))
+  );
+}
+
 export function getMarketCode() {
   const raw = String(process.env.JAB_RE_MARKET || "AE").trim().toUpperCase();
   return raw === "GH" || raw === "GHANA" ? "GH" : "AE";
 }
 
 export function getMarket() {
-  return MARKETS[getMarketCode()];
+  const market = { ...MARKETS[getMarketCode()] };
+  if (market.code === "GH" && isFieStandalone()) {
+    market.pwaPath = "/";
+    market.logo = "/fie-ai-logo.webp";
+  }
+  return market;
 }
 
 export function isGhanaMarket() {

@@ -6,7 +6,13 @@ import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { voiceTranscriptionPrompt } from "./language.mjs";
 
-const STATE_DIR = path.join(process.env.USERPROFILE || process.env.HOME || "", ".openclaw", "jab-hub");
+const STATE_DIR = process.env.VERCEL
+  ? path.join("/tmp", "fie-ai-gemini")
+  : path.join(
+      process.env.JAB_HUB_DATA_DIR ||
+        path.join(process.env.USERPROFILE || process.env.HOME || "", ".openclaw", "jab-hub"),
+      "gemini"
+    );
 const SESSION_PATH = path.join(STATE_DIR, "re-sessions.json");
 const GEMINI_MODEL =
   process.env.JAB_RE_GEMINI_MODEL ||
