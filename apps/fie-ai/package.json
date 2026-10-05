@@ -11,7 +11,10 @@
     "start": "node server.mjs",
     "prestart": "npm run build",
     "scrape": "node scripts/scrape-to-supabase.mjs",
-    "scrape:all": "node scripts/scrape-to-supabase.mjs --all"
+    "scrape:all": "node scripts/scrape-to-supabase.mjs --all",
+    "bootstrap": "node scripts/bootstrap-supabase.mjs",
+    "verify": "node scripts/verify-ready.mjs",
+    "verify:strict": "node scripts/verify-ready.mjs --strict"
   },
   "engines": {
     "node": "22.x"

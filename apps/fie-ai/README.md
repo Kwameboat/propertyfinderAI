@@ -21,11 +21,17 @@ Jiji needs FlareSolverr, so it is **off by default** on Vercel. Enable with `FLA
 ## Supabase setup
 
 1. Create a Supabase project.
-2. Run migrations in order from [`supabase/migrations`](../../supabase/migrations):
-   - `001_real_estate.sql`
-   - `002_listing_availability.sql` (if present)
-   - `004_ghana_cluster.sql`
+2. Paste **[`supabase/GHANA_FIE_SETUP.sql`](../../supabase/GHANA_FIE_SETUP.sql)** into the SQL editor (one shot), **or** run migrations `001` → `002_listing_availability` → `004_ghana_cluster`.
 3. Copy **Project URL** + **service role key** into Vercel env.
+4. First fill (from your machine or CI):
+
+```bash
+cd apps/fie-ai
+export SUPABASE_URL=... SUPABASE_SERVICE_ROLE_KEY=...
+npm run bootstrap          # live GPC Accra rent → Supabase
+npm run scrape             # cron-style tick
+npm run verify:strict      # fail if env incomplete
+```
 
 ## Vercel env
 
