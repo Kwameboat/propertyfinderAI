@@ -9,6 +9,7 @@ import path from "node:path";
 import { openHubDb } from "../packages/hub-db/index.mjs";
 import { runSavedSearchAlerts, formatAlertWhatsApp } from "../packages/real-estate/saved-search.mjs";
 import { resolveReWhatsAppSendInstance } from "../packages/real-estate/re-wa.mjs";
+import { isGhanaMarket } from "../packages/real-estate/market.mjs";
 import { sendMetaCloudText, metaDirectConfigured } from "../packages/meta-cloud.mjs";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
@@ -30,7 +31,7 @@ async function sendWhatsAppAlert(toPhone, text) {
   const evoUrl = String(process.env.EVOLUTION_API_URL || process.env.JAB_EVOLUTION_URL || "http://127.0.0.1:8080").replace(/\/$/, "");
   const apiKey = String(process.env.EVOLUTION_API_KEY || process.env.AUTHENTICATION_API_KEY || "").trim();
 
-  if (metaDirectConfigured()) {
+  if (metaDirectConfigured() && !isGhanaMarket()) {
     await sendMetaCloudText({ to: toPhone, text });
     return { via: "meta" };
   }

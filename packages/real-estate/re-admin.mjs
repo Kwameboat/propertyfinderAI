@@ -19,6 +19,9 @@ import {
 import { runPuppeteerIngestAll } from "./puppeteer-scrape.mjs";
 import { runIngestStaleCleanup } from "./ingest.mjs";
 import { scrapeListingsFromUrl, validatePortalUrl } from "./url-scrape.mjs";
+import { liveSearchStatus } from "./ghana-live-search.mjs";
+import { isN8nLiveSearchEnabled } from "./n8n-live-search.mjs";
+import { isGhanaMarket, ghanaListingSources } from "./market.mjs";
 
 export { scrapeListingsFromUrl, validatePortalUrl };
 
@@ -57,7 +60,10 @@ export async function getReAdminDashboard(db) {
       enabled: isPuppeteerScrapeEnabled(),
       cronSources: getPuppeteerCronSources(),
       allSources: PUPPETEER_INGEST_SOURCES
-    }
+    },
+    liveSearch: liveSearchStatus(),
+    n8nLiveSearch: isN8nLiveSearchEnabled(),
+    market: isGhanaMarket() ? "GH" : "AE"
   };
 }
 
@@ -166,6 +172,16 @@ export async function patchReLead(db, id, patch = {}) {
   return updated ? formatLeadRow({ ...updated, criteria: updated.criteria || {} }) : null;
 }
 
+function applyMarketSourceFilter(params, source) {
+  if (source) {
+    params.set("source", `eq.${source}`);
+    return;
+  }
+  if (isGhanaMarket()) {
+    params.set("source", `in.(${ghanaListingSources().join(",")})`);
+  }
+}
+
 export async function listAdminListings(
   db,
   { limit = 30, offset = 0, source, emirate, beds, transaction_type, q } = {}
@@ -184,7 +200,7 @@ export async function listAdminListings(
     params.set("limit", String(cap));
     params.set("offset", String(off));
     params.set("and", "(source.neq.seed,external_id.not.like.gen-*)");
-    if (source) params.set("source", `eq.${source}`);
+    applyMarketSourceFilter(params, source);
     if (emirate) params.set("emirate", `eq.${emirate}`);
     if (beds != null && beds !== "") params.set("beds", `eq.${Number(beds)}`);
     if (transaction_type) params.set("transaction_type", `eq.${transaction_type}`);
@@ -201,6 +217,10 @@ export async function listAdminListings(
   if (source) {
     sql += ` AND source = ?`;
     params.push(source);
+  } else if (isGhanaMarket()) {
+    const sources = ghanaListingSources();
+    sql += ` AND source IN (${sources.map(() => "?").join(",")})`;
+    params.push(...sources);
   }
   if (emirate) {
     sql += ` AND emirate = ?`;
@@ -239,7 +259,7 @@ export async function countAdminListings(db, filters = {}) {
     params.set("select", "id");
     params.set("is_active", "eq.true");
     params.set("and", "(source.neq.seed,external_id.not.like.gen-*)");
-    if (filters.source) params.set("source", `eq.${filters.source}`);
+    applyMarketSourceFilter(params, filters.source);
     if (filters.emirate) params.set("emirate", `eq.${filters.emirate}`);
     if (filters.beds != null && filters.beds !== "") params.set("beds", `eq.${Number(filters.beds)}`);
     if (filters.transaction_type) params.set("transaction_type", `eq.${filters.transaction_type}`);
@@ -268,6 +288,10 @@ export async function countAdminListings(db, filters = {}) {
   if (filters.source) {
     sql += ` AND source = ?`;
     params.push(filters.source);
+  } else if (isGhanaMarket()) {
+    const sources = ghanaListingSources();
+    sql += ` AND source IN (${sources.map(() => "?").join(",")})`;
+    params.push(...sources);
   }
   if (filters.emirate) {
     sql += ` AND emirate = ?`;

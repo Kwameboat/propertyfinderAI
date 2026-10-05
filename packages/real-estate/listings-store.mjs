@@ -18,6 +18,7 @@ import {
 } from "./supabase.mjs";
 import { normalizeSearchCriteria, filterListingsByEmirate, resolveEmirateScope } from "./emirate-scope.mjs";
 import { listingNeedsDetailEnrich, enrichListingFromDetailPage } from "./listing-detail-enrich.mjs";
+import { isGhanaMarket, ghanaListingSources } from "./market.mjs";
 
 export function listingsUseSupabase() {
   return isSupabaseEnabled();
@@ -61,11 +62,20 @@ export async function getListingsStatus(db) {
   if (isSupabaseEnabled()) {
     const [total, bySource] = await Promise.all([
       countActiveListingsSupabase(),
-      countListingsBySourceSupabase()
+      countListingsBySourceSupabase(isGhanaMarket() ? ghanaListingSources() : null)
     ]);
+    const sources = bySource || {};
+    if (isGhanaMarket()) {
+      const allowed = new Set(ghanaListingSources());
+      const ghanaSources = Object.fromEntries(
+        Object.entries(sources).filter(([source]) => allowed.has(source))
+      );
+      const ghanaTotal = Object.values(ghanaSources).reduce((n, c) => n + Number(c || 0), 0);
+      return { listings: ghanaTotal, sources: ghanaSources, store: "supabase" };
+    }
     return {
       listings: total ?? 0,
-      sources: bySource || {},
+      sources,
       store: "supabase"
     };
   }

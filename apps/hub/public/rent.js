@@ -1,5 +1,21 @@
 import { initPwaInstall, registerRentServiceWorker } from "./rent-pwa.js";
 
+const RENT_BASE = window.__RENT_BASE || (location.pathname === "/gh" || location.pathname.startsWith("/gh/") ? "/gh" : "");
+const RENT_API = window.__RENT_API || `${RENT_BASE}/api/rent`;
+
+function assetUrl(src) {
+  if (!src || typeof src !== "string") return src;
+  if (/^https?:\/\//i.test(src) || src.startsWith("data:") || src.startsWith("blob:")) return src;
+  if (RENT_BASE && src.startsWith(`${RENT_BASE}/`)) return src;
+  if (RENT_BASE && src.startsWith("/")) return `${RENT_BASE}${src}`;
+  return src;
+}
+
+function listingImages(listing) {
+  const raw = (listing?.images || []).length ? listing.images : listing?.image ? [listing.image] : [];
+  return raw.map((src) => assetUrl(src)).filter(Boolean);
+}
+
 const chatEl = document.getElementById("chat");
 const chatListingsEl = document.getElementById("chat-listings");
 const chatPanel = document.getElementById("panel-concierge");
@@ -15,6 +31,162 @@ const sendBtn = document.getElementById("send");
 const micBtn = document.getElementById("mic-btn");
 const recordingBar = document.getElementById("recording-bar");
 const recordingLabel = document.getElementById("recording-label");
+let marketConfig = {
+  code: "AE",
+  brand: "Dar Concierge AI",
+  currency: "AED",
+  payToView: false,
+  viewingFeeGhs: 0,
+  phoneLabel: "UAE phone",
+  phonePlaceholder: "+971 50 xxx xxxx",
+  consent: "I agree to share my details with the listing agent",
+  logo: "/dar-concierge-logo.png"
+};
+
+async function loadMarketConfig() {
+  try {
+    const res = await fetch(`${RENT_API}/config`);
+    const data = await res.json();
+    if (data.ok && data.market) marketConfig = { ...marketConfig, ...data.market };
+  } catch {
+    /* keep defaults */
+  }
+  applyMarketBranding();
+}
+
+function applyMarketBranding() {
+  const ghana = marketConfig.code === "GH";
+  document.body?.classList.toggle("market-gh", ghana);
+  document.title = marketConfig.brand || document.title;
+  if (ghana) {
+    BRAND.name = "FIE AI";
+    BRAND.nameUpper = "FIE AI";
+    BRAND.tagline = "Your AI real estate agent in Ghana";
+    BRAND.poweredBy = "FIE AI";
+    BRAND.poweredLine = "Your AI real estate agent in Ghana";
+  }
+  document.querySelector('meta[name="description"]')?.setAttribute(
+    "content",
+    ghana
+      ? "FIE AI — your AI real estate agent in Ghana. Rent or buy rooms, self-contains, apartments, and houses. Landlords and agents can list directly. Pay GH₵100 to view."
+      : "Dar Concierge AI — Your UAE AI Property Assistant. Powered by KeyFinder AI."
+  );
+  document.querySelectorAll(".logo-link").forEach((a) => {
+    a.setAttribute("href", ghana ? `${RENT_BASE || "/gh"}` : "/rent");
+    a.setAttribute("aria-label", `${marketConfig.brand || "Home"} home`);
+  });
+  if (ghana) {
+    const logo = assetUrl(marketConfig.logo || "/fie-ai-logo.webp");
+    document.querySelectorAll(".brand-logo").forEach((img) => {
+      img.src = logo;
+      img.alt = "FIE AI";
+    });
+    const iosLast = document.querySelector("#pwa-ios-dialog li:last-child");
+    if (iosLast) iosLast.innerHTML = "Tap <strong>Add</strong> — FIE AI opens like an app.";
+  }
+  if (heroGreeting) {
+    heroGreeting.textContent = ghana
+      ? "Welcome. Looking for a self-contain in East Legon or a chamber and hall in Osu?"
+      : heroGreeting.textContent;
+  }
+  const powered = document.querySelector(".hero-powered");
+  if (powered && ghana) powered.textContent = "Your AI real estate agent in Ghana";
+  const pills = document.querySelectorAll(".hero-suggestions .pill");
+  if (ghana && pills[0] && pills[1]) {
+    pills[0].textContent = "East Legon self-contain";
+    pills[0].dataset.msg = "Show me self-contain rooms for rent in East Legon";
+    pills[1].textContent = "East Legon for sale";
+    pills[1].dataset.msg = "Show me houses for sale in East Legon";
+  }
+  const actions = document.querySelectorAll("#quick-actions .action-card");
+  if (ghana && actions.length >= 3) {
+    actions[0].dataset.msg = "What does a self-contain in East Legon usually cost per month?";
+    actions[0].querySelector("span:last-child").textContent = "Accra rents";
+    actions[1].dataset.msg = "I can't pay 2 years rent advance. Who pays the landlord so I can pay monthly?";
+    actions[1].querySelector("span:last-child").textContent = "Pay monthly";
+    actions[2].dataset.msg = "How does the GH₵100 viewing fee and PIN work?";
+    actions[2].querySelector("span:last-child").textContent = "Viewing fee";
+  }
+  const exploreDubai = document.querySelector('.explore-filters [data-filter="Dubai"]');
+  if (ghana && exploreDubai) {
+    exploreDubai.textContent = "Accra";
+    exploreDubai.dataset.filter = "Accra";
+  }
+  if (input) input.placeholder = composerPlaceholder();
+  if (!localStorage.getItem(PROFILE_KEY)) {
+    const ini = defaultInitials();
+    if (headerAvatar) headerAvatar.textContent = ini;
+    if (profileAvatarLg) profileAvatarLg.textContent = ini;
+  }
+  const disclaimer = document.querySelector(".profile-card .disclaimer");
+  if (disclaimer && ghana) {
+    disclaimer.textContent =
+      "FIE AI connects you with listing agents in Ghana. Pay GH₵100 to view. We are not a landlord.";
+  }
+  const pwaCopy = document.querySelector(".pwa-install-copy strong");
+  if (pwaCopy && ghana) pwaCopy.textContent = "Install FIE AI";
+  const pwaSpan = document.querySelector(".pwa-install-copy span");
+  if (pwaSpan && ghana) pwaSpan.textContent = "Add FIE AI to your home screen.";
+  const menuPowered = document.querySelectorAll(".side-menu-powered, .side-menu-foot-brand");
+  menuPowered.forEach((el) => {
+    if (ghana) el.textContent = "FIE AI · Ghana";
+  });
+  const phoneInput = leadForm?.querySelector('input[name="phone"]');
+  const phoneLabel = phoneInput?.closest("label");
+  if (phoneInput) phoneInput.placeholder = marketConfig.phonePlaceholder || phoneInput.placeholder;
+  if (phoneLabel) {
+    const text = phoneLabel.childNodes[0];
+    if (text && text.nodeType === Node.TEXT_NODE) text.textContent = marketConfig.phoneLabel || "Phone";
+  }
+  const consentLabel = leadForm?.querySelector('input[name="consent"]')?.closest("label");
+  if (consentLabel && marketConfig.consent) {
+    const box = consentLabel.querySelector("input");
+    consentLabel.textContent = "";
+    if (box) consentLabel.append(box, " ", document.createTextNode(marketConfig.consent));
+  }
+  const muted = document.querySelector("#lead-form > p.muted");
+  if (muted && marketConfig.payToView) {
+    muted.textContent = `Pay GH₵${marketConfig.viewingFeeGhs || 100} to book. GH₵50 for FIE AI, GH₵50 held for the agent until you view.`;
+  }
+  if (marketConfig.payToView) {
+    const btn = document.getElementById("lead-submit");
+    if (btn) btn.textContent = `Pay GH₵${marketConfig.viewingFeeGhs || 100}`;
+  }
+  document.querySelectorAll(".gh-only").forEach((el) => {
+    el.classList.toggle("hidden", !ghana);
+    el.hidden = !ghana;
+  });
+  const waBtn = document.getElementById("gh-whatsapp-btn");
+  const waDigits = String(marketConfig.whatsappPhone || "").replace(/\D/g, "");
+  if (waBtn) {
+    const showWa = ghana && waDigits.length >= 10;
+    waBtn.classList.toggle("hidden", !showWa);
+    waBtn.hidden = !showWa;
+    if (showWa) {
+      waBtn.href = `https://wa.me/${waDigits}?text=${encodeURIComponent("Hi FIE, I need a room")}`;
+    }
+  }
+  fillOwnerListingCities();
+  const menuNav = document.querySelector(".side-menu-nav");
+  if (ghana && menuNav && !document.getElementById("gh-agent-link")) {
+    const a = document.createElement("a");
+    a.id = "gh-agent-link";
+    a.className = "side-menu-link";
+    a.href = "/gh/agent";
+    a.textContent = "Listing agent: enter PIN";
+    menuNav.appendChild(a);
+  }
+  if (ghana && menuNav && !document.getElementById("gh-whatsapp-link") && waDigits.length >= 10) {
+    const wa = document.createElement("a");
+    wa.id = "gh-whatsapp-link";
+    wa.className = "side-menu-link";
+    wa.href = `https://wa.me/${waDigits}?text=${encodeURIComponent("Hi FIE, I need a room")}`;
+    wa.target = "_blank";
+    wa.rel = "noopener noreferrer";
+    wa.textContent = "Chat on WhatsApp";
+    menuNav.appendChild(wa);
+  }
+}
 const leadDialog = document.getElementById("lead-dialog");
 const leadForm = document.getElementById("lead-form");
 const leadCancel = document.getElementById("lead-cancel");
@@ -23,6 +195,10 @@ const leadListing = document.getElementById("lead-listing");
 const listingDialog = document.getElementById("listing-dialog");
 const listingDetailEl = document.getElementById("listing-detail");
 const listingClose = document.getElementById("listing-close");
+const ownerListingDialog = document.getElementById("owner-listing-dialog");
+const ownerListingForm = document.getElementById("owner-listing-form");
+const ownerListingCancel = document.getElementById("owner-listing-cancel");
+const ownerListingError = document.getElementById("owner-listing-error");
 const compareDialog = document.getElementById("compare-dialog");
 const compareContent = document.getElementById("compare-content");
 const compareClose = document.getElementById("compare-close");
@@ -180,8 +356,92 @@ const RENT_UI = {
     bookViewing: "Mag-book ng viewing",
     bookTitle: "Mag-book ng viewing",
     errorGeneric: "May problema — subukan muli."
-  }
-};
+  },
+  pidgin: {
+      placeholder: "Ask FIE AI…",
+      transcribing: "I dey write di voice…",
+      recording: "I dey record… tap mic send",
+      micDenied: "Browser no gree microphone.",
+      voiceFailed: "E no transcribe — type am.",
+      bookViewing: "Pay make we go see",
+      bookTitle: "Pay make we go see",
+      errorGeneric: "Something miss — try again.",
+      searching: "I dey search Ghana listings…",
+      aiDisclaimer: "This one be AI. AI fit miss."
+    },
+    tw: {
+      placeholder: "Bisa FIE AI…",
+      transcribing: "Yɛrekyerɛw wo nne…",
+      recording: "Yɛrekyere… mia mic na fa kɔ",
+      micDenied: "Browser no ammɛn wo microphone. Ma ho kwan wɔ settings mu.",
+      voiceFailed: "Yɛantumi ankyerɛw nne no — twerɛ kyerɛ me.",
+      bookViewing: "Tua kɔhwɛ",
+      bookTitle: "Tua kɔhwɛ",
+      errorGeneric: "Biribi ankɔ yie — san yɛ bio.",
+      searching: "Yɛrehwehwɛ Ghana listings…",
+      aiDisclaimer: "Wei yɛ AI. AI betumi ayɛ mfomso."
+    },
+    ee: {
+      placeholder: "Bia FIE AI…",
+      transcribing: "Miele gbe ŋlɔm…",
+      recording: "Miele mɔ̃ ɖem… zi mic ɖe ɖoɖo",
+      micDenied: "Browser me de mɔ̃ ɖe microphone ŋu o.",
+      voiceFailed: "Meteŋu ŋlɔ gbe la o — ŋlɔe.",
+      bookViewing: "Dɔ kpɔkpɔ",
+      bookTitle: "Dɔ kpɔkpɔ",
+      errorGeneric: "Vodada aɖe va — ga dzem.",
+      searching: "Miele Ghana listings dim…",
+      aiDisclaimer: "Esia nye AI. AI ate ŋu awɔ vodada."
+    },
+    gaa: {
+      placeholder: "Bii FIE AI…",
+      transcribing: "Wɔŋmɛɔ dzee…",
+      recording: "Wɔŋmɛɔ… shi mic kɛha",
+      micDenied: "Browser ekɛ microphone lɛ shwie.",
+      voiceFailed: "Wɔnyɛ dzee ŋmaaa — ŋma.",
+      bookViewing: "Naakpɛɛ",
+      bookTitle: "Naakpɛɛ",
+      errorGeneric: "Efee flɛɛ — kee ekoŋŋ.",
+      searching: "Wɔkwɛɔ Ghana listings…",
+      aiDisclaimer: "Nɛkɛ ji AI. AI nyɛɔ fee flɛɛ."
+    },
+    fat: {
+      placeholder: "Bisa FIE AI…",
+      transcribing: "Yɛrekyerɛw wo ndze…",
+      recording: "Yɛrekyerɛ… mia mic",
+      micDenied: "Browser no ammɛn microphone.",
+      voiceFailed: "Yɛantumi — kyerɛw kyerɛ me.",
+      bookViewing: "Tua kɔhwɛ",
+      bookTitle: "Tua kɔhwɛ",
+      errorGeneric: "Biribi ankɔ yie — san yɛ.",
+      searching: "Yɛrehwehwɛ Ghana listings…",
+      aiDisclaimer: "Iyi yɛ AI. AI botum ayɛ mfomso."
+    },
+    dag: {
+      placeholder: "Bɔhi FIE AI…",
+      transcribing: "Ti yɛri a yɛltɔɣa…",
+      recording: "Ti yɛri… n-ŋme mic",
+      micDenied: "Browser bi ti microphone.",
+      voiceFailed: "Ti ku tooi yɛli — sabi.",
+      bookViewing: "Labi nya",
+      bookTitle: "Labi nya",
+      errorGeneric: "Binshɛɣu niŋ — labi niŋ.",
+      searching: "Ti bɔri Ghana listings…",
+      aiDisclaimer: "Ŋun nyɛ AI. AI tooi niŋ taɣibu."
+    },
+    ha: {
+      placeholder: "Tambayi FIE AI…",
+      transcribing: "Muna rubuta murya…",
+      recording: "Ana ɗauka… taɓa mic",
+      micDenied: "Browser ya hana microphone.",
+      voiceFailed: "Ba a iya rubuta muryar — rubuta.",
+      bookViewing: "Biyan duba",
+      bookTitle: "Biyan duba",
+      errorGeneric: "Wani kuskure — sake gwadawa.",
+      searching: "Muna neman Ghana listings…",
+      aiDisclaimer: "Wannan AI ne. AI na iya yin kuskure."
+    }
+  };
 
 let userLanguage = localStorage.getItem(LANG_KEY) || "en";
 let mediaRecorder = null;
@@ -193,6 +453,93 @@ function uiText(key) {
   return (RENT_UI[userLanguage] || RENT_UI.en)[key] || RENT_UI.en[key] || "";
 }
 
+function isGhanaMarket() {
+  return marketConfig.code === "GH";
+}
+
+function composerPlaceholder() {
+  if (!isGhanaMarket()) return uiText("placeholder");
+  if (RENT_UI[userLanguage]?.placeholder && userLanguage !== "en") return RENT_UI[userLanguage].placeholder;
+  return "Ask FIE AI — type or tap the mic";
+}
+
+function defaultInitials() {
+  return isGhanaMarket() ? "FI" : "DC";
+}
+
+function fillOwnerListingCities() {
+  const select = document.getElementById("owner-listing-city");
+  if (!select || !Array.isArray(marketConfig.cities) || !marketConfig.cities.length) return;
+  const current = select.value;
+  select.innerHTML = marketConfig.cities
+    .map((city) => `<option value="${escapeAttr(city)}">${escapeHtml(city)}</option>`)
+    .join("");
+  if (current && marketConfig.cities.includes(current)) select.value = current;
+}
+
+function setOwnerListingError(message) {
+  if (!ownerListingError) return;
+  if (!message) {
+    ownerListingError.textContent = "";
+    ownerListingError.classList.add("hidden");
+    ownerListingError.hidden = true;
+    return;
+  }
+  ownerListingError.textContent = message;
+  ownerListingError.classList.remove("hidden");
+  ownerListingError.hidden = false;
+}
+
+function openOwnerListingDialog() {
+  if (!isGhanaMarket() || !ownerListingDialog) return;
+  closeMenu?.();
+  fillOwnerListingCities();
+  setOwnerListingError("");
+  ownerListingDialog.showModal();
+}
+
+async function submitOwnerListingForm(event) {
+  event.preventDefault();
+  if (!ownerListingForm) return;
+  const submitBtn = document.getElementById("owner-listing-submit");
+  const fd = new FormData(ownerListingForm);
+  if (!fd.get("consent")) {
+    setOwnerListingError("Please confirm you have the right to list this property.");
+    return;
+  }
+  const files = ownerListingForm.querySelector('input[name="photos"]')?.files;
+  if (files?.length) {
+    const photos = fd.getAll("photos");
+    fd.delete("photos");
+    [...photos].slice(0, 5).forEach((file) => fd.append("photos", file));
+  }
+  if (submitBtn) submitBtn.disabled = true;
+  setOwnerListingError("");
+  try {
+    const res = await fetch(`${RENT_API}/owner-listing`, { method: "POST", body: fd });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok || !data.ok) {
+      setOwnerListingError(data.error || "Could not publish listing.");
+      return;
+    }
+    ownerListingDialog.close();
+    ownerListingForm.reset();
+    exploreLoaded = false;
+    switchTab("explore");
+    if (data.listing?.transaction_type === "sale") {
+      document.querySelectorAll(".filter-pill").forEach((p) => p.classList.remove("active"));
+      const buy = document.querySelector('.filter-pill[data-filter="sale"]');
+      if (buy) buy.classList.add("active");
+      exploreFilter = "sale";
+    }
+    await loadExplore();
+  } catch {
+    setOwnerListingError("Could not publish listing. Try again.");
+  } finally {
+    if (submitBtn) submitBtn.disabled = false;
+  }
+}
+
 function aiDisclaimerHtml(text) {
   const line = String(text || uiText("aiDisclaimer") || RENT_UI.en.aiDisclaimer);
   return `<p class="ai-disclaimer" role="note">${escapeHtml(line)}</p>`;
@@ -201,12 +548,21 @@ function aiDisclaimerHtml(text) {
 function applyUiLanguage(lang) {
   userLanguage = String(lang || "en").toLowerCase();
   localStorage.setItem(LANG_KEY, userLanguage);
-  input.placeholder = uiText("placeholder");
+  if (input) input.placeholder = composerPlaceholder();
   if (recordingLabel) recordingLabel.textContent = uiText("recording");
   const leadSubmit = document.getElementById("lead-submit");
-  if (leadSubmit) leadSubmit.textContent = uiText("bookViewing");
+  if (leadSubmit && !marketConfig.payToView) leadSubmit.textContent = uiText("bookViewing");
   if (leadTitle && !pendingListingTitle) leadTitle.textContent = uiText("bookTitle");
-  document.documentElement.lang = userLanguage === "ar" || userLanguage === "ur" ? userLanguage : "en";
+  document.documentElement.lang =
+    userLanguage === "ar" || userLanguage === "ur"
+      ? userLanguage
+      : userLanguage === "tw" || userLanguage === "fat"
+        ? "ak"
+        : userLanguage === "ee"
+          ? "ee"
+          : userLanguage === "ha"
+            ? "ha"
+            : "en";
   document.documentElement.dir = userLanguage === "ar" || userLanguage === "ur" ? "rtl" : "ltr";
   const composerNote = document.getElementById("composer-ai-note");
   if (composerNote) composerNote.textContent = uiText("aiDisclaimer");
@@ -235,7 +591,7 @@ async function transcribeAndSend(blob, mimeType) {
   const typing = addTypingIndicator({ status: uiText("transcribing") });
   try {
     const audioBase64 = await blobToBase64(blob);
-    const res = await fetch("/api/rent/transcribe", {
+    const res = await fetch(`${RENT_API}/transcribe`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ audioBase64, mimeType })
@@ -326,19 +682,23 @@ function isSaved(id) {
 }
 
 function initials(name) {
-  const parts = String(name || "DC").trim().split(/\s+/).filter(Boolean);
-  if (!parts.length) return "DC";
+  const fallback = defaultInitials();
+  const parts = String(name || fallback).trim().split(/\s+/).filter(Boolean);
+  if (!parts.length) return fallback;
   if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
   return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
 }
 
 function applyProfileName(name) {
   const n = String(name || "").trim();
-  const ini = initials(n || "Guest");
+  const ini = n ? initials(n) : defaultInitials();
   headerAvatar.textContent = ini;
   profileAvatarLg.textContent = ini;
-  if (n) {
-    heroGreeting.textContent = `Welcome, ${n.split(/\s+/)[0]}. What property are you looking for across the UAE today?`;
+  if (n && heroGreeting) {
+    const first = n.split(/\s+/)[0];
+    heroGreeting.textContent = isGhanaMarket()
+      ? `Welcome, ${first}. Looking for a self-contain in East Legon or a chamber and hall in Osu?`
+      : `Welcome, ${first}. What property are you looking for across the UAE today?`;
   }
 }
 
@@ -375,7 +735,7 @@ async function runCompare(ids) {
   const list = [...ids].slice(0, 3);
   if (list.length < 2) return;
   try {
-    const res = await fetch("/api/rent/compare", {
+    const res = await fetch(`${RENT_API}/compare`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ ids: list })
@@ -394,7 +754,7 @@ function renderComparisonTable(comparison) {
   const head = `<tr><th></th>${cols
     .map(
       (l) =>
-        `<th><div class="compare-col-head">${l.image ? `<img src="${escapeAttr(l.image)}" alt="" />` : ""}<strong>${escapeHtml(l.title)}</strong><span>${escapeHtml(formatPrice(l))}</span></div></th>`
+        `<th><div class="compare-col-head">${l.image ? `<img src="${escapeAttr(assetUrl(l.image))}" alt="" />` : ""}<strong>${escapeHtml(l.title)}</strong><span>${escapeHtml(formatPrice(l))}</span></div></th>`
     )
     .join("")}</tr>`;
   const body = (comparison.rows || [])
@@ -445,12 +805,21 @@ function appendComparisonToChat(comparison) {
   appendToChat(wrap);
 }
 
+function clusterNoteHtml(listing) {
+  const n = Number(listing?.other_agent_count || 0);
+  if (n < 1) return "";
+  return `<p class="muted cluster-note">Also listed by ${n} other agent${n === 1 ? "" : "s"} — booking binds to this offer.</p>`;
+}
+
 function formatPrice(listing) {
   if (!listing) return "";
+  const amount = Number(listing.price_aed).toLocaleString();
+  const cur = listing.currency || marketConfig.currency || "AED";
+  const symbol = cur === "GHS" ? "GH₵" : "AED";
   if (listing.transaction_type === "rent") {
-    return `AED ${Number(listing.price_aed).toLocaleString()}/${listing.price_period || "year"}`;
+    return `${symbol} ${amount}/${listing.price_period || (cur === "GHS" ? "month" : "year")}`;
   }
-  return `AED ${Number(listing.price_aed).toLocaleString()}`;
+  return `${symbol} ${amount}`;
 }
 
 function txLabel(type) {
@@ -469,6 +838,11 @@ function sourceLabel(source) {
     dubizzle: "Dubizzle",
     emaar: "Emaar",
     damac: "Damac",
+    jiji: "Jiji",
+    meqasa: "Meqasa",
+    ghanapropertycentre: "Ghana Property Centre",
+    tonaton: "Tonaton",
+    fie_direct: "Direct listing",
     seed: "Demo"
   };
   return map[source] || source.replace(/_/g, " ");
@@ -692,7 +1066,7 @@ function closeMenu() {
 }
 
 async function createFreshSession() {
-  const res = await fetch("/api/rent/session", {
+  const res = await fetch(`${RENT_API}/session`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: "{}"
@@ -718,7 +1092,7 @@ async function startNewChat() {
 }
 
 async function loadSessionMessages(id) {
-  const res = await fetch(`/api/rent/session/${encodeURIComponent(id)}`);
+  const res = await fetch(`${RENT_API}/session/${encodeURIComponent(id)}`);
   const data = await res.json();
   if (!data.ok) throw new Error(data.error || "Session not found");
   return data.session || {};
@@ -807,7 +1181,7 @@ function addMessage(text, role = "bot", options = {}) {
     wrap.className = "msg bot-wrap";
     wrap.innerHTML = `
       <div class="concierge-label">
-        <img src="/dar-concierge-logo.png" alt="" class="brand-logo brand-logo--chat" />
+        <img src="${escapeAttr(assetUrl(marketConfig.logo || "/dar-concierge-logo.png"))}" alt="" class="brand-logo brand-logo--chat" />
         <span>${BRAND.nameUpper}</span>
       </div>
       <div class="msg bot">${formatBotHtml(text)}</div>
@@ -855,7 +1229,7 @@ function openLeadDialog(listingId, listingTitle = "") {
 
 function buildFeatureCard(l) {
   const img = l.image
-    ? `<img src="${escapeAttr(l.image)}" alt="" loading="lazy" />`
+    ? `<img src="${escapeAttr(assetUrl(l.image))}" alt="" loading="lazy" />`
     : "";
   const community = l.community || l.emirate || "";
   const beds = l.beds != null ? `${l.beds} Beds` : "";
@@ -879,12 +1253,13 @@ function buildFeatureCard(l) {
       <div class="feature-body">
         <h3>${escapeHtml(l.title)}</h3>
         <p class="feature-price">${escapeHtml(formatPrice(l))}</p>
-        <p class="feature-loc">📍 ${escapeHtml(l.community || l.emirate || "UAE")}</p>
+        <p class="feature-loc">📍 ${escapeHtml(l.community || l.emirate || (marketConfig.code === "GH" ? "Ghana" : "UAE"))}</p>
         <div class="feature-specs">
           ${beds ? `<span>🛏 ${beds}</span>` : ""}
           ${baths ? `<span>🛁 ${baths}</span>` : ""}
           ${sqft ? `<span>📐 ${sqft}</span>` : ""}
         </div>
+        ${clusterNoteHtml(l)}
         <button type="button" class="gold-btn" data-book="${escapeAttr(l.id)}">Book Viewing</button>
       </div>
     </article>
@@ -929,9 +1304,10 @@ function wireFeatureCards(container) {
 
 function formatAedShort(n) {
   const v = Number(n) || 0;
-  if (v >= 1_000_000) return `AED ${(v / 1_000_000).toFixed(1)}M`;
-  if (v >= 1000) return `AED ${Math.round(v / 1000)}k`;
-  return `AED ${v.toLocaleString()}`;
+  const symbol = marketConfig.currency === "GHS" ? "GH₵" : "AED";
+  if (v >= 1_000_000) return `${symbol} ${(v / 1_000_000).toFixed(1)}M`;
+  if (v >= 1000) return `${symbol} ${Math.round(v / 1000)}k`;
+  return `${symbol} ${v.toLocaleString()}`;
 }
 
 function appendChartToChat(chart) {
@@ -998,7 +1374,7 @@ function renderMiniListings(listings = [], photoMode = false) {
     card.className = photoMode ? "photo-card" : "mini-card";
     card.dataset.id = l.id;
 
-    const imgs = (l.images || []).length ? l.images : l.image ? [l.image] : [];
+    const imgs = listingImages(l);
     const strip = imgs
       .slice(0, 6)
       .map((src) => `<img src="${escapeAttr(src)}" alt="" loading="eager" decoding="async" referrerpolicy="no-referrer" />`)
@@ -1027,6 +1403,7 @@ function renderMiniListings(listings = [], photoMode = false) {
           ${specHtml}
           ${l.description ? `<p class="photo-desc">${escapeHtml(String(l.description).slice(0, 160))}${l.description.length > 160 ? "…" : ""}</p>` : ""}
           ${amenityHtml ? `<div class="photo-amenities">${amenityHtml}</div>` : ""}
+          ${clusterNoteHtml(l)}
           <button type="button" class="photo-view-btn">View full listing</button>
           <button type="button" class="photo-book-btn" data-book="${escapeAttr(l.id)}">Book viewing</button>
         </div>
@@ -1041,7 +1418,7 @@ function renderMiniListings(listings = [], photoMode = false) {
       });
     } else {
       const imgHtml = l.image
-        ? `<img src="${escapeAttr(l.image)}" alt="" loading="lazy" />`
+        ? `<img src="${escapeAttr(assetUrl(l.image))}" alt="" loading="lazy" />`
         : `<div class="thumb"></div>`;
       card.innerHTML = `
         ${imgHtml}
@@ -1049,6 +1426,7 @@ function renderMiniListings(listings = [], photoMode = false) {
           <h4>${escapeHtml(l.title)}</h4>
           <p class="price">${escapeHtml(formatPrice(l))}</p>
           <p class="muted">${escapeHtml(l.community || l.emirate || "")}</p>
+          ${clusterNoteHtml(l)}
         </div>
       `;
     }
@@ -1102,18 +1480,23 @@ const ALERT_PHONE_KEY = "uae_re_alert_phone";
 async function saveSearchAlert() {
   let phone = localStorage.getItem(ALERT_PHONE_KEY) || "";
   if (!phone) {
-    const raw = window.prompt("UAE mobile for WhatsApp alerts (e.g. 971501234567):", "");
+    const raw = window.prompt(
+      marketConfig.code === "GH"
+        ? "Ghana mobile for WhatsApp alerts (e.g. 0244111222):"
+        : "UAE mobile for WhatsApp alerts (e.g. 971501234567):",
+      ""
+    );
     if (!raw) return;
     phone = raw.replace(/\D/g, "");
     if (phone.length < 9) {
-      alert("Enter a valid UAE mobile number.");
+      alert(marketConfig.code === "GH" ? "Enter a valid Ghana mobile number." : "Enter a valid UAE mobile number.");
       return;
     }
     localStorage.setItem(ALERT_PHONE_KEY, phone);
   }
   try {
     const sid = await ensureSession();
-    const res = await fetch("/api/rent/saved-search", {
+    const res = await fetch(`${RENT_API}/saved-search`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ sessionId: sid, userPhone: phone })
@@ -1136,10 +1519,10 @@ async function loadExplore() {
   const params = new URLSearchParams({ limit: "20" });
   if (exploreFilter === "rent") params.set("type", "rent");
   else if (exploreFilter === "sale") params.set("type", "sale");
-  else if (exploreFilter === "Dubai") params.set("emirate", "Dubai");
+  else if (exploreFilter === "Dubai" || exploreFilter === "Accra") params.set("emirate", exploreFilter);
 
   try {
-    const res = await fetch(`/api/rent/browse?${params}`);
+    const res = await fetch(`${RENT_API}/browse?${params}`);
     const data = await res.json();
     if (!data.ok || !data.listings?.length) {
       exploreGrid.innerHTML = `<p class="muted center">No properties found.</p>`;
@@ -1163,7 +1546,7 @@ async function renderSavedGrid() {
   const listings = [];
   for (const id of ids) {
     try {
-      const res = await fetch(`/api/rent/listings/${encodeURIComponent(id)}`);
+      const res = await fetch(`${RENT_API}/listings/${encodeURIComponent(id)}`);
       const data = await res.json();
       if (data.ok && data.listing) listings.push(data.listing);
     } catch {
@@ -1319,7 +1702,7 @@ function renderListingDetail(l) {
     l.furnished === true ? "Furnished" : l.furnished === false ? "Unfurnished" : null
   ].filter(Boolean);
 
-  const images = (l.images || []).length ? l.images : l.image ? [l.image] : [];
+  const images = listingImages(l);
   const gallery = buildPhotoGallery(images);
 
   const amenities =
@@ -1348,6 +1731,7 @@ function renderListingDetail(l) {
       ${l.description ? `<p class="listing-desc">${escapeHtml(l.description)}</p>` : ""}
       ${amenities}
       ${l.agency_name ? `<p class="listing-meta muted">Listed by ${escapeHtml(l.agency_name)}${source ? ` · ${escapeHtml(source)}` : ""}</p>` : source ? `<p class="listing-meta muted">Listed on ${escapeHtml(source)}</p>` : ""}
+      ${clusterNoteHtml(l)}
       <button type="button" class="listing-book" data-book="${escapeAttr(l.id)}">Book Viewing</button>
     </div>
   `;
@@ -1372,14 +1756,14 @@ function mergeListingDetail(api, cached) {
   if (!cached) return api;
   const apiImgs = (api.images || []).length ? api.images : api.image ? [api.image] : [];
   const cachedImgs = (cached.images || []).length ? cached.images : cached.image ? [cached.image] : [];
-  const images = apiImgs.length >= cachedImgs.length ? apiImgs : cachedImgs;
+  const images = (apiImgs.length >= cachedImgs.length ? apiImgs : cachedImgs).map((src) => assetUrl(src));
   const apiDesc = String(api.description || "").trim();
   const cachedDesc = String(cached.description || "").trim();
   return {
     ...cached,
     ...api,
     images,
-    image: images[0] || api.image || cached.image || null,
+    image: images[0] || assetUrl(api.image) || assetUrl(cached.image) || null,
     description: apiDesc.length >= cachedDesc.length ? apiDesc || cachedDesc : cachedDesc,
     amenities: api.amenities?.length ? api.amenities : cached.amenities || []
   };
@@ -1396,7 +1780,7 @@ async function openListingDetail(listingId) {
   }
 
   try {
-    const res = await fetch(`/api/rent/listings/${encodeURIComponent(listingId)}`);
+    const res = await fetch(`${RENT_API}/listings/${encodeURIComponent(listingId)}`);
     const data = await res.json();
     if (data.ok && data.listing) {
       renderListingDetail(mergeListingDetail(data.listing, cached));
@@ -1419,7 +1803,7 @@ async function openListingDetail(listingId) {
 async function ensureSession() {
   if (sessionId) {
     try {
-      const res = await fetch(`/api/rent/session/${encodeURIComponent(sessionId)}`);
+      const res = await fetch(`${RENT_API}/session/${encodeURIComponent(sessionId)}`);
       const data = await res.json();
       if (data.ok) return sessionId;
     } catch {
@@ -1428,7 +1812,7 @@ async function ensureSession() {
     sessionId = "";
     localStorage.removeItem("uae_re_session_id");
   }
-  const res = await fetch("/api/rent/session", { method: "POST", headers: { "Content-Type": "application/json" }, body: "{}" });
+  const res = await fetch(`${RENT_API}/session`, { method: "POST", headers: { "Content-Type": "application/json" }, body: "{}" });
   const data = await res.json();
   if (!data.ok) throw new Error(data.error || "Could not start session");
   sessionId = data.sessionId;
@@ -1438,9 +1822,28 @@ async function ensureSession() {
 }
 
 function looksLikePropertySearch(text = "") {
-  return /\b(rent|buy|lease|bhk|br|bed|studio|apartment|villa|townhouse|penthouse|ajman|dubai|sharjah|abu dhabi|fujairah|ras al khaimah|umm al quwain|aed|budget|under|max|min)\b/i.test(
+  return /\b(rent|buy|lease|bhk|br|bed|studio|apartment|villa|townhouse|penthouse|self-?contain|chamber|compound|ajman|dubai|sharjah|abu dhabi|fujairah|ras al khaimah|umm al quwain|accra|kumasi|tema|east legon|osu|spintex|aed|gh₵|cedis|budget|under|max|min)\b/i.test(
     String(text || "")
   );
+}
+
+function appendPartnersToChat(partners = []) {
+  if (!partners.length) return;
+  const wrap = document.createElement("div");
+  wrap.className = "partner-cards";
+  wrap.innerHTML = partners
+    .map((p) => {
+      const meta = [p.kind, p.phone].filter(Boolean).join(" · ");
+      const href = String(p.url || "").trim();
+      return `<a class="partner-card" href="${escapeHtml(href)}" target="_blank" rel="noopener noreferrer">
+        <strong>${escapeHtml(p.name || "")}</strong>
+        <span class="partner-kind">${escapeHtml(meta)}</span>
+        <span class="partner-summary">${escapeHtml(p.summary || "")}</span>
+        <span class="partner-link">Open site →</span>
+      </a>`;
+    })
+    .join("");
+  appendToChat(wrap);
 }
 
 function appendSearchStatus(text) {
@@ -1465,7 +1868,7 @@ async function sendMessage(text, options = {}) {
 
   try {
     const sid = await ensureSession();
-    const res = await fetch("/api/rent/chat", {
+    const res = await fetch(`${RENT_API}/chat`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ sessionId: sid, message })
@@ -1475,6 +1878,9 @@ async function sendMessage(text, options = {}) {
     if (!data.ok) throw new Error(data.error || "Chat failed");
     if (data.language) applyUiLanguage(data.language);
     addMessage(data.text || "…", "bot", { aiDisclaimer: data.aiDisclaimer });
+    if (data.showPartners && data.partners?.length) {
+      appendPartnersToChat(data.partners);
+    }
     if (data.showChart && data.chart) {
       appendChartToChat(data.chart);
     }
@@ -1515,8 +1921,10 @@ micBtn?.addEventListener("click", () => toggleVoiceRecording());
 
 document.querySelectorAll(".pill, .action-card").forEach((el) => {
   el.addEventListener("click", () => {
+    const msg = el.getAttribute("data-msg");
+    if (!msg) return;
     switchTab("concierge");
-    sendMessage(el.getAttribute("data-msg"));
+    sendMessage(msg);
   });
 });
 
@@ -1560,6 +1968,14 @@ saveProfileBtn?.addEventListener("click", () => {
 });
 
 leadCancel.addEventListener("click", () => leadDialog.close());
+ownerListingCancel?.addEventListener("click", () => ownerListingDialog?.close());
+document.getElementById("list-property-btn")?.addEventListener("click", openOwnerListingDialog);
+document.getElementById("list-property-profile-btn")?.addEventListener("click", openOwnerListingDialog);
+document.getElementById("list-property-menu-btn")?.addEventListener("click", () => {
+  closeMenu();
+  openOwnerListingDialog();
+});
+ownerListingForm?.addEventListener("submit", submitOwnerListingForm);
 listingClose.addEventListener("click", () => listingDialog.close());
 compareClose?.addEventListener("click", () => compareDialog.close());
 savedCompareBtn?.addEventListener("click", () => runCompare([...compareSelection]));
@@ -1606,7 +2022,7 @@ leadForm.addEventListener("submit", async (e) => {
   const submitBtn = document.getElementById("lead-submit");
 
   if (!renterName || !renterPhone) {
-    addMessage("Please enter your name and UAE phone number.", "bot");
+    addMessage(`Please enter your name and ${marketConfig.phoneLabel || "phone number"}.`, "bot");
     return;
   }
   if (!consent) {
@@ -1619,7 +2035,7 @@ leadForm.addEventListener("submit", async (e) => {
 
   try {
     const sid = await ensureSession();
-    const res = await fetch("/api/rent/lead", {
+    const res = await fetch(`${RENT_API}/lead`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -1649,6 +2065,21 @@ leadForm.addEventListener("submit", async (e) => {
       data.text ||
       `Viewing booked${pendingListingTitle ? ` for ${pendingListingTitle}` : ""} — we'll call ${renterPhone} to confirm, then reach out to the agent.`;
     addMessage(confirm, "bot");
+    if (data.payToView && data.authorizationUrl) {
+      addMessage("Opening MoMo / card payment for GH₵100…", "bot");
+      window.location.href = data.authorizationUrl;
+    } else if (data.payToView && data.devPay && data.viewing?.id) {
+      const paid = await fetch(`${RENT_API}/viewing/confirm`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ viewingId: data.viewing.id })
+      }).then((r) => r.json());
+      if (paid.ok && paid.pin) {
+        addMessage(`Your viewing PIN is ${paid.pin}. Give it to the agent only at the property. Agent confirms it here: ${location.origin}/gh/agent`, "bot");
+      } else if (paid.ok) {
+        addMessage("Payment marked. PIN will be sent to WhatsApp.", "bot");
+      }
+    }
     pendingListingId = null;
     pendingListingTitle = "";
     leadForm.reset();
@@ -1657,11 +2088,14 @@ leadForm.addEventListener("submit", async (e) => {
     addMessage(`Could not book viewing: ${error.message}. Please try again.`, "bot");
   } finally {
     submitBtn.disabled = false;
-    submitBtn.textContent = "Book Viewing";
+    submitBtn.textContent = marketConfig.payToView
+      ? `Pay GH₵${marketConfig.viewingFeeGhs || 100}`
+      : "Book Viewing";
   }
 });
 
 async function bootstrap() {
+  await loadMarketConfig();
   applyUiLanguage(userLanguage);
 
   const savedName = localStorage.getItem(PROFILE_KEY) || "";
@@ -1674,7 +2108,7 @@ async function bootstrap() {
   if (saved) {
     sessionId = saved;
     try {
-      const res = await fetch(`/api/rent/session/${encodeURIComponent(saved)}`);
+      const res = await fetch(`${RENT_API}/session/${encodeURIComponent(saved)}`);
       const data = await res.json();
       const messages = data.ok ? data.session?.messages || [] : [];
       if (data.ok && data.session?.criteria?.language) {

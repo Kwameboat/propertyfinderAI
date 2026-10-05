@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="800" height="520" viewBox="0 0 800 520">
+  <rect width="800" height="520" fill="#12100c"/>
+  <rect x="40" y="40" width="720" height="440" rx="24" fill="#1c1812" stroke="#c9a227" stroke-width="3"/>
+  <circle cx="180" cy="250" r="70" fill="#c9a227" opacity="0.2"/>
+  <text x="400" y="230" text-anchor="middle" fill="#c9a227" font-family="Georgia, serif" font-size="40" font-weight="700">East Legon</text>
+  <text x="400" y="290" text-anchor="middle" fill="#f5e6c8" font-family="Inter, system-ui, sans-serif" font-size="24">Self-contain · Jiji listing</text>
+</svg>

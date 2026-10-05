@@ -1,4 +1,5 @@
-import { createHash, randomBytes, timingSafeEqual } from "node:crypto";
+import { createHash, randomBytes, randomUUID, timingSafeEqual } from "node:crypto";
+import { readFileSync } from "node:fs";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -123,6 +124,35 @@ import {
   getReLead
 } from "../../packages/hub-db/index.mjs";
 import { handleRentChat, handleRentTranscribe, submitRentLead, formatListingCard, formatListingDetail } from "../../packages/real-estate/chat.mjs";
+import { publicMarketConfig, isGhanaMarket } from "../../packages/real-estate/market.mjs";
+import { handleReWhatsAppInbound, ghanaWhatsAppInboundToken, isLoopbackAddress } from "../../packages/real-estate/re-wa.mjs";
+import { getEvolutionConfig, resolveEvolutionInstanceToken, sendEvolutionText } from "../../packages/evolution-client.mjs";
+import {
+  fillGhanaServiceWorker,
+  ghanaAdminPath,
+  ghanaLoginPath,
+  ghanaSafeNextPath,
+  pwaBuildId,
+  rewriteHubHtmlForGhana,
+  rewriteRentHtmlForGhana,
+  stripGhanaPublicPrefix
+} from "../../packages/real-estate/pwa-host.mjs";
+import { enhanceListingPhoto, enhanceImageBuffer } from "./listing-photo.mjs";
+import { isEnhanceableRemotePhoto, upgradePortalImageUrl } from "../../packages/real-estate/listing-photo-url.mjs";
+import { submitOwnerListing, sanitizeOwnerPhotoUrls } from "../../packages/real-estate/owner-listing.mjs";
+import { runGhanaLiveSearch } from "../../packages/real-estate/ghana-live-search.mjs";
+import { attachClusterMeta, groupListingsByCluster } from "../../packages/real-estate/cluster.mjs";
+import {
+  confirmGhanaViewingPayment,
+  handleGhanaPaystackWebhook,
+  parseAgentPinMessage,
+  redeemViewingPin,
+  listViewings,
+  createDeal,
+  listViewingLedger,
+  listDeals,
+  getViewing
+} from "../../packages/real-estate/ghana-viewing.mjs";
 import {
   createSavedSearchFromSession,
   listSavedSearches,
@@ -287,7 +317,11 @@ function requireAuth(req, res, next) {
       res.status(401).json({ ok: false, error: "unauthorized" });
       return;
     }
-    res.redirect("/login");
+    const nextPath = req.originalUrl || req.path || "/";
+    const safe = nextPath.startsWith("/") && !nextPath.startsWith("//") && !nextPath.startsWith("/api")
+      ? nextPath
+      : isGhanaMarket() ? ghanaAdminPath() : "/";
+    res.redirect(`${isGhanaMarket() ? ghanaLoginPath() : "/login"}?next=${encodeURIComponent(safe)}`);
     return;
   }
   req.session = session;
@@ -334,14 +368,15 @@ function createSession(res, payload, { secure = false } = {}) {
   });
 }
 
-/** Secure cookies only when Hub is actually served over HTTPS. */
+/** Secure cookies only when this request is actually HTTPS. */
 function resolveSecureCookies(req) {
   const forced = String(process.env.JAB_HUB_SECURE_COOKIE || "").trim();
   if (forced === "1") return true;
   if (forced === "0") return false;
-  const publicUrl = String(process.env.JAB_HUB_PUBLIC_URL || HUB_PUBLIC_URL || "").trim();
-  if (publicUrl.startsWith("https://")) return true;
-  const proto = String(req?.headers?.["x-forwarded-proto"] || "").split(",")[0].trim();
+  const proto = String(req?.headers?.["x-forwarded-proto"] || req?.protocol || "")
+    .split(",")[0]
+    .trim()
+    .toLowerCase();
   if (proto === "https") return true;
   if (req?.secure) return true;
   return false;
@@ -607,51 +642,161 @@ app.use((err, req, res, next) => {
 });
 app.use(cookieParser());
 
-/** PWA routes must beat express.static so Chrome gets SW-Allowed + correct manifest MIME. */
-app.get("/manifest.webmanifest", (req, res) => {
-  res.set("Cache-Control", "no-cache");
-  res.type("application/manifest+json");
-  res.sendFile(path.join(__dirname, "public", "manifest.webmanifest"));
+app.use((req, _res, next) => {
+  if (!isGhanaMarket()) {
+    next();
+    return;
+  }
+  const stripped = stripGhanaPublicPrefix(req.url);
+  if (stripped !== req.url) req.url = stripped;
+  next();
 });
 
-app.get(["/rent-sw.js", "/sw.js"], (req, res) => {
-  res.set("Service-Worker-Allowed", "/");
-  res.set("Cache-Control", "no-cache");
-  res.type("application/javascript");
-  res.sendFile(path.join(__dirname, "public", "rent-sw.js"));
-});
+const PUBLIC_DIR = path.join(__dirname, "public");
 
-app.use(express.static(path.join(__dirname, "public"), { index: false }));
-app.use("/uploads", express.static(paths.uploadsDir));
+function sendRentApp(res) {
+  const htmlPath = path.join(PUBLIC_DIR, "rent.html");
+  if (isGhanaMarket()) {
+    const html = readFileSync(htmlPath, "utf8");
+    res.set("Cache-Control", "no-cache");
+    res.type("html");
+    res.send(rewriteRentHtmlForGhana(html, { buildId: pwaBuildId(PUBLIC_DIR) }));
+    return;
+  }
+  res.sendFile(htmlPath);
+}
 
-app.get("/login", (req, res) => {
-  res.sendFile(path.join(__dirname, "public", "login.html"));
-});
+function sendHubHtml(res, fileName) {
+  const htmlPath = path.join(PUBLIC_DIR, fileName);
+  if (isGhanaMarket()) {
+    res.set("Cache-Control", "no-cache");
+    res.type("html");
+    res.send(rewriteHubHtmlForGhana(readFileSync(htmlPath, "utf8")));
+    return;
+  }
+  res.sendFile(htmlPath);
+}
 
-app.get("/agent-login", (req, res) => {
-  res.sendFile(path.join(__dirname, "public", "agent-login.html"));
-});
-
-app.get("/rent", (req, res) => {
+function shouldSkipHttpsRedirect(req) {
   const proto = String(req.headers["x-forwarded-proto"] || req.protocol || "http")
     .split(",")[0]
     .trim();
   const host = String(req.headers.host || "").split(":")[0];
   const httpsHost = RENT_HTTPS_ORIGIN.replace(/^https?:\/\//i, "").split("/")[0];
-  const skipRedirect =
+  return (
     !RENT_HTTPS_ORIGIN ||
     /^(off|0|false)$/i.test(RENT_HTTPS_ORIGIN) ||
     proto === "https" ||
     /^(localhost|127\.0\.0\.1)$/i.test(host) ||
-    host === httpsHost;
-  if (!skipRedirect) {
-    const dest = new URL("/rent", RENT_HTTPS_ORIGIN);
-    const q = req.originalUrl.indexOf("?");
-    if (q >= 0) dest.search = req.originalUrl.slice(q);
-    res.redirect(302, dest.toString());
+    host === httpsHost
+  );
+}
+
+function redirectGhanaHttps(req, res, destPath) {
+  if (!isGhanaMarket() || shouldSkipHttpsRedirect(req)) return false;
+  const dest = new URL(destPath, RENT_HTTPS_ORIGIN);
+  const q = req.originalUrl.indexOf("?");
+  if (q >= 0) dest.search = req.originalUrl.slice(q);
+  res.redirect(302, dest.toString());
+  return true;
+}
+
+/** PWA routes must beat express.static so Chrome gets SW-Allowed + correct manifest MIME. */
+app.get("/manifest.webmanifest", (req, res) => {
+  res.set("Cache-Control", "no-cache");
+  res.type("application/manifest+json");
+  res.sendFile(path.join(PUBLIC_DIR, isGhanaMarket() ? "gh-manifest.webmanifest" : "manifest.webmanifest"));
+});
+
+app.get("/gh/manifest.webmanifest", (req, res) => {
+  res.set("Cache-Control", "no-cache");
+  res.type("application/manifest+json");
+  res.sendFile(path.join(PUBLIC_DIR, "gh-manifest.webmanifest"));
+});
+
+app.get(["/rent-sw.js", "/sw.js"], (req, res) => {
+  if (isGhanaMarket()) {
+    res.set("Service-Worker-Allowed", "/gh");
+    res.set("CDN-Cache-Control", "no-store");
+  res.set("Cloudflare-CDN-Cache-Control", "no-store");
+    res.type("application/javascript");
+    res.send(
+      fillGhanaServiceWorker(readFileSync(path.join(PUBLIC_DIR, "gh-sw.js"), "utf8"), {
+        buildId: pwaBuildId(PUBLIC_DIR)
+      })
+    );
     return;
   }
-  res.sendFile(path.join(__dirname, "public", "rent.html"));
+  res.set("Service-Worker-Allowed", "/");
+  res.set("Cache-Control", "no-cache");
+  res.type("application/javascript");
+  res.sendFile(path.join(PUBLIC_DIR, "rent-sw.js"));
+});
+
+app.get(["/gh/sw.js", "/gh/gh-sw.js"], (req, res) => {
+  res.set("Service-Worker-Allowed", "/gh");
+  res.set("CDN-Cache-Control", "no-store");
+  res.set("Cloudflare-CDN-Cache-Control", "no-store");
+  res.type("application/javascript");
+  res.send(
+    fillGhanaServiceWorker(readFileSync(path.join(PUBLIC_DIR, "gh-sw.js"), "utf8"), {
+      buildId: pwaBuildId(PUBLIC_DIR)
+    })
+  );
+});
+
+app.use(express.static(PUBLIC_DIR, { index: false }));
+app.use("/gh", express.static(PUBLIC_DIR, { index: false, redirect: false }));
+app.use("/uploads", express.static(paths.uploadsDir));
+app.use("/gh/uploads", express.static(paths.uploadsDir));
+
+app.get("/login", (req, res) => {
+  if (isGhanaMarket()) {
+    const q = req.originalUrl.indexOf("?");
+    res.redirect(302, `${ghanaLoginPath()}${q >= 0 ? req.originalUrl.slice(q) : ""}`);
+    return;
+  }
+  res.sendFile(path.join(PUBLIC_DIR, "login.html"));
+});
+
+app.get("/gh/login", (req, res) => {
+  if (redirectGhanaHttps(req, res, ghanaLoginPath())) return;
+  sendHubHtml(res, "login.html");
+});
+
+app.get("/agent-login", (req, res) => {
+  if (isGhanaMarket()) {
+    res.redirect(302, "/gh/agent-login");
+    return;
+  }
+  res.sendFile(path.join(PUBLIC_DIR, "agent-login.html"));
+});
+
+app.get("/gh/agent-login", (req, res) => {
+  if (redirectGhanaHttps(req, res, "/gh/agent-login")) return;
+  sendHubHtml(res, "agent-login.html");
+});
+
+app.get("/", (req, res, next) => {
+  if (isGhanaMarket()) {
+    res.redirect(302, "/gh");
+    return;
+  }
+  next();
+});
+
+app.get("/gh/agent", (req, res) => {
+  res.sendFile(path.join(__dirname, "public", "gh-agent.html"));
+});
+
+app.get(["/rent", "/gh", "/gh/"], (req, res) => {
+  if (isGhanaMarket() && (req.path === "/rent")) {
+    const q = req.originalUrl.indexOf("?");
+    res.redirect(302, `/gh${q >= 0 ? req.originalUrl.slice(q) : ""}`);
+    return;
+  }
+  if (redirectGhanaHttps(req, res, req.path.startsWith("/gh") ? "/gh" : "/rent")) return;
+  sendRentApp(res);
 });
 
 /** Simple rate limit for public rent API (per IP). */
@@ -674,6 +819,59 @@ function rentRateLimit(req, res, next) {
     return;
   }
   next();
+}
+
+const ownerListRate = new Map();
+const OWNER_LIST_WINDOW_MS = 60 * 60 * 1000;
+const OWNER_LIST_MAX = Number(process.env.JAB_RE_OWNER_LIST_MAX || 8);
+
+function ownerListingRateLimit(req, res, next) {
+  const ip = String(req.headers["x-forwarded-for"] || req.socket?.remoteAddress || "local").split(",")[0].trim();
+  const now = Date.now();
+  const row = ownerListRate.get(ip) || { count: 0, reset: now + OWNER_LIST_WINDOW_MS };
+  if (now > row.reset) {
+    row.count = 0;
+    row.reset = now + OWNER_LIST_WINDOW_MS;
+  }
+  row.count++;
+  ownerListRate.set(ip, row);
+  if (row.count > OWNER_LIST_MAX) {
+    res.status(429).json({ ok: false, error: "Too many listings from this device — try again later." });
+    return;
+  }
+  next();
+}
+
+function optionalOwnerPhotos(req, res, next) {
+  const ct = String(req.headers["content-type"] || "");
+  if (ct.includes("multipart/form-data")) {
+    return upload.array("photos", 5)(req, res, next);
+  }
+  next();
+}
+
+async function saveOwnerListingPhotos(files = []) {
+  if (!files?.length) return [];
+  const folder = randomUUID();
+  const dir = path.join(paths.uploadsDir, "owner-listings", folder);
+  await mkdir(dir, { recursive: true });
+  const saved = [];
+  for (const file of files) {
+    const ext = path.extname(file.originalname || file.filename || "").toLowerCase();
+    if (![".jpg", ".jpeg", ".png", ".webp"].includes(ext)) continue;
+    const buf = await readFile(file.path);
+    const sharpened = await enhanceImageBuffer(buf, { strong: true });
+    if (sharpened?.length) {
+      const name = `${Date.now()}-${saved.length}.webp`;
+      await writeFile(path.join(dir, name), sharpened);
+      saved.push(`/uploads/owner-listings/${folder}/${name}`);
+    } else {
+      const name = `${Date.now()}-${saved.length}${ext === ".jpeg" ? ".jpg" : ext}`;
+      await writeFile(path.join(dir, name), buf);
+      saved.push(`/uploads/owner-listings/${folder}/${name}`);
+    }
+  }
+  return saved;
 }
 
 /** Rate limit Hub admin login (per IP). */
@@ -699,6 +897,136 @@ function loginRateLimit(req, res, next) {
 }
 
 /** UAE Real Estate concierge — public PWA API (no agency auth). */
+app.get("/api/rent/photo", async (req, res) => {
+  const src = String(req.query.u || req.query.url || "").trim();
+  const upgraded = upgradePortalImageUrl(src);
+  if (!isEnhanceableRemotePhoto(upgraded)) {
+    res.status(400).json({ ok: false, error: "unsupported photo host" });
+    return;
+  }
+  try {
+    const file = await enhanceListingPhoto(upgraded, { uploadsDir: paths.uploadsDir });
+    if (file) {
+      res.setHeader("Cache-Control", "public, max-age=86400, immutable");
+      res.type("image/webp");
+      res.sendFile(file);
+      return;
+    }
+  } catch (error) {
+    console.error(JSON.stringify({ at: new Date().toISOString(), listingPhotoError: error.message }));
+  }
+  res.redirect(302, upgraded);
+});
+
+app.get("/api/rent/config", (req, res) => {
+  res.json({ ok: true, market: publicMarketConfig() });
+});
+
+app.get("/gh/thanks", (req, res) => {
+  res.type("html").send(`<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8"/><meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>FIE AI</title></head>
+<body style="font-family:system-ui;padding:2rem;max-width:32rem;margin:auto">
+<h1>Payment received</h1>
+<p>If GH₵100 went through, your viewing PIN is being sent to WhatsApp. Give that PIN to the listing agent only when you see the room.</p>
+<p><a href="/gh/agent">Listing agent: enter PIN + MoMo</a></p>
+<p><a href="/gh">Back to FIE AI</a></p>
+<script>
+const q = new URLSearchParams(location.search);
+const viewingId = q.get("viewing");
+const reference = q.get("reference");
+if (viewingId || reference) {
+  fetch((location.pathname.indexOf("/gh") === 0 ? "/gh" : "") + "/api/rent/viewing/confirm", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ viewingId, reference })
+  }).catch(() => {});
+}
+</script>
+</body></html>`);
+});
+
+app.post("/api/rent/viewing/confirm", rentRateLimit, async (req, res) => {
+  try {
+    if (!isGhanaMarket()) {
+      res.status(400).json({ ok: false, error: "Ghana market only" });
+      return;
+    }
+    const result = await confirmGhanaViewingPayment(db, {
+      viewingId: req.body?.viewingId,
+      reference: req.body?.reference
+    });
+    res.json({
+      ok: true,
+      viewingId: result.viewing.id,
+      status: result.viewing.status,
+      already: result.already,
+      whatsappSent: result.whatsappSent,
+      pin: process.env.JAB_RE_GH_DEV_PAY ? result.pin : undefined
+    });
+  } catch (error) {
+    res.status(400).json({ ok: false, error: error.message });
+  }
+});
+
+app.post("/api/rent/viewing/redeem-pin", rentRateLimit, async (req, res) => {
+  try {
+    if (!isGhanaMarket()) {
+      res.status(400).json({ ok: false, error: "Ghana market only" });
+      return;
+    }
+    const parsed = parseAgentPinMessage(String(req.body?.text || ""));
+    const pin = req.body?.pin || parsed.pin;
+    const momo = req.body?.momo || parsed.momo;
+    if (!pin || !momo) {
+      res.status(400).json({ ok: false, error: "PIN and MoMo number required" });
+      return;
+    }
+    const viewing = redeemViewingPin(db, { pin, momo, fromPhone: req.body?.fromPhone || "" });
+    res.json({
+      ok: true,
+      viewing: {
+        id: viewing.id,
+        status: viewing.status,
+        renter_name: viewing.renter_name,
+        agent_momo: viewing.agent_momo,
+        redeemed_at: viewing.redeemed_at
+      }
+    });
+  } catch (error) {
+    res.status(400).json({ ok: false, error: error.message });
+  }
+});
+
+app.get("/api/admin/re/viewings", requireAgency, (req, res) => {
+  res.json({ ok: true, viewings: listViewings(db, { status: req.query.status, limit: 80 }) });
+});
+
+app.get("/api/admin/re/viewings/:id", requireAgency, (req, res) => {
+  const viewing = getViewing(db, req.params.id);
+  if (!viewing) {
+    res.status(404).json({ ok: false, error: "not found" });
+    return;
+  }
+  res.json({ ok: true, viewing, ledger: listViewingLedger(db, viewing.id) });
+});
+
+app.post("/api/admin/re/deals", requireAgency, (req, res) => {
+  try {
+    const deal = createDeal(db, {
+      viewingId: req.body?.viewingId,
+      agreedAmountGhs: req.body?.agreedAmountGhs
+    });
+    res.json({ ok: true, deal });
+  } catch (error) {
+    res.status(400).json({ ok: false, error: error.message });
+  }
+});
+
+app.get("/api/admin/re/deals", requireAgency, (req, res) => {
+  res.json({ ok: true, deals: listDeals(db, { limit: 80 }) });
+});
+
 app.post("/api/rent/session", rentRateLimit, (req, res) => {
   try {
     const session = createReSession(db, { userPhone: String(req.body?.userPhone || "") });
@@ -745,6 +1073,54 @@ app.post("/api/rent/chat", rentRateLimit, async (req, res) => {
       sessionId,
       message,
       userPhone: String(req.body?.userPhone || "")
+    });
+    res.json({ ok: true, ...result });
+  } catch (error) {
+    res.status(500).json({ ok: false, error: error.message });
+  }
+});
+
+function ghanaWhatsAppInboundAuth(req, res, next) {
+  const expected = ghanaWhatsAppInboundToken();
+  const got = String(req.headers["x-jab-re-inbound"] || "").trim();
+  const remote = req.socket?.remoteAddress || req.ip || "";
+  if (!expected || !isLoopbackAddress(remote) || got.length !== expected.length) {
+    res.status(401).json({ ok: false, error: "unauthorized" });
+    return;
+  }
+  if (!timingSafeEqual(Buffer.from(got), Buffer.from(expected))) {
+    res.status(401).json({ ok: false, error: "unauthorized" });
+    return;
+  }
+  next();
+}
+
+/** Evolution bridge → FIE Hub. Localhost only. Same chat engine as /gh. */
+app.post("/api/rent/whatsapp/inbound", ghanaWhatsAppInboundAuth, async (req, res) => {
+  try {
+    if (!isGhanaMarket()) {
+      res.status(400).json({ ok: false, error: "not ghana market" });
+      return;
+    }
+    const instance = String(req.body?.instance || process.env.JAB_RE_WA_INSTANCE || "").trim();
+    const number = String(req.body?.number || "").trim();
+    const inboundText = String(req.body?.inboundText || req.body?.message || "").trim();
+    if (!instance || !number || !inboundText) {
+      res.status(400).json({ ok: false, error: "instance, number, and inboundText required" });
+      return;
+    }
+    const env = getEvolutionConfig();
+    const { token } = await resolveEvolutionInstanceToken(env.evoApiUrl, env.globalKey, instance);
+    const result = await handleReWhatsAppInbound({
+      db,
+      instance,
+      number,
+      replyJid: req.body?.replyJid || number,
+      inboundText,
+      pushName: String(req.body?.pushName || ""),
+      evoApiUrl: env.evoApiUrl,
+      apiKey: token,
+      sendText: sendEvolutionText
     });
     res.json({ ok: true, ...result });
   } catch (error) {
@@ -949,8 +1325,15 @@ app.get("/api/rent/browse", async (req, res) => {
     if (req.query.beds) criteria.beds = Number(req.query.beds);
     if (req.query.max_price) criteria.max_price = Number(req.query.max_price);
     const limit = Math.min(40, Math.max(1, Number(req.query.limit) || 20));
-    const listings = (await searchListingsStore(db, criteria, limit)).map((l) => formatListingCard(l));
-    res.json({ ok: true, listings, store: isSupabaseEnabled() ? "supabase" : "sqlite" });
+    const listingsRaw = await searchListingsStore(db, criteria, limit);
+    const listings = isGhanaMarket()
+      ? groupListingsByCluster(listingsRaw).map((g) => attachClusterMeta(g.listing, g.offers))
+      : listingsRaw;
+    res.json({
+      ok: true,
+      listings: listings.map((l) => formatListingCard(l)),
+      store: isSupabaseEnabled() ? "supabase" : "sqlite"
+    });
   } catch (error) {
     res.status(500).json({ ok: false, error: error.message });
   }
@@ -990,6 +1373,32 @@ app.post("/api/rent/lead", rentRateLimit, async (req, res) => {
       notes
     });
     res.json({ ok: true, ...result });
+  } catch (error) {
+    res.status(400).json({ ok: false, error: error.message });
+  }
+});
+
+app.post("/api/rent/owner-listing", rentRateLimit, ownerListingRateLimit, optionalOwnerPhotos, async (req, res) => {
+  try {
+    if (!isGhanaMarket()) {
+      res.status(404).json({ ok: false, error: "Not found" });
+      return;
+    }
+    const body = req.body || {};
+    const uploaded = await saveOwnerListingPhotos(req.files || []);
+    const photoUrls = sanitizeOwnerPhotoUrls(body.photoUrls || body.photos || body.photo_urls);
+    const result = await submitOwnerListing(db, {
+      ...body,
+      photos: [...uploaded, ...photoUrls]
+    });
+    if (!result.ok) {
+      res.status(400).json({ ok: false, error: result.error || "Could not save listing" });
+      return;
+    }
+    res.json({
+      ok: true,
+      listing: result.listing ? formatListingCard(result.listing) : null
+    });
   } catch (error) {
     res.status(400).json({ ok: false, error: error.message });
   }
@@ -1199,6 +1608,7 @@ app.get("/api/rent/status", async (req, res) => {
       platforms: getN8nIngestSources(),
       supabase: isSupabaseEnabled(),
       ingest: Boolean(process.env.JAB_RE_INGEST_TOKEN),
+      market: publicMarketConfig(),
       apify: isApifyConfigured(),
       apifyFallback: isApifyConfigured() ? ["bayut", "dubizzle"] : [],
       mode: getModeSummary(),
@@ -1211,7 +1621,8 @@ app.get("/api/rent/status", async (req, res) => {
       livePull: {
         endpoint: "/api/rent/live-pull",
         enrichUrl: "/api/rent/enrich-url",
-        matrixIngest: "/api/rent/ingest/matrix"
+        matrixIngest: "/api/rent/ingest/matrix",
+        n8nWebhook: Boolean(String(process.env.N8N_LIVE_SEARCH_WEBHOOK || "").trim())
       }
     });
   } catch (error) {
@@ -1410,12 +1821,87 @@ app.post("/api/admin/re/ingest/apify", requireAgency, async (req, res) => {
   }
 });
 
-app.get("/admin/re", requireAgency, (req, res) => {
-  res.sendFile(path.join(__dirname, "public", "re-admin.html"));
+app.post("/api/admin/re/live-search", requireAgency, async (req, res) => {
+  try {
+    if (!isGhanaMarket()) {
+      const result = await pullLiveListingsForChat(db, req.body?.criteria || {}, {
+        limit: Math.min(Number(req.body?.limit) || 8, 12),
+        message: String(req.body?.query || req.body?.message || ""),
+        forcePortal: true,
+        forceLive: true
+      });
+      res.json({
+        ok: result.ok,
+        listings: (result.listings || []).map((l) => formatListingCard(l)),
+        sources: result.sources,
+        count: result.listings?.length || 0
+      });
+      return;
+    }
+    const result = await runGhanaLiveSearch(db, {
+      query: String(req.body?.query || req.body?.message || "").trim(),
+      message: String(req.body?.query || req.body?.message || "").trim(),
+      criteria: {
+        emirate: req.body?.emirate || req.body?.city,
+        community: req.body?.community || req.body?.area,
+        transaction_type: req.body?.transaction_type || req.body?.purpose
+      },
+      limit: Math.min(Number(req.body?.limit) || 12, 24)
+    });
+    res.json({
+      ok: result.ok,
+      ...result,
+      listings: (result.listings || []).map((l) => formatListingCard(l))
+    });
+  } catch (error) {
+    res.status(500).json({ ok: false, error: error.message });
+  }
 });
 
-app.get("/admin/listings", requireAgency, (req, res) => {
-  res.sendFile(path.join(__dirname, "public", "re-admin.html"));
+app.post("/api/admin/re/ingest/ghana", requireAgency, async (req, res) => {
+  try {
+    const source = String(req.body?.source || "ghanapropertycentre").trim();
+    const allowed = ["ghanapropertycentre", "meqasa", "jiji"];
+    if (!allowed.includes(source)) {
+      res.status(400).json({ ok: false, error: "source must be ghanapropertycentre, meqasa, or jiji" });
+      return;
+    }
+    const result = await runIngestScrape(source, {
+      emirates: req.body?.emirates || req.body?.cities,
+      types: req.body?.types || ["rent", "sale"],
+      maxPages: req.body?.maxPages || 2
+    });
+    res.json({ ok: result.ok, ...result });
+  } catch (error) {
+    res.status(500).json({ ok: false, error: error.message });
+  }
+});
+
+app.get("/admin/re", (req, res) => {
+  if (isGhanaMarket()) {
+    res.redirect(302, ghanaAdminPath());
+    return;
+  }
+  requireAgency(req, res, () => {
+    res.sendFile(path.join(PUBLIC_DIR, "re-admin.html"));
+  });
+});
+
+app.get("/admin/listings", (req, res) => {
+  if (isGhanaMarket()) {
+    res.redirect(302, "/gh/admin/listings");
+    return;
+  }
+  requireAgency(req, res, () => {
+    res.sendFile(path.join(PUBLIC_DIR, "re-admin.html"));
+  });
+});
+
+app.get(["/gh/admin/re", "/gh/admin/listings"], (req, res) => {
+  if (redirectGhanaHttps(req, res, req.path === "/gh/admin/listings" ? "/gh/admin/listings" : ghanaAdminPath())) {
+    return;
+  }
+  requireAgency(req, res, () => sendHubHtml(res, "re-admin.html"));
 });
 
 app.post("/api/login", loginRateLimit, async (req, res) => {
@@ -1426,7 +1912,12 @@ app.post("/api/login", loginRateLimit, async (req, res) => {
       return;
     }
     createSession(res, { role: "agency" }, { secure: resolveSecureCookies(req) });
-    res.json({ ok: true, role: "agency" });
+    const redirect = isGhanaMarket()
+      ? ghanaSafeNextPath(req.body?.next || req.query?.next)
+      : String(req.body?.next || "/").startsWith("/")
+        ? String(req.body.next)
+        : "/";
+    res.json({ ok: true, role: "agency", redirect });
   } catch (error) {
     res.status(500).json({ ok: false, error: error.message });
   }
@@ -1465,7 +1956,11 @@ app.post("/api/agent/login", (req, res) => {
 app.post("/api/logout", (req, res) => {
   const token = req.cookies?.[SESSION_COOKIE];
   if (token) sessions.delete(hashToken(token));
-  res.clearCookie(SESSION_COOKIE);
+  res.clearCookie(SESSION_COOKIE, {
+    httpOnly: true,
+    sameSite: "lax",
+    secure: resolveSecureCookies(req)
+  });
   res.json({ ok: true });
 });
 
@@ -1507,7 +2002,11 @@ app.post("/api/settings/password", requireAgency, async (req, res) => {
     await setHubEnvValue("HUB_ADMIN_PASSWORD", newPassword);
     process.env.HUB_ADMIN_PASSWORD = newPassword;
     sessions.clear();
-    res.clearCookie(SESSION_COOKIE);
+    res.clearCookie(SESSION_COOKIE, {
+      httpOnly: true,
+      sameSite: "lax",
+      secure: resolveSecureCookies(req)
+    });
     res.json({ ok: true });
   } catch (error) {
     res.status(500).json({ ok: false, error: error.message });
@@ -2573,6 +3072,11 @@ app.post("/api/billing/paystack/webhook", async (req, res) => {
     }
     const event = req.body;
     if (event?.event === "charge.success") {
+      const ghana = await handleGhanaPaystackWebhook(db, event);
+      if (ghana.handled) {
+        res.json({ ok: true, ghana: true });
+        return;
+      }
       const reference = event?.data?.reference;
       const cust = getCustomerPaymentByReference(db, reference);
       if (cust) {

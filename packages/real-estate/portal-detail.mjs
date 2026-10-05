@@ -12,6 +12,7 @@ import {
   normalizeListingRow
 } from "./scrapers/normalize.mjs";
 import { filterValidPortalImages, extractImagesFromText } from "./listing-images.mjs";
+import { parseGpcSearchHtml, parseGpcGalleryHtml, preferFullGpcImages } from "./scrapers/ghanapropertycentre-html.mjs";
 
 const EMIRATE_FROM_SLUG = {
   dubai: "Dubai",
@@ -28,6 +29,10 @@ export function detectPortalFromUrl(url = "") {
   if (/propertyfinder\.ae/i.test(u)) return "propertyfinder";
   if (/bayut\.com/i.test(u)) return "bayut";
   if (/dubizzle\.com/i.test(u)) return "dubizzle";
+  if (/ghanapropertycentre\.com/i.test(u)) return "ghanapropertycentre";
+  if (/meqasa\.com/i.test(u)) return "meqasa";
+  if (/jiji\.com\.gh/i.test(u)) return "jiji";
+  if (/tonaton\.com/i.test(u)) return "tonaton";
   return null;
 }
 
@@ -44,6 +49,13 @@ function inferTransactionType(url = "", prop = {}) {
 
 function emirateFromUrl(url = "") {
   const u = String(url).toLowerCase();
+  if (/ghanapropertycentre|meqasa|jiji\.com\.gh|tonaton/.test(u)) {
+    if (/kumasi|ashanti/.test(u)) return "Kumasi";
+    if (/tema/.test(u)) return "Tema";
+    if (/takoradi|western/.test(u)) return "Takoradi";
+    if (/tamale|northern/.test(u)) return "Tamale";
+    return "Accra";
+  }
   for (const [slug, name] of Object.entries(EMIRATE_FROM_SLUG)) {
     if (u.includes(slug) || u.includes(name.toLowerCase().replace(/\s+/g, "-"))) return name;
   }
@@ -211,6 +223,17 @@ function parseListingFromHtml(html, url, partial = {}) {
   else if (next && portal === "bayut") listing = parseBayutDetail(next, url);
   else if (next && portal === "dubizzle") listing = parseDubizzleDetail(next, url);
 
+  if (portal === "ghanapropertycentre") {
+    const gallery = parseGpcGalleryHtml(html);
+    if (gallery.length) {
+      listing = mergeListing(listing || partial, {
+        source: "ghanapropertycentre",
+        source_url: url,
+        images: gallery
+      });
+    }
+  }
+
   if (!listing?.images?.length) {
     const ld = parseJsonLdListing(extractJsonLd(html), url);
     if (ld) listing = listing ? mergeListing(listing, ld) : ld;
@@ -234,6 +257,9 @@ function parseListingFromHtml(html, url, partial = {}) {
   }
 
   if (listing) listing = mergeListing(partial, listing);
+  if (portal === "ghanapropertycentre" && listing?.images?.length) {
+    listing.images = preferFullGpcImages(listing.images);
+  }
   return listing;
 }
 
@@ -253,6 +279,24 @@ export async function enrichListingFromPortalUrl(sourceUrl = "", partial = {}) {
 
   try {
     const { html, engine, format } = await fetchDetailHtml(url);
+
+    const isGpcSerp =
+      portal === "ghanapropertycentre" &&
+      /\/(?:for-rent|for-sale)\//i.test(url) &&
+      !/\d{3,}-/.test(url);
+    if (isGpcSerp && html) {
+      const rows = parseGpcSearchHtml(html, {
+        city: partial.emirate || emirateFromUrl(url),
+        transactionType: inferTransactionType(url)
+      }).filter((r) => Number(r.price_aed) > 0);
+      return {
+        ok: rows.length > 0,
+        listing: rows[0] || partial,
+        listings: rows,
+        portal,
+        engine: engine || "gpc-serp"
+      };
+    }
 
     if (format === "markdown") {
       const fromMd = filterValidPortalImages(extractImagesFromText(html));

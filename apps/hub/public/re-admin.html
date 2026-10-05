@@ -3,16 +3,16 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Dar Concierge — Listing Dashboard</title>
+  <title>FIE AI — Listing Dashboard</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Playfair+Display:wght@600;700&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="/re-admin.css" />
+  <link rel="stylesheet" href="/re-admin.css?v=fie-jiji" />
 </head>
 <body class="ld-app">
   <aside class="ld-sidebar" aria-label="Listing dashboard navigation">
     <div class="ld-brand">
-      <img src="/dar-concierge-logo.png" alt="Dar Concierge" class="ld-logo" width="140" height="40" />
+      <img src="/dar-concierge-logo.png" alt="Dar Concierge" class="ld-logo" id="dash-logo" width="140" height="40" />
       <p class="ld-brand-sub">Listing Dashboard</p>
     </div>
     <nav class="ld-nav">
@@ -25,6 +25,12 @@
       <button type="button" class="ld-nav-item" data-view="leads">
         <span class="ld-nav-icon">◎</span> Leads
       </button>
+      <button type="button" class="ld-nav-item" data-view="viewings">
+        <span class="ld-nav-icon">◆</span> Viewings
+      </button>
+      <button type="button" class="ld-nav-item" data-view="live">
+        <span class="ld-nav-icon">⚡</span> Live search
+      </button>
       <button type="button" class="ld-nav-item" data-view="ingest">
         <span class="ld-nav-icon">↓</span> Ingest
       </button>
@@ -35,6 +41,7 @@
     <div class="ld-sidebar-foot">
       <a href="/" class="ld-link">Agency console</a>
       <a href="/rent" class="ld-link" target="_blank" rel="noopener">Open /rent PWA</a>
+      <a href="/gh" class="ld-link" target="_blank" rel="noopener">Open /gh PWA</a>
       <button type="button" id="logout-btn" class="ld-link ld-link-btn">Log out</button>
     </div>
   </aside>
@@ -42,7 +49,7 @@
   <div class="ld-main">
     <header class="ld-topbar">
       <div>
-        <p class="ld-eyebrow">Dar Concierge AI</p>
+        <p class="ld-eyebrow" id="dash-eyebrow">Dar Concierge AI</p>
         <h1 id="view-title">Overview</h1>
       </div>
       <div class="ld-topbar-actions">
@@ -55,11 +62,11 @@
       <!-- Overview -->
       <section class="ld-view active" id="view-overview">
         <div class="ld-kpi-row">
-          <article class="ld-kpi"><span>Listings</span><strong id="kpi-listings">—</strong></article>
-          <article class="ld-kpi"><span>Property Finder</span><strong id="kpi-pf">—</strong></article>
+          <article class="ld-kpi"><span id="kpi-listings-label">Listings</span><strong id="kpi-listings">—</strong></article>
+          <article class="ld-kpi"><span id="kpi-pf-label">Property Finder</span><strong id="kpi-pf">—</strong></article>
           <article class="ld-kpi"><span>Leads</span><strong id="kpi-leads">—</strong></article>
-          <article class="ld-kpi"><span>New leads</span><strong id="kpi-new-leads">—</strong></article>
-          <article class="ld-kpi"><span>Puppeteer</span><strong id="kpi-puppeteer">—</strong></article>
+          <article class="ld-kpi"><span id="kpi-new-leads-label">New leads</span><strong id="kpi-new-leads">—</strong></article>
+          <article class="ld-kpi"><span id="kpi-live-label">Live search</span><strong id="kpi-puppeteer">—</strong></article>
         </div>
         <div class="ld-split">
           <div class="ld-card">
@@ -69,8 +76,11 @@
           <div class="ld-card">
             <h2>Quick actions</h2>
             <div class="ld-actions">
-              <button type="button" id="btn-puppeteer" class="ld-btn ld-btn-gold">Run PF ingest</button>
-              <button type="button" id="btn-apify-pf" class="ld-btn ld-btn-gold">Apify PF scrape</button>
+              <button type="button" id="btn-live-search" class="ld-btn ld-btn-gold ld-gh-only" hidden>Run live search</button>
+              <button type="button" id="btn-ghana-scrape" class="ld-btn ld-btn-gold ld-gh-only" hidden>Scrape Ghana portals</button>
+              <button type="button" id="btn-jiji-scrape" class="ld-btn ld-btn-gold ld-gh-only" hidden>Scrape Jiji</button>
+              <button type="button" id="btn-puppeteer" class="ld-btn ld-btn-gold ld-uae-only">Run PF ingest</button>
+              <button type="button" id="btn-apify-pf" class="ld-btn ld-btn-gold ld-uae-only">Apify PF scrape</button>
               <button type="button" id="btn-stale" class="ld-btn ld-btn-ghost">Mark stale</button>
             </div>
             <p id="action-msg" class="ld-muted"></p>
@@ -92,6 +102,10 @@
             <option value="bayut">Bayut</option>
             <option value="dubizzle">Dubizzle</option>
             <option value="live_search">Live search</option>
+            <option value="ghanapropertycentre">Ghana Property Centre</option>
+            <option value="meqasa">Meqasa</option>
+            <option value="jiji">Jiji</option>
+            <option value="fie_direct">Direct listing</option>
           </select>
           <select id="listing-emirate-filter" class="ld-select">
             <option value="">All emirates</option>
@@ -102,6 +116,9 @@
             <option value="RAK">RAK</option>
             <option value="Fujairah">Fujairah</option>
             <option value="UAQ">UAQ</option>
+            <option value="Accra">Accra</option>
+            <option value="Kumasi">Kumasi</option>
+            <option value="Tema">Tema</option>
           </select>
           <select id="listing-beds-filter" class="ld-select">
             <option value="">Any beds</option>
@@ -146,15 +163,84 @@
         </div>
       </section>
 
+      <!-- Ghana viewings + deals -->
+      <section class="ld-view" id="view-viewings" hidden>
+        <div class="ld-card">
+          <div class="ld-toolbar">
+            <h2>Viewings (Ghana PIN)</h2>
+            <select id="viewing-status-filter" class="ld-select">
+              <option value="">All statuses</option>
+              <option value="awaiting_payment">awaiting_payment</option>
+              <option value="paid_awaiting_viewing">paid_awaiting_viewing</option>
+              <option value="completed">completed</option>
+            </select>
+          </div>
+          <p class="ld-muted">Client pays GH₵100, then gives the WhatsApp PIN to the listing agent at the property. Agent sends PIN + MoMo to platform WhatsApp to release GH₵50.</p>
+          <div id="viewings-table" class="ld-table-wrap"></div>
+        </div>
+        <div class="ld-card">
+          <h2>Record a close (10% split 50/50)</h2>
+          <form id="deal-form" class="ld-form">
+            <div class="ld-form-row">
+              <label>
+                Viewing ID
+                <input id="deal-viewing-id" class="ld-input" required placeholder="viewing uuid" />
+              </label>
+              <label>
+                Agreed monthly rent (GHS)
+                <input id="deal-amount" type="number" min="1" step="1" class="ld-input" required placeholder="1800" />
+              </label>
+            </div>
+            <button type="submit" class="ld-btn ld-btn-gold">Record deal</button>
+          </form>
+          <p id="deal-msg" class="ld-muted"></p>
+          <div id="deals-table" class="ld-table-wrap"></div>
+        </div>
+      </section>
+
+      <!-- Ghana live search -->
+      <section class="ld-view" id="view-live" hidden>
+        <div class="ld-card">
+          <h2>Live search</h2>
+          <p class="ld-muted" id="live-status">Checks n8n / SearXNG and pulls fresh Ghana Property Centre pages for rent and sale.</p>
+          <form id="live-search-form" class="ld-form">
+            <label>
+              Query
+              <input id="live-query" class="ld-input" required placeholder="Houses for sale in East Legon" />
+            </label>
+            <div class="ld-form-row">
+              <label>
+                City
+                <select id="live-city" class="ld-select">
+                  <option value="Accra">Accra</option>
+                  <option value="Kumasi">Kumasi</option>
+                  <option value="Tema">Tema</option>
+                </select>
+              </label>
+              <label>
+                Rent or buy
+                <select id="live-tx" class="ld-select">
+                  <option value="rent">Rent</option>
+                  <option value="sale">Sale</option>
+                </select>
+              </label>
+            </div>
+            <button type="submit" class="ld-btn ld-btn-gold">Search live now</button>
+          </form>
+          <p id="live-msg" class="ld-muted"></p>
+          <div id="live-results" class="ld-grid"></div>
+        </div>
+      </section>
+
       <!-- Ingest -->
       <section class="ld-view" id="view-ingest" hidden>
         <div class="ld-card">
           <h2>Pull from portal URL</h2>
-          <p class="ld-muted">Paste a Property Finder, Bayut, or Dubizzle search URL.</p>
+          <p class="ld-muted" id="ingest-help">Paste a Property Finder, Bayut, or Dubizzle search URL.</p>
           <form id="pull-form" class="ld-form">
             <label>
               Portal search URL
-              <input id="pull-url" type="url" required class="ld-input" placeholder="https://www.propertyfinder.ae/en/rent/dubai/..." />
+              <input id="pull-url" type="url" required class="ld-input" placeholder="https://ghanapropertycentre.com/for-sale/houses/greater-accra/east-legon/showtype" />
             </label>
             <div class="ld-form-row">
               <label>
@@ -204,6 +290,6 @@
     <div id="drawer-lead-body" class="ld-drawer-body"></div>
   </aside>
 
-  <script src="/re-admin.js"></script>
+  <script src="/re-admin.js?v=fie-jiji"></script>
 </body>
 </html>

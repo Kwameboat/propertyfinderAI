@@ -17,22 +17,54 @@
   <script>
     (function () {
       window.__darPwa = window.__darPwa || { promptEvent: null };
+      var gh = location.pathname === "/gh" || location.pathname.indexOf("/gh/") === 0;
+      if (gh) {
+        window.__RENT_BASE = window.__RENT_BASE || "/gh";
+        window.__RENT_API = window.__RENT_API || "/gh/api/rent";
+      }
       window.addEventListener("beforeinstallprompt", function (e) {
         e.preventDefault();
         window.__darPwa.promptEvent = e;
         window.dispatchEvent(new Event("dar-pwa-ready"));
       });
-      if ("serviceWorker" in navigator && window.isSecureContext) {
-        navigator.serviceWorker.register("/sw.js", { scope: "/" }).catch(function () {
-          navigator.serviceWorker.register("/rent-sw.js", { scope: "/" });
+      if (!("serviceWorker" in navigator) || !window.isSecureContext) return;
+      var swUrl = gh ? "/gh/gh-sw.js" : "/sw.js";
+      var scope = gh ? "/gh" : "/";
+      var reloading = false;
+      navigator.serviceWorker.addEventListener("controllerchange", function () {
+        if (reloading) return;
+        reloading = true;
+        location.reload();
+      });
+      navigator.serviceWorker.register(swUrl, { scope: scope, updateViaCache: "none" }).then(function (reg) {
+        function promptWaiting() {
+          if (reg.waiting) reg.waiting.postMessage({ type: "SKIP_WAITING" });
+        }
+        promptWaiting();
+        reg.addEventListener("updatefound", function () {
+          var worker = reg.installing;
+          if (!worker) return;
+          worker.addEventListener("statechange", function () {
+            if (worker.state === "installed" && navigator.serviceWorker.controller) promptWaiting();
+          });
         });
-      }
+        var check = function () { reg.update().catch(function () {}); };
+        document.addEventListener("visibilitychange", function () {
+          if (document.visibilityState === "visible") check();
+        });
+        window.addEventListener("focus", check);
+        window.addEventListener("pageshow", check);
+        setInterval(check, 5 * 60 * 1000);
+        check();
+      }).catch(function () {
+        if (!gh) navigator.serviceWorker.register("/rent-sw.js", { scope: "/", updateViaCache: "none" });
+      });
     })();
   </script>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="/rent.css" />
+  <link rel="stylesheet" href="/rent.css?v=fie-buy" />
 </head>
 <body>
   <div class="elite-app">
@@ -60,7 +92,14 @@
           <div class="hero-suggestions">
             <button type="button" class="pill" data-msg="Show me penthouses for rent in Dubai Marina">Marina Penthouses</button>
             <button type="button" class="pill" data-msg="I'm looking for a villa to rent in JVC, 3 bed">JVC Villas</button>
+            <button type="button" class="pill gh-only hidden" id="gh-pay-monthly-pill" hidden data-msg="I can't pay 2 years rent advance. Which companies pay the landlord and let me pay monthly?">Pay rent monthly</button>
+            <button type="button" class="pill gh-only hidden" id="gh-twi-pill" hidden data-msg="Kasa Twi. Mepɛ self-contain wɔ East Legon.">Kasa Twi</button>
           </div>
+          <button type="button" class="gold-btn list-property-cta gh-only hidden" id="list-property-btn" hidden>
+            List your property
+          </button>
+          <a class="gold-btn wa-chat-cta gh-only hidden" id="gh-whatsapp-btn" hidden href="#" target="_blank" rel="noopener noreferrer">Chat on WhatsApp</a>
+          <p class="muted list-property-hint gh-only hidden" hidden>Landlords and agents can add a rent or sale listing here.</p>
         </div>
 
         <div class="quick-actions" id="quick-actions">
@@ -119,6 +158,7 @@
             <input id="profile-name" type="text" placeholder="Abdullah" autocomplete="name" />
           </label>
           <button type="button" class="gold-btn" id="save-profile">Save</button>
+          <button type="button" class="gold-btn list-property-profile gh-only hidden" id="list-property-profile-btn" hidden>List a property</button>
           <div id="pwa-install-profile-card" class="pwa-profile-card hidden" hidden>
             <p class="pwa-profile-title">Install the app</p>
             <p class="muted">Use Dar Concierge like a native app — home screen icon, offline shell, no browser chrome.</p>
@@ -230,6 +270,9 @@
       <button type="button" class="side-menu-link" data-menu-tab="profile">
         <span>👤</span> Profile
       </button>
+      <button type="button" class="side-menu-link gh-only hidden" id="list-property-menu-btn" hidden>
+        <span>🏠</span> List your property
+      </button>
       <button type="button" class="side-menu-link hidden" id="pwa-install-menu-btn" hidden>
         <span>⬇</span> Install now
       </button>
@@ -250,6 +293,64 @@
       <button type="button" class="side-menu-muted" id="clear-sessions-btn">Clear chat history</button>
     </div>
   </aside>
+
+  <dialog id="owner-listing-dialog" class="lead-dialog owner-listing-dialog">
+    <form id="owner-listing-form">
+      <h2>List your property</h2>
+      <p class="muted">Landlords and agents can add a rent or sale listing. It shows on FIE AI for buyers and renters.</p>
+      <label>You are
+        <select name="role">
+          <option value="landlord">Landlord / owner</option>
+          <option value="agent">Listing agent</option>
+        </select>
+      </label>
+      <label>Your name<input name="name" required placeholder="Your name" autocomplete="name" /></label>
+      <label>Ghana phone<input name="phone" required placeholder="024 xxx xxxx" inputmode="tel" autocomplete="tel" /></label>
+      <label>Agency (optional)<input name="agency_name" placeholder="Agency name" /></label>
+      <label>Listing type
+        <select name="transaction_type" required>
+          <option value="rent">For rent</option>
+          <option value="sale">For sale</option>
+        </select>
+      </label>
+      <label>Property type
+        <select name="property_type" required>
+          <option value="apartment">Apartment</option>
+          <option value="house">House</option>
+          <option value="self-contain">Self-contain</option>
+          <option value="chamber-and-hall">Chamber and hall</option>
+          <option value="compound">Compound house</option>
+          <option value="single-room">Single room</option>
+          <option value="studio">Studio</option>
+          <option value="villa">Villa</option>
+          <option value="townhouse">Townhouse</option>
+        </select>
+      </label>
+      <label>City
+        <select name="city" id="owner-listing-city" required>
+          <option value="Accra">Accra</option>
+          <option value="Kumasi">Kumasi</option>
+          <option value="Tema">Tema</option>
+        </select>
+      </label>
+      <label>Area / neighbourhood<input name="area" required placeholder="East Legon" /></label>
+      <label>Bedrooms<input name="beds" type="number" min="0" max="20" value="1" required /></label>
+      <label>Bathrooms (optional)<input name="baths" type="number" min="0" max="20" /></label>
+      <label>Price (GH₵)<input name="price" type="number" min="1" step="1" required placeholder="1800" /></label>
+      <label>Description (optional)<textarea name="description" rows="3" placeholder="Tiled, prepaid meter, parking…"></textarea></label>
+      <label>Photos (optional)<input name="photos" type="file" accept="image/jpeg,image/png,image/webp" multiple /></label>
+      <label>Or photo URLs (optional)<textarea name="photo_urls" rows="2" placeholder="https://…"></textarea></label>
+      <label class="checkbox">
+        <input name="consent" type="checkbox" required />
+        I confirm I have the right to list this property on FIE AI
+      </label>
+      <p id="owner-listing-error" class="owner-listing-error hidden" hidden></p>
+      <div class="dialog-actions">
+        <button type="button" id="owner-listing-cancel">Cancel</button>
+        <button type="submit" id="owner-listing-submit" class="gold-btn inline">Publish listing</button>
+      </div>
+    </form>
+  </dialog>
 
   <dialog id="lead-dialog" class="lead-dialog">
     <form id="lead-form">
@@ -282,6 +383,6 @@
     </div>
   </dialog>
 
-  <script type="module" src="/rent.js"></script>
+  <script type="module" src="/rent.js?v=fie-buy"></script>
 </body>
 </html>

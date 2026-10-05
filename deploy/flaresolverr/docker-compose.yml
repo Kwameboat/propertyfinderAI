@@ -1,0 +1,22 @@
+# Cloudflare solver for Jiji Ghana (localhost only — Hub on the host calls :8191).
+#   docker compose -f deploy/flaresolverr/docker-compose.yml up -d
+#
+# Hub: FLARESOLVERR_URL=http://127.0.0.1:8191
+
+services:
+  flaresolverr:
+    container_name: jabhub_flaresolverr
+    image: ghcr.io/flaresolverr/flaresolverr:latest
+    restart: unless-stopped
+    environment:
+      LOG_LEVEL: info
+      TZ: Africa/Accra
+    ports:
+      - "127.0.0.1:8191:8191"
+    networks:
+      - jabhub-net
+
+networks:
+  jabhub-net:
+    external: true
+    name: jabhub-net

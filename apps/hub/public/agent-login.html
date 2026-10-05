@@ -25,7 +25,8 @@
       const fd = new FormData(e.target);
       const err = document.getElementById("login-error");
       err.hidden = true;
-      const res = await fetch("/api/agent/login", {
+      const base = window.__HUB_BASE || (location.pathname.indexOf("/gh") === 0 ? "/gh" : "");
+      const res = await fetch(base + "/api/agent/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ login: fd.get("login"), password: fd.get("password") })
@@ -36,7 +37,7 @@
         err.hidden = false;
         return;
       }
-      location.href = "/agent.html";
+      location.href = (window.__HUB_BASE || "") + "/agent.html";
     });
   </script>
 </body>

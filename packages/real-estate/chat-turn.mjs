@@ -15,6 +15,8 @@ import { extractCriteria } from "./qualification.mjs";
 import { inferEmirateFromCommunity } from "./emirate-scope.mjs";
 import { preferListingImages } from "./listing-images.mjs";
 import { userWantsListingCompare, extractCompareIndices } from "./listing-compare.mjs";
+import { isGhanaMarket } from "./market.mjs";
+import { userWantsGhanaRentFinance } from "./ghana-knowledge.mjs";
 
 const REFINE_SEARCH =
   /\b(?:cheaper|lower budget|less expensive|more affordable|under\s+\d|max\s+\d|budget\s+(?:of|is)|instead|rather|switch to|change to|what about|how about|try|show me|any in|only|just|furnished|unfurnished|with (?:a )?pool|pet(?:s)? allowed|sea view|marina view|closer to|near)\b/i;
@@ -56,7 +58,7 @@ const GREETING_ONLY =
   /^(?:hi|hello|hey|thanks|thank you|ok|okay|cool|great|got it|cheers|salam|marhaba|shukran|yes|no|sure)\b[\s!.]*$/i;
 
 const PURE_GREETING =
-  /^(?:hi|hello|hey|thanks|thank you|cheers|salam|marhaba|shukran)\b[\s!.]*$/i;
+  /^(?:hi|hello|hey|thanks|thank you|ok|okay|cool|great|got it|cheers|salam|marhaba|shukran|yes|no|sure|medaase|akpe|naa)\b[\s!.]*$/i;
 
 /** User is refining an active property search (new criteria → re-search). */
 export function userRefiningSearch(text = "", session = {}) {
@@ -103,6 +105,7 @@ export function classifyChatTurn(text = "", criteria = {}, session = {}) {
   const inbound = String(text || "").trim();
   const intent = classifyIntent(inbound, criteria);
   const wantsCompare = userWantsListingCompare(inbound);
+  const ghanaFinance = isGhanaMarket() && userWantsGhanaRentFinance(inbound);
 
   if (wantsCompare) {
     return {
@@ -115,7 +118,18 @@ export function classifyChatTurn(text = "", criteria = {}, session = {}) {
     };
   }
 
-  if (intentNeedsChart(intent, inbound)) {
+  if (ghanaFinance && !userExplicitlyAsksForListings(inbound) && !userRefiningSearch(inbound, session)) {
+    return {
+      turn: "process",
+      intent: "process",
+      shouldSearch: false,
+      shouldReuseRecent: false,
+      focusIndex: null,
+      answerMode: "rent_finance"
+    };
+  }
+
+  if (intentNeedsChart(intent, inbound) && !(isGhanaMarket() && ghanaFinance)) {
     return {
       turn: "market",
       intent,

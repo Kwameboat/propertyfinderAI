@@ -8,6 +8,7 @@ import { fetchN8nLiveSearch, isN8nLiveSearchEnabled } from "./n8n-live-search.mj
 import { enrichListingsWithImages, listingHasRealPhotos, preferListingImages } from "./listing-images.mjs";
 import { enrichListingsWithDetail, listingNeedsDetailEnrich } from "./listing-detail-enrich.mjs";
 import { ingestListingBatch, prepareListing } from "./ingest.mjs";
+import { upsertListing } from "../hub-db/real-estate.mjs";
 import { isSupabaseEnabled, batchSyncListingsToSupabaseWithReturn } from "./supabase.mjs";
 import {
   normalizeSearchCriteria,
@@ -21,6 +22,10 @@ import {
 } from "./listing-polish.mjs";
 import { getLivePullFromCache, setLivePullCache, isLiveCacheEnabled } from "./live-cache.mjs";
 import { filterShowableListings } from "./listing-verify-filter.mjs";
+import { isGhanaMarket } from "./market.mjs";
+import { pullGhanaListingsForChat } from "./ghana-search.mjs";
+import { runGhanaLiveSearch } from "./ghana-live-search.mjs";
+import { attachClusterMeta, groupListingsByCluster } from "./cluster.mjs";
 
 const MIN_RESULTS = 3;
 const PORTAL_HOST = /propertyfinder\.ae|bayut\.com|dubizzle\.com/i;
@@ -33,9 +38,43 @@ export function isVerifiedPortalListing(listing = {}) {
 function mergeByKey(existing = [], incoming = []) {
   const map = new Map(existing.map((l) => [`${l.source}:${l.external_id}`, l]));
   for (const row of incoming) {
-    map.set(`${row.source}:${row.external_id}`, row);
+    const key = `${row.source}:${row.external_id}`;
+    const prev = map.get(key);
+    if (prev) {
+      map.set(key, {
+        ...prev,
+        ...row,
+        images: preferListingImages(row.images, prev.images)
+      });
+    } else {
+      map.set(key, row);
+    }
   }
   return [...map.values()];
+}
+
+function persistGhanaListingGalleries(db, listings = []) {
+  if (!db) return;
+  for (const listing of listings) {
+    if (!listing?.source || !listing?.external_id) continue;
+    if (!Array.isArray(listing.images) || !listing.images.length) continue;
+    try {
+      upsertListing(db, {
+        ...listing,
+        images: listing.images,
+        images_json: JSON.stringify(listing.images)
+      });
+    } catch (error) {
+      console.error(
+        JSON.stringify({
+          at: new Date().toISOString(),
+          ghanaGalleryPersistError: error.message,
+          source: listing.source,
+          external_id: listing.external_id
+        })
+      );
+    }
+  }
 }
 
 async function finalizeListings(listings = [], criteria = {}, { limit = 8, ingestSource = "live_pull", scope } = {}) {
@@ -85,6 +124,52 @@ export async function pullLiveListingsForChat(db, criteria = {}, options = {}) {
 }
 
 async function pullLiveListingsForChatInner(db, criteria = {}, options = {}) {
+  if (isGhanaMarket()) {
+    const limit = options.limit || 8;
+    const store = await pullGhanaListingsForChat(db, criteria, { limit });
+    let listings = store.listings || [];
+    const sources = store.ok ? ["ghana_store"] : [];
+    const thin = listings.length < 3;
+    const wantsLive = thin || options.forcePortal || options.forceLive || Boolean(criteria.community);
+    if (wantsLive) {
+      try {
+        const live = await runGhanaLiveSearch(db, {
+          message: options.message || "",
+          criteria,
+          session: options.session || {},
+          limit
+        });
+        if (live.listings?.length) {
+          listings = mergeByKey(listings, live.listings);
+          sources.push(...(live.sources || ["gpc_live"]));
+        }
+      } catch (error) {
+        console.error(JSON.stringify({ at: new Date().toISOString(), ghanaLivePullError: error.message }));
+      }
+    }
+    const grouped = groupListingsByCluster(listings);
+    listings = grouped.map((g) => attachClusterMeta(g.listing, g.offers)).slice(0, limit);
+    if (listings.some((l) => listingNeedsDetailEnrich(l, { minImages: 4 }))) {
+      try {
+        listings = await enrichListingsWithDetail(listings, { minImages: 4, max: listings.length });
+        persistGhanaListingGalleries(db, listings);
+      } catch (error) {
+        console.error(JSON.stringify({ at: new Date().toISOString(), ghanaGalleryEnrichError: error.message }));
+      }
+    }
+    const loc = criteria.community || criteria.emirate || "Ghana";
+    const tx = criteria.transaction_type === "sale" ? "homes for sale" : criteria.transaction_type === "rent" ? "rentals" : "listings";
+    return {
+      ok: listings.length > 0,
+      listings,
+      sources,
+      searchMessage: sources.includes("gpc_live") || sources.includes("n8n")
+        ? `Live-searched Ghana ${tx} in ${loc}.`
+        : store.searchMessage || `Searched Ghana ${tx} in ${loc}.`,
+      searched: true,
+      fetchedAt: new Date().toISOString()
+    };
+  }
   const limit = options.limit || 8;
   const wantsPhotos = options.wantsPhotos !== false;
   const sources = [];

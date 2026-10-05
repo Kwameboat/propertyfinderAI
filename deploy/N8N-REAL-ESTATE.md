@@ -1,6 +1,11 @@
-# n8n — UAE Real Estate multi-source scrape
+# n8n — listing scrape → Supabase
 
-Scheduled ingest: **Bayut · Property Finder · Dubizzle · Emaar · Damac** → **Supabase** → Hub `/rent` chat reads Supabase only.
+**Live target is FIE AI Ghana** (`:3001`, workflows in `deploy/n8n/gh-*.json`).
+Dar Concierge UAE scrape workflows in `deploy/n8n/re-*.json` are **disabled**.
+
+Scheduled ingest: **Ghana Property Centre · Meqasa · Jiji** → **Supabase** → Hub `/gh` chat.
+
+Historical UAE notes below are kept for the disabled Dar Concierge workflows only.
 
 **Default: $0 mode** — HTML scrapers + Gemini RAG. See **`deploy/ZERO-COST-MODE.md`**.
 

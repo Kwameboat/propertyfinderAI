@@ -4,6 +4,7 @@
 
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
+import { voiceTranscriptionPrompt } from "./language.mjs";
 
 const STATE_DIR = path.join(process.env.USERPROFILE || process.env.HOME || "", ".openclaw", "jab-hub");
 const SESSION_PATH = path.join(STATE_DIR, "re-sessions.json");
@@ -92,8 +93,7 @@ export async function transcribeVoiceNote({ base64, mimetype = "audio/webm" } = 
           role: "user",
           parts: [
             {
-              text:
-                "Transcribe this voice note to plain text in the language spoken. Reply with ONLY the transcript — no labels, quotes, or preamble."
+              text: voiceTranscriptionPrompt()
             },
             { inlineData: { mimeType: mimetype || "audio/webm", data } }
           ]

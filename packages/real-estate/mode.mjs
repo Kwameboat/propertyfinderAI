@@ -3,6 +3,7 @@
  */
 
 import { isApifyConfigured, isApifyFreeMode, propertyFinderUsesApify, isApifyPrimaryPortal, ALL_UAE_EMIRATES } from "./apify-client.mjs";
+import { isGhanaMarket, GHANA_PORTALS } from "./market.mjs";
 
 export function isZeroCostMode() {
   const v = String(process.env.JAB_RE_ZERO_COST_MODE ?? "1").trim().toLowerCase();
@@ -10,11 +11,13 @@ export function isZeroCostMode() {
 }
 
 export const ZERO_COST_N8N_SOURCES = ["bayut", "propertyfinder", "dubizzle", "emaar", "damac"];
+export const GHANA_N8N_SOURCES = [...GHANA_PORTALS];
 
 export function getN8nIngestSources() {
-  if (isZeroCostMode()) return [...ZERO_COST_N8N_SOURCES];
   const raw = String(process.env.JAB_RE_N8N_SOURCES || "").trim();
   if (raw) return raw.split(",").map((s) => s.trim()).filter(Boolean);
+  if (isGhanaMarket()) return [...GHANA_N8N_SOURCES];
+  if (isZeroCostMode()) return [...ZERO_COST_N8N_SOURCES];
   return [...ZERO_COST_N8N_SOURCES];
 }
 
@@ -32,6 +35,7 @@ export function getScrapeDelayMs() {
 export function getScrapeEmirates() {
   const raw = String(process.env.JAB_RE_SCRAPE_EMIRATES || "").trim();
   if (raw) return raw.split(",").map((s) => s.trim()).filter(Boolean);
+  if (isGhanaMarket()) return ["Accra", "Kumasi", "Tema"];
   return isZeroCostMode() ? ["Dubai", "Abu Dhabi"] : ["Dubai", "Abu Dhabi", "Sharjah", "Ajman"];
 }
 

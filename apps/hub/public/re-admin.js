@@ -1,12 +1,21 @@
+const HUB_BASE = window.__HUB_BASE || (location.pathname === "/gh" || location.pathname.startsWith("/gh/") ? "/gh" : "");
+
+function hubPath(path) {
+  if (!path || path.startsWith("http") || path.startsWith("data:")) return path;
+  if (HUB_BASE && path.startsWith(`${HUB_BASE}/`)) return path;
+  if (path.startsWith("/")) return `${HUB_BASE}${path}`;
+  return path;
+}
+
 async function api(path, options = {}) {
-  const res = await fetch(path, {
+  const res = await fetch(hubPath(path), {
     credentials: "same-origin",
     headers: { "Content-Type": "application/json", ...(options.headers || {}) },
     ...options
   });
   const data = await res.json().catch(() => ({}));
   if (res.status === 401) {
-    location.href = "/login.html?next=" + encodeURIComponent(location.pathname);
+    location.href = hubPath("/login") + "?next=" + encodeURIComponent(location.pathname);
     throw new Error("Unauthorized");
   }
   if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
@@ -22,6 +31,9 @@ function fmtDate(v) {
 function fmtPrice(n, tx) {
   const p = Number(n);
   if (!Number.isFinite(p)) return "—";
+  if (marketCode === "GH") {
+    return tx === "sale" ? `GH₵ ${p.toLocaleString()}` : `GH₵ ${p.toLocaleString()}/mo`;
+  }
   return tx === "rent" ? `AED ${p.toLocaleString()}/yr` : `AED ${p.toLocaleString()}`;
 }
 
@@ -45,9 +57,13 @@ const VIEW_TITLES = {
   overview: "Overview",
   listings: "Listings",
   leads: "Leads",
+  viewings: "Viewings",
+  live: "Live search",
   ingest: "Ingest",
   scrapes: "Scrape runs"
 };
+
+let marketCode = "AE";
 
 const LEAD_STATUSES = [
   "new",
@@ -65,6 +81,13 @@ let dashboardCache = null;
 let listingsPage = 0;
 const LISTINGS_PAGE_SIZE = 24;
 let listingsSearchTimer = null;
+const liveListingCache = new Map();
+
+function rememberListings(listings = []) {
+  for (const l of listings) {
+    if (l?.id) liveListingCache.set(String(l.id), l);
+  }
+}
 
 function switchView(name) {
   document.querySelectorAll(".ld-nav-item").forEach((b) => {
@@ -79,6 +102,8 @@ function switchView(name) {
   if (name === "leads") loadLeads();
   if (name === "listings") loadListings();
   if (name === "scrapes") loadScrapes();
+  if (name === "viewings") loadViewings();
+  if (name === "live") document.getElementById("live-query")?.focus();
 }
 
 function listingFilters() {
@@ -129,14 +154,75 @@ function renderListingCard(l) {
   </article>`;
 }
 
+function ghanaLiveLabel(data) {
+  if (marketCode === "GH") {
+    return data.liveSearch?.n8n || data.n8nLiveSearch ? "ON" : "GPC";
+  }
+  return data.puppeteer?.enabled ? "ON" : "OFF";
+}
+
+function applyDashboardMarket(market, data) {
+  const ghana = market.code === "GH" || data.market === "GH";
+  document.body.classList.toggle("market-gh", ghana);
+  document.querySelectorAll(".ld-gh-only").forEach((el) => {
+    el.hidden = !ghana;
+  });
+  document.querySelectorAll(".ld-uae-only").forEach((el) => {
+    el.hidden = ghana;
+  });
+  if (!ghana) return;
+  document.title = "FIE AI — Listing Dashboard";
+  const logo = document.getElementById("dash-logo");
+  if (logo) {
+    logo.src = hubPath(market.logo || "/fie-ai-logo.webp");
+    logo.alt = "FIE AI";
+  }
+  const sub = document.querySelector(".ld-brand-sub");
+  if (sub) sub.textContent = "FIE AI listing dashboard";
+  const eye = document.getElementById("dash-eyebrow");
+  if (eye) eye.textContent = "FIE AI · Ghana";
+  const pfLabel = document.getElementById("kpi-pf-label");
+  if (pfLabel) pfLabel.textContent = "Ghana Property Centre";
+  document.getElementById("kpi-pf").textContent = data.sources?.ghanapropertycentre ?? "0";
+  const liveLabel = document.getElementById("kpi-live-label");
+  if (liveLabel) liveLabel.textContent = "Live search";
+  const ingestHelp = document.getElementById("ingest-help");
+  if (ingestHelp) {
+    ingestHelp.textContent = "Paste a Ghana Property Centre for-rent or for-sale search URL, or use Live search.";
+  }
+  const cityFilter = document.getElementById("listing-emirate-filter");
+  if (cityFilter?.options?.[0] && !cityFilter.options[0].value) {
+    cityFilter.options[0].textContent = "All cities";
+  }
+  const liveStatus = document.getElementById("live-status");
+  if (liveStatus) {
+    liveStatus.textContent = data.liveSearch?.n8n
+      ? "n8n + SearXNG is on. Live search also reads Ghana Property Centre rent and sale pages."
+      : "Live search reads Ghana Property Centre rent and sale pages. n8n webhook is not set.";
+  }
+}
+
 async function loadDashboard() {
+  let market = {};
+  try {
+    const cfg = await api("/api/rent/config");
+    market = cfg.market || {};
+    if (market.code) marketCode = market.code;
+  } catch {
+    /* keep AE */
+  }
   const data = await api("/api/admin/re/dashboard");
   dashboardCache = data;
+  if (data.market === "GH") marketCode = "GH";
+  applyDashboardMarket(market, data);
   document.getElementById("kpi-listings").textContent = data.listings ?? "0";
-  document.getElementById("kpi-pf").textContent = data.sources?.propertyfinder ?? "0";
+  const ghana = marketCode === "GH" || data.market === "GH";
+  document.getElementById("kpi-pf").textContent = ghana
+    ? (data.sources?.ghanapropertycentre ?? "0")
+    : (data.sources?.propertyfinder ?? "0");
   document.getElementById("kpi-leads").textContent = data.leads?.total ?? "0";
   document.getElementById("kpi-new-leads").textContent = data.leads?.byStatus?.new ?? "0";
-  document.getElementById("kpi-puppeteer").textContent = data.puppeteer?.enabled ? "ON" : "OFF";
+  document.getElementById("kpi-puppeteer").textContent = ghanaLiveLabel(data);
   document.getElementById("store-badge").textContent = data.store || "local";
 
   document.getElementById("sources-list").innerHTML = Object.entries(data.sources || {})
@@ -163,6 +249,7 @@ async function loadListings() {
   const data = await api(`/api/admin/re/listings?${listingQueryString()}`);
   const listings = data.listings || [];
   const total = data.total ?? listings.length;
+  rememberListings(listings);
 
   document.getElementById("listings-count").textContent =
     `${total.toLocaleString()} listing${total === 1 ? "" : "s"} · showing ${listings.length}`;
@@ -202,8 +289,18 @@ async function openListingDrawer(id) {
   body.innerHTML = '<p class="ld-muted">Loading…</p>';
   openDrawer("listing-drawer");
 
+  let l = null;
   try {
-    const { listing: l } = await api(`/api/admin/re/listings/${encodeURIComponent(id)}`);
+    l = (await api(`/api/admin/re/listings/${encodeURIComponent(id)}`)).listing;
+  } catch (e) {
+    l = liveListingCache.get(String(id)) || null;
+    if (!l) {
+      body.innerHTML = `<p class="ld-muted">${esc(e.message)}</p>`;
+      return;
+    }
+  }
+
+  try {
     document.getElementById("drawer-listing-title").textContent =
       l.community || l.building || "Listing";
 
@@ -216,7 +313,7 @@ async function openListingDrawer(id) {
 
     const rows = [
       ["Price", fmtPrice(l.price_aed, l.transaction_type)],
-      ["Emirate", l.emirate || "—"],
+      [marketCode === "GH" ? "City" : "Emirate", l.emirate || "—"],
       ["Community", l.community || "—"],
       ["Building", l.building || "—"],
       ["Beds", l.beds === 0 ? "Studio" : l.beds ?? "—"],
@@ -355,6 +452,47 @@ async function loadLeads() {
   });
 }
 
+async function loadViewings() {
+  const status = document.getElementById("viewing-status-filter")?.value || "";
+  const q = status ? `?status=${encodeURIComponent(status)}` : "";
+  const [viewingData, dealData] = await Promise.all([
+    api(`/api/admin/re/viewings${q}`),
+    api("/api/admin/re/deals")
+  ]);
+
+  document.getElementById("viewings-table").innerHTML = renderTable(
+    ["Renter", "Phone", "Status", "Agent MoMo", "Paid", "Redeemed", "ID"],
+    (viewingData.viewings || []).map((v) => [
+      esc(v.renter_name || "—"),
+      esc(v.renter_phone || ""),
+      `<span class="ld-status-pill">${esc(v.status)}</span>`,
+      esc(v.agent_momo || "—"),
+      fmtDate(v.paid_at),
+      fmtDate(v.redeemed_at),
+      `<button type="button" class="ld-link-row viewing-id-btn" data-viewing-id="${esc(v.id)}">${esc(String(v.id).slice(0, 8))}…</button>`
+    ])
+  );
+
+  document.querySelectorAll(".viewing-id-btn").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const input = document.getElementById("deal-viewing-id");
+      if (input) input.value = btn.dataset.viewingId;
+    });
+  });
+
+  document.getElementById("deals-table").innerHTML = renderTable(
+    ["Viewing", "Agreed GHS", "Commission", "Platform", "Agent", "Status"],
+    (dealData.deals || []).map((d) => [
+      esc(String(d.viewing_id || "").slice(0, 8)),
+      String(d.agreed_amount_ghs ?? ""),
+      String(d.commission_ghs ?? ""),
+      String(d.platform_share_ghs ?? ""),
+      String(d.agent_share_ghs ?? ""),
+      esc(d.status || "")
+    ])
+  );
+}
+
 async function loadScrapes() {
   const data = await api("/api/admin/re/scrape-runs?limit=25");
   document.getElementById("scrapes-table").innerHTML = renderTable(
@@ -379,16 +517,92 @@ document.getElementById("refresh-btn").addEventListener("click", async () => {
   if (active === "leads") await loadLeads();
   if (active === "listings") await loadListings();
   if (active === "scrapes") await loadScrapes();
+  if (active === "viewings") await loadViewings();
 });
 
 document.getElementById("logout-btn").addEventListener("click", async () => {
-  await fetch("/api/logout", { method: "POST", credentials: "same-origin" });
-  location.href = "/login.html";
+  await fetch(hubPath("/api/logout"), { method: "POST", credentials: "same-origin" });
+  location.href = hubPath("/login");
 });
 
 document.getElementById("close-listing-drawer").addEventListener("click", closeDrawers);
 document.getElementById("close-lead-drawer").addEventListener("click", closeDrawers);
 document.getElementById("drawer-backdrop").addEventListener("click", closeDrawers);
+
+document.getElementById("btn-live-search")?.addEventListener("click", () => switchView("live"));
+
+document.getElementById("btn-ghana-scrape")?.addEventListener("click", async () => {
+  const el = document.getElementById("action-msg");
+  el.textContent = "Scraping Ghana Property Centre rent and sale pages…";
+  try {
+    const data = await api("/api/admin/re/ingest/ghana", {
+      method: "POST",
+      body: JSON.stringify({ source: "ghanapropertycentre", types: ["rent", "sale"], maxPages: 2 })
+    });
+    el.textContent = `Ghana scrape — found ${data.found ?? 0}, saved ${data.upserted ?? 0}.`;
+    await loadDashboard();
+  } catch (e) {
+    el.textContent = e.message;
+  }
+});
+
+document.getElementById("btn-jiji-scrape")?.addEventListener("click", async () => {
+  const el = document.getElementById("action-msg");
+  el.textContent = "Scraping Jiji Ghana (Cloudflare bypass, 1–3 min)…";
+  try {
+    const data = await api("/api/admin/re/ingest/ghana", {
+      method: "POST",
+      body: JSON.stringify({ source: "jiji", types: ["rent", "sale"], maxPages: 3 })
+    });
+    el.textContent = `Jiji — found ${data.found ?? 0}, saved ${data.upserted ?? 0}${data.errors?.length ? `. ${data.errors[0]}` : "."}`;
+    await loadDashboard();
+  } catch (e) {
+    el.textContent = e.message;
+  }
+});
+
+document.getElementById("live-search-form")?.addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const msg = document.getElementById("live-msg");
+  const grid = document.getElementById("live-results");
+  const query = document.getElementById("live-query").value.trim();
+  const city = document.getElementById("live-city").value;
+  const tx = document.getElementById("live-tx").value;
+  msg.textContent = "Searching Ghana Property Centre now…";
+  grid.innerHTML = '<p class="ld-muted">Pulling priced listings…</p>';
+  try {
+    const data = await api("/api/admin/re/live-search", {
+      method: "POST",
+      body: JSON.stringify({
+        query,
+        message: query,
+        city,
+        emirate: city,
+        transaction_type: tx,
+        purpose: tx,
+        limit: 12
+      })
+    });
+    const listings = data.listings || [];
+    rememberListings(listings);
+    const via = (data.sources || []).filter(Boolean).join(", ") || "Ghana Property Centre";
+    msg.textContent = listings.length
+      ? `Found ${listings.length} priced listing${listings.length === 1 ? "" : "s"} via ${via}${data.upserted ? ` · saved ${data.upserted}` : ""}.`
+      : data.error || "No priced listings found. Try another area.";
+    if (!listings.length) {
+      grid.innerHTML = '<p class="ld-muted">No live results. Try East Legon, Osu, or Spintex — or scrape Ghana portals from Overview.</p>';
+    } else {
+      grid.innerHTML = listings.map(renderListingCard).join("");
+      grid.querySelectorAll(".ld-card-item").forEach((el) => {
+        el.addEventListener("click", () => openListingDrawer(el.dataset.listingId));
+      });
+    }
+    await loadDashboard();
+  } catch (err) {
+    msg.textContent = err.message;
+    grid.innerHTML = "";
+  }
+});
 
 document.getElementById("btn-puppeteer").addEventListener("click", async () => {
   const el = document.getElementById("action-msg");
@@ -470,6 +684,29 @@ document.getElementById("listings-next").addEventListener("click", () => {
 
 document.getElementById("lead-status-filter").addEventListener("change", () => {
   loadLeads().catch(console.error);
+});
+
+document.getElementById("viewing-status-filter")?.addEventListener("change", () => {
+  loadViewings().catch(console.error);
+});
+
+document.getElementById("deal-form")?.addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const msg = document.getElementById("deal-msg");
+  msg.textContent = "Saving…";
+  try {
+    const data = await api("/api/admin/re/deals", {
+      method: "POST",
+      body: JSON.stringify({
+        viewingId: document.getElementById("deal-viewing-id").value.trim(),
+        agreedAmountGhs: Number(document.getElementById("deal-amount").value)
+      })
+    });
+    msg.textContent = `Deal recorded. Commission GH₵${data.deal.commission_ghs} (platform ${data.deal.platform_share_ghs} / agent ${data.deal.agent_share_ghs}).`;
+    await loadViewings();
+  } catch (err) {
+    msg.textContent = err.message;
+  }
 });
 
 async function runPull(dryRun) {

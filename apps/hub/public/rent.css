@@ -100,6 +100,81 @@ html, body {
   margin: 0 auto;
 }
 
+.market-gh .brand-logo--header {
+  height: 36px;
+  max-width: min(120px, 42vw);
+  object-fit: contain;
+  object-position: center;
+}
+
+.market-gh .brand-logo--hero {
+  width: auto;
+  height: auto;
+  max-width: 72px;
+  max-height: 88px;
+  margin: 0 auto 8px;
+  border-radius: 12px;
+  object-fit: contain;
+  object-position: center;
+  filter: drop-shadow(0 4px 12px rgba(0, 0, 0, 0.4));
+}
+
+.market-gh .hero-card {
+  margin: 12px 16px 8px;
+  padding: 14px 16px 12px;
+}
+
+.market-gh .hero-powered {
+  margin: 0 0 8px;
+}
+
+.market-gh .hero-greeting {
+  font-size: 1.05rem;
+  margin: 0 0 12px;
+}
+
+.market-gh .list-property-cta {
+  margin-top: 12px;
+  width: 100%;
+}
+
+.market-gh .wa-chat-cta {
+  margin-top: 8px;
+  width: 100%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
+  box-sizing: border-box;
+}
+
+.market-gh .wa-chat-cta.hidden {
+  display: none;
+}
+
+.market-gh .list-property-hint {
+  margin: 8px 0 0;
+  font-size: 0.75rem;
+}
+
+.market-gh .list-property-profile {
+  margin-top: 12px;
+}
+
+.market-gh .brand-logo--menu {
+  max-width: 96px;
+  max-height: 120px;
+  border-radius: 12px;
+}
+
+@media (max-height: 720px) {
+  .market-gh .brand-logo--hero {
+    max-width: 56px;
+    max-height: 64px;
+    margin-bottom: 6px;
+  }
+}
+
 .brand-logo--chat {
   height: 28px;
   width: 28px;
@@ -422,6 +497,52 @@ html, body {
 
 .search-status-icon {
   flex-shrink: 0;
+}
+
+.partner-cards {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  align-self: stretch;
+}
+
+.partner-card {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 12px 14px;
+  border-radius: var(--radius);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  color: inherit;
+  text-decoration: none;
+}
+
+.partner-card:hover {
+  border-color: var(--gold);
+}
+
+.partner-card strong {
+  font-size: 0.88rem;
+}
+
+.partner-kind {
+  font-size: 0.68rem;
+  color: var(--muted);
+  letter-spacing: 0.02em;
+}
+
+.partner-summary {
+  font-size: 0.8rem;
+  line-height: 1.4;
+  color: var(--text);
+}
+
+.partner-link {
+  font-size: 0.72rem;
+  color: var(--gold);
+  font-weight: 600;
+  margin-top: 2px;
 }
 
 /* Inline chat listing cards — lives inside .chat-thread */
@@ -758,6 +879,7 @@ html, body {
   min-height: 120px;
   object-fit: cover;
   border-radius: 0;
+  filter: contrast(1.08) saturate(1.1);
 }
 
 .photo-more {
@@ -792,6 +914,12 @@ html, body {
   line-height: 1.45;
   color: var(--text);
   opacity: 0.92;
+}
+
+.cluster-note {
+  margin: 8px 0 0;
+  font-size: 0.78rem;
+  color: var(--gold, #c9a227);
 }
 
 .photo-view-btn {
@@ -1294,7 +1422,11 @@ dialog label {
 }
 
 dialog input[type="text"],
-dialog input[type="tel"] {
+dialog input[type="tel"],
+dialog input[type="number"],
+dialog input[type="file"],
+dialog select,
+dialog textarea {
   display: block;
   width: 100%;
   margin-top: 4px;
@@ -1304,6 +1436,22 @@ dialog input[type="tel"] {
   background: var(--bg);
   color: var(--text);
   font: inherit;
+}
+
+dialog textarea {
+  min-height: 72px;
+  resize: vertical;
+}
+
+.owner-listing-dialog {
+  max-height: min(90dvh, 720px);
+  overflow: auto;
+}
+
+.owner-listing-error {
+  margin-top: 12px;
+  color: #f87171;
+  font-size: 0.82rem;
 }
 
 dialog .checkbox {
@@ -1387,6 +1535,7 @@ dialog .checkbox {
   width: 100%;
   height: min(52vw, 280px);
   object-fit: cover;
+  filter: contrast(1.08) saturate(1.1);
 }
 
 .gallery-main-wrap { position: relative; }
@@ -1449,7 +1598,7 @@ dialog .checkbox {
 
 .gallery-thumb.active { border-color: var(--gold); }
 
-.gallery-thumb img { width: 100%; height: 100%; object-fit: cover; }
+.gallery-thumb img { width: 100%; height: 100%; object-fit: cover; filter: contrast(1.08) saturate(1.1); }
 
 .gallery-toggle {
   display: block;
@@ -1479,7 +1628,7 @@ dialog .checkbox {
   cursor: pointer;
 }
 
-.gallery-grid-item img { width: 100%; height: 100%; object-fit: cover; }
+.gallery-grid-item img { width: 100%; height: 100%; object-fit: cover; filter: contrast(1.08) saturate(1.1); }
 
 .listing-body { padding: 16px; }
 

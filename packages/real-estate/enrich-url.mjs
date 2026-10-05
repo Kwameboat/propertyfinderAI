@@ -58,6 +58,22 @@ async function syncEnrichedListing(listing = {}) {
 export async function runEnrichPortalUrl(url, options = {}) {
   const partial = options.partial || options.listing || {};
   const result = await enrichListingFromPortalUrl(url, partial);
+
+  if (Array.isArray(result.listings) && result.listings.length) {
+    const rows = result.listings.filter((l) => Number(l.price_aed) > 0);
+    result.ok = rows.length > 0;
+    result.listing = rows[0] || null;
+    result.listings = rows;
+    result.count = rows.length;
+    if (options.sync && rows.length) {
+      for (const row of rows.slice(0, 24)) {
+        await syncEnrichedListing(row);
+      }
+      result.synced = true;
+    }
+    return result;
+  }
+
   const images = filterValidPortalImages(result.listing?.images || []);
   result.listing = result.listing ? { ...result.listing, images } : null;
   result.ok = Boolean(result.ok && images.length);

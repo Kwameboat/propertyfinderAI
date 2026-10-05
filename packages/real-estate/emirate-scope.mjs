@@ -2,6 +2,8 @@
  * Strict emirate scoping — one emirate per search unless user explicitly asks for several.
  */
 
+import { isGhanaMarket, GHANA_CITIES, GHANA_AREAS } from "./market.mjs";
+
 const EMIRATE_ALIASES = [
   ["abu dhabi", "Abu Dhabi"],
   ["abudhabi", "Abu Dhabi"],
@@ -63,6 +65,58 @@ const MULTI_EMIRATE_RE =
 
 function aliasPattern(alias) {
   return alias.replace(/\s+/g, "\\s+");
+}
+
+export function extractGhanaCitiesFromText(text = "") {
+  const lower = String(text || "").toLowerCase();
+  const found = [];
+  for (const city of GHANA_CITIES) {
+    const re = new RegExp(`\\b${city.replace(/\s+/g, "\\s+")}\\b`, "i");
+    if (re.test(lower)) found.push(city);
+  }
+  return found;
+}
+
+export function extractGhanaAreaFromText(text = "") {
+  const lower = String(text || "").toLowerCase();
+  for (const [city, areas] of Object.entries(GHANA_AREAS)) {
+    for (const area of areas) {
+      const escaped = area.replace(/[.*+?^${}()|[\]\\]/g, "\\$&").replace(/\s+/g, "\\s+");
+      if (new RegExp(`\\b${escaped}\\b`, "i").test(lower)) {
+        return { city, area };
+      }
+    }
+  }
+  return null;
+}
+
+function resolveGhanaScope(criteria = {}, { currentMessage = "", session = {} } = {}) {
+  const areaFromCurrent = extractGhanaAreaFromText(currentMessage);
+  if (areaFromCurrent) return { emirate: areaFromCurrent.city, emirates: undefined };
+
+  const citiesFromCurrent = extractGhanaCitiesFromText(currentMessage);
+  if (citiesFromCurrent[0]) return { emirate: citiesFromCurrent[0], emirates: undefined };
+
+  const userMsgs = (session.messages || [])
+    .filter((m) => m.role === "user")
+    .map((m) => String(m.body || ""))
+    .reverse();
+  for (const body of userMsgs) {
+    const area = extractGhanaAreaFromText(body);
+    if (area) return { emirate: area.city, emirates: undefined };
+    const cities = extractGhanaCitiesFromText(body);
+    if (cities[0]) return { emirate: cities[0], emirates: undefined };
+  }
+
+  const city = String(criteria.emirate || "").trim();
+  if (city) {
+    const known = GHANA_CITIES.find((c) => c.toLowerCase() === city.toLowerCase());
+    if (known) return { emirate: known, emirates: undefined };
+    if (!/^(dubai|abu dhabi|sharjah|ajman|ras al khaimah|fujairah|umm al quwain)$/i.test(city)) {
+      return { emirate: city, emirates: undefined };
+    }
+  }
+  return { emirate: "", emirates: undefined };
 }
 
 /** Word-boundary emirate detection (avoids matching "dubai" inside "abu dhabi"). */
@@ -152,6 +206,8 @@ function resolveFromDetectedList(detected = [], wantsMulti = false) {
  * Priority: current message → session history → community → stored criteria → Dubai default.
  */
 export function resolveEmirateScope(criteria = {}, { currentMessage = "", session = {} } = {}) {
+  if (isGhanaMarket()) return resolveGhanaScope(criteria, { currentMessage, session });
+
   const wantsMulti =
     userWantsMultipleEmirates(currentMessage) ||
     userWantsMultipleEmirates((session.messages || []).map((m) => m.body).join(" "));

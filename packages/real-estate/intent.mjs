@@ -1,10 +1,11 @@
 /**
 
- * Lightweight intent classification for UAE real estate concierge chat.
+ * Lightweight intent classification for UAE / Ghana real estate concierge chat.
 
  */
 
-
+import { isGhanaMarket } from "./market.mjs";
+import { userWantsGhanaRentFinance } from "./ghana-knowledge.mjs";
 
 const INTENTS = [
 
@@ -74,13 +75,13 @@ export function userAskingAboutProperty(text = "") {
 
   const lower = String(text || "").toLowerCase();
 
-  if (/trend|market|average rent|how much is rent|how much does|investment yield|cap rate|compare areas|calculator|checklist|ejari|dewa|news|regulation/.test(lower)) {
+  if (/trend|market|average rent|how much is rent|how much does|usually cost|typical rent|investment yield|cap rate|compare areas|calculator|checklist|ejari|dewa|news|regulation|nras|rent advance|pay rent monthly/.test(lower)) {
 
     return false;
 
   }
 
-  return /apartment|apartments|flat|flats|villa|villas|townhouse|penthouse|penthouses|studio|studios|duplex|property|properties|home|homes|condo|unit|units|bedroom|bedrooms|\d\s*(?:bhk|br|bed)|for rent|to rent|for sale|to buy|place to live|housing|accommodation|listing|listings/.test(
+  return /apartment|apartments|flat|flats|villa|villas|townhouse|penthouse|penthouses|studio|studios|duplex|property|properties|home|homes|condo|unit|units|bedroom|bedrooms|self-?contain|chamber\s*(and|&)\s*hall|compound house|single room|\d\s*(?:bhk|br|bed)|for rent|to rent|for sale|to buy|place to live|housing|accommodation|listing|listings/.test(
 
     lower
 
@@ -163,12 +164,18 @@ export function classifyIntent(text = "", criteria = {}) {
 
   const lower = String(text || "").toLowerCase();
 
-
+  if (isGhanaMarket() && userWantsGhanaRentFinance(lower)) {
+    return "process";
+  }
 
   if (/connect|contact agent|speak to agent|call the agent|whatsapp the agent/.test(lower)) {
 
     return "connect_agent";
 
+  }
+
+  if (isGhanaMarket() && /rent control|ecg|ghana water|viewing fee|how (?:does|do) (?:the )?pin|lands commission/.test(lower)) {
+    return /ecg|ghana water/.test(lower) ? "move_in" : "process";
   }
 
   if (/news|headline|latest|announcement|regulation|rera update|dld/.test(lower)) {
@@ -177,7 +184,7 @@ export function classifyIntent(text = "", criteria = {}) {
 
   }
 
-  if (/trend|market|average rent|prices (?:in|for)|good time to buy|investment|yield|cap rate|rents (?:in|are)|how much (?:is|does)|numbers|real data|statistics|data on/.test(lower)) {
+  if (/trend|market|average rent|typical rent|usually cost|rent like|prices (?:in|for)|good time to buy|investment|yield|cap rate|rents (?:in|are)|how much (?:is|does)|numbers|real data|statistics|data on/.test(lower)) {
     return "market";
   }
 
@@ -187,7 +194,7 @@ export function classifyIntent(text = "", criteria = {}) {
 
   }
 
-  if (/how (?:to|do)|steps|process|expat|mortgage|freehold|leasehold|dld fee|commission|visa|golden visa/.test(lower)) {
+  if (/how (?:to|do)|steps|process|expat|mortgage|freehold|leasehold|dld fee|commission|visa|golden visa|tenancy agreement|rent card/.test(lower)) {
 
     return "process";
 
@@ -210,7 +217,16 @@ export function classifyIntent(text = "", criteria = {}) {
     }
   }
 
-  if (/ejari|rera|tenancy|deposit|notice period|service charge|broker fee/.test(lower)) {
+  if (
+    isGhanaMarket() &&
+    /self-?contain|chamber\s*(and|&)\s*hall|compound|apartment|house|\bdan\b|\bofie\b|\baƒe\b/.test(lower) &&
+    /east legon|osu|spintex|accra|kumasi|tema|adenta|labone|cantonments|mepɛ|me pɛ|hwehwɛ|me le |i dey find|i dey look/.test(lower)
+  ) {
+    if (/buy|purchase|for sale/.test(lower)) return "search_buy";
+    return "search_rent";
+  }
+
+  if (/ejari|rera|tenancy|deposit|notice period|service charge|broker fee|self-?contain|chamber\s*(and|&)\s*hall|compound house/.test(lower) && !userExplicitlyAsksForListings(lower)) {
 
     return "faq";
 

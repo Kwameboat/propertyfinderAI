@@ -1,0 +1,20 @@
+[Unit]
+Description=FIE AI Ghana portal listings scrape (one-shot)
+After=network-online.target keyfinder-ghana.service
+
+[Service]
+Type=oneshot
+User=jabhub
+Group=jabhub
+WorkingDirectory=/opt/keyfinder-ghana
+EnvironmentFile=/opt/keyfinder-ghana/.env
+Environment=HOME=/home/jabhub
+Environment=NODE_ENV=production
+Environment=JAB_RE_MARKET=GH
+ExecStart=/usr/bin/node /opt/keyfinder-ghana/scripts/scrape-ghana-listings.mjs --sources=meqasa,jiji,ghanapropertycentre
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=fie-gh-scrape
+
+[Install]
+WantedBy=multi-user.target

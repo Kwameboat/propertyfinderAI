@@ -2,10 +2,10 @@
  * Fetch property listing images from portal pages (Jina Reader + URL patterns).
  */
 
-const CDN_HINTS = /images\.bayut|propertyfinder|dubizzle|cloudinary|akamai|amazonaws/i;
+const CDN_HINTS = /images\.bayut|propertyfinder|dubizzle|cloudinary|akamai|amazonaws|ghanapropertycentre|meqasa|jiji/i;
 const LISTING_IMAGE = /\/listing\/|images\.bayut\.com\/|media\/images\/listing|\/photos?\//i;
 const JUNK_IMAGE =
-  /nav_header|mf-logo|serp-hero|placeholder|banner\.webp|static\/nav|growth\.propertyfinder|\.svg(?:\?|$)|favicon|apple-touch|1x1|sprite|avatar|logo|unsplash|pexels|pixabay|shutterstock|gettyimages|stock-photo|placeholder\.com|via\.placeholder/i;
+  /nav_header|mf-logo|serp-hero|placeholder|banner\.webp|static\/nav|growth\.propertyfinder|\.svg(?:\?|$)|favicon|apple-touch|1x1|sprite|avatar|logo|unsplash|pexels|pixabay|shutterstock|gettyimages|stock-photo|placeholder\.com|via\.placeholder|\/properties\/branded\/|\/properties\/profiles\//i;
 
 export function extractImagesFromText(text = "") {
   const src = String(text || "");
@@ -19,7 +19,8 @@ export function extractImagesFromText(text = "") {
     /(https?:\/\/static\.shared\.propertyfinder\.ae\/[^\s"'<>]+)/gi,
     /(https?:\/\/www\.propertyfinder\.ae\/property\/[^\s"'<>]+)/gi,
     /(https?:\/\/[^\s"'<>]*propertyfinder[^\s"'<>]*(?:\/images\/|\/property\/|photo|media\/images\/listing)[^\s"'<>]*)/gi,
-    /(https?:\/\/[^\s"'<>]*dubizzle[^\s"'<>]*(?:\.jpg|\.jpeg|\.png|\.webp|listing)[^\s"'<>]*)/gi
+    /(https?:\/\/[^\s"'<>]*dubizzle[^\s"'<>]*(?:\.jpg|\.jpeg|\.png|\.webp|listing)[^\s"'<>]*)/gi,
+    /(https?:\/\/images\.ghanapropertycentre\.com\/properties\/images\/\d+\/[^\s"'<>]+)/gi
   ];
 
   for (const re of patterns) {
@@ -33,9 +34,9 @@ export function extractImagesFromText(text = "") {
 }
 
 const PORTAL_HOST =
-  /(?:^|\.)(?:bayut\.com|bayutcdn\.com|propertyfinder\.ae|propertyfinder\.com|dubizzle\.com|dubizzle\.ae)$/i;
+  /(?:^|\.)(?:bayut\.com|bayutcdn\.com|propertyfinder\.ae|propertyfinder\.com|dubizzle\.com|dubizzle\.ae|ghanapropertycentre\.com|meqasa\.com|jiji\.com\.gh|tonaton\.com)$/i;
 const PORTAL_LISTING_CDN =
-  /images\.bayut\.com|bayutcdn|static\.shared\.propertyfinder|static\.propertyfinder|propertyfinder\.ae\/(?:property|images|photos?|picture)|media\.images\.listing|\/listing\/|dubizzle\.(?:com|ae).*\/(?:photos?|images?|pictures?)/i;
+  /images\.bayut\.com|bayutcdn|static\.shared\.propertyfinder|static\.propertyfinder|propertyfinder\.ae\/(?:property|images|photos?|picture)|media\.images\.listing|\/listing\/|dubizzle\.(?:com|ae).*\/(?:photos?|images?|pictures?)|images\.ghanapropertycentre\.com|dve7rykno93gs\.cloudfront\.net|img\.jiji|jijistatic/i;
 
 export function isValidListingImage(url = "") {
   const u = String(url).trim();
@@ -81,7 +82,7 @@ export function preferListingImages(primary = [], fallback = []) {
 
 export async function fetchListingImages(sourceUrl = "", { markdown = "" } = {}) {
   let images = extractImagesFromText(markdown);
-  if (images.length >= 2) return images;
+  if (images.length >= 8) return images.slice(0, 12);
 
   const url = String(sourceUrl || "").trim();
   if (!url) return images;
@@ -122,6 +123,18 @@ export async function enrichListingsWithImages(listings = [], { minImages = 1 } 
     out.push({ ...listing, images: merged });
   }
   return out;
+}
+
+export function isLocalGhanaMedia(url = "") {
+  const u = String(url).trim();
+  return (
+    /^\/gh-media\/[A-Za-z0-9._-]+\.(?:svg|png|jpe?g|webp)$/i.test(u) ||
+    /^\/uploads\/owner-listings\/[A-Za-z0-9/_-]+\.(?:png|jpe?g|webp)$/i.test(u)
+  );
+}
+
+export function isChatListingImage(url = "") {
+  return isLocalGhanaMedia(url) || isValidListingImage(url);
 }
 
 export function listingHasRealPhotos(listing = {}) {

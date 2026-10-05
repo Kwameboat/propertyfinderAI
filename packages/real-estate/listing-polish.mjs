@@ -6,6 +6,7 @@ import { prepareListing } from "./ingest.mjs";
 import { mapSupabaseListing } from "./supabase.mjs";
 import { isValidPortalListingImage, listingHasRealPhotos } from "./listing-images.mjs";
 import { inferEmirateFromListing } from "./emirate-scope.mjs";
+import { isGhanaMarket } from "./market.mjs";
 
 const PORTAL_HOST = /propertyfinder\.ae|bayut\.com|dubizzle\.com/i;
 
@@ -36,7 +37,7 @@ export function formatListingTitle(listing = {}, criteria = {}) {
   const beds = inferBedsFromListing(listing) ?? criteria.beds;
   const label = bedsDisplayLabel(beds, listing.property_type);
   const type = String(listing.property_type || "apartment").replace(/_/g, " ");
-  const loc = listing.community || listing.emirate || "UAE";
+  const loc = listing.community || listing.emirate || (isGhanaMarket() ? "Ghana" : "UAE");
   if (label) return `${label} ${type} · ${loc}`;
   return `${type.charAt(0).toUpperCase() + type.slice(1)} · ${loc}`;
 }
