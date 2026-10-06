@@ -8,16 +8,17 @@ import { getScrapeEmirates } from "./mode.mjs";
 import { runIngestScrape, runIngestStaleCleanup, ingestListingBatch } from "./ingest.mjs";
 import { isSupabaseEnabled } from "./supabase.mjs";
 import { clusterKey } from "./cluster.mjs";
+import { jijiFreeAccessAvailable } from "./scrapers/jiji-cookie.mjs";
 
 /**
- * Portals that work from Vercel without FlareSolverr/Puppeteer.
- * Ghana Property Centre is the primary live source; Meqasa is best-effort
- * (often JS-rendered / empty from datacenter IPs).
+ * Portals that work from Vercel without a browser solver.
+ * Ghana Property Centre is the primary live source; Meqasa is best-effort.
+ * Jiji is added when free cookie auth or FlareSolverr is configured.
  */
 export const VERCEL_SAFE_GHANA_SOURCES = ["ghanapropertycentre", "meqasa"];
 
 export function jijiScrapeAvailable() {
-  return Boolean(String(process.env.FLARESOLVERR_URL || "").trim());
+  return jijiFreeAccessAvailable();
 }
 
 export function ghanaIngestSources({ includeJiji = jijiScrapeAvailable() } = {}) {

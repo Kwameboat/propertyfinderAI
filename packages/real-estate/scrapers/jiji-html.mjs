@@ -1,6 +1,9 @@
 /**
  * Jiji Ghana (and Tonaton) listing scrape.
- * Direct HTTP is Cloudflare-blocked from datacenter IPs; FlareSolverr is the working path.
+ *
+ * Free access paths (datacenter IPs hit Cloudflare Managed Challenge):
+ *  1. Browser cookies — JIJI_COOKIE / JIJI_CF_CLEARANCE (+ JIJI_USER_AGENT)
+ *  2. FlareSolverr — FLARESOLVERR_URL (local Docker or GitHub Actions service)
  */
 
 import { fetchText, sleep } from "./http.mjs";
@@ -11,6 +14,7 @@ import {
   isFlareSolverrEnabled,
   jsonFromFlareHtml
 } from "./flaresolverr.mjs";
+import { isJijiCookieConfigured, jijiCookieHeader, jijiUserAgent } from "./jiji-cookie.mjs";
 
 const REGION_SLUG = {
   Accra: "greater-accra",
@@ -182,35 +186,70 @@ function adsFromPayload(data) {
   );
 }
 
+function looksLikeCfChallenge(text = "") {
+  return /just a moment|cf-browser-verification|challenge-platform|attention required/i.test(
+    String(text || "")
+  );
+}
+
 async function fetchJijiListingJson(url, session) {
+  // Prefer explicit free browser cookies (works on Vercel when fresh).
+  if (!session.cookie && isJijiCookieConfigured()) {
+    session.cookie = jijiCookieHeader();
+    session.userAgent = jijiUserAgent();
+    session.fromEnvCookie = true;
+  }
+
   if (session.cookie) {
     try {
       const text = await fetchText(url, {
         timeoutMs: 25000,
         headers: {
-          Accept: "application/json",
-          "User-Agent": session.userAgent || "Mozilla/5.0",
+          Accept: "application/json,text/plain,*/*",
+          "User-Agent": session.userAgent || jijiUserAgent(),
           Cookie: session.cookie,
-          Referer: "https://jiji.com.gh/"
+          Referer: "https://jiji.com.gh/",
+          "Accept-Language": "en-GH,en;q=0.9"
         }
       });
+      if (looksLikeCfChallenge(text)) {
+        throw new Error("Cloudflare challenge (cookie expired or UA mismatch)");
+      }
       return JSON.parse(text);
-    } catch {
-      session.cookie = "";
+    } catch (error) {
+      if (!session.fromEnvCookie) session.cookie = "";
+      else throw error;
     }
   }
 
-  if (isFlareSolverrEnabled()) {
+  // Only when FLARESOLVERR_URL is explicitly set (GitHub Actions / Contabo).
+  // Avoid the package default of localhost:8191 on Vercel cold starts.
+  const flareUrl = String(process.env.FLARESOLVERR_URL || "").trim();
+  const flareExplicit = flareUrl && !/^(0|off|false)$/i.test(flareUrl);
+  if (flareExplicit && isFlareSolverrEnabled()) {
     const solution = await flareSolverrGet(url, { timeoutMs: 60000 });
     session.userAgent = solution.userAgent || session.userAgent;
     session.cookie = cookieHeader(solution.cookies);
-    return jsonFromFlareHtml(solution.response);
+    const body = solution.response || "";
+    if (looksLikeCfChallenge(body) && !/adverts/i.test(body)) {
+      throw new Error("FlareSolverr still saw Cloudflare challenge");
+    }
+    return jsonFromFlareHtml(body);
   }
 
   const text = await fetchText(url, {
     timeoutMs: 20000,
-    headers: { Accept: "application/json", Referer: "https://jiji.com.gh/" }
+    headers: {
+      Accept: "application/json",
+      Referer: "https://jiji.com.gh/",
+      "User-Agent": jijiUserAgent()
+    }
   });
+  if (looksLikeCfChallenge(text)) {
+    throw new Error(
+      "Jiji Cloudflare blocked direct fetch — set JIJI_CF_CLEARANCE (+ JIJI_USER_AGENT) or FLARESOLVERR_URL"
+    );
+  }
   return JSON.parse(text);
 }
 

@@ -16,7 +16,10 @@ Vercel Cron (every 2h)
   → upsert into Supabase `listings`
 ```
 
-Jiji needs FlareSolverr, so it is **off by default** on Vercel. Enable with `FLARESOLVERR_URL` pointing at a reachable solver, or scrape Jiji from Contabo into the same Supabase project.
+**Jiji (free):** Cloudflare blocks bare Vercel fetch. Use either:
+
+1. Browser cookie — `JIJI_CF_CLEARANCE` + `JIJI_USER_AGENT` (see [JIJI.md](./JIJI.md))
+2. GitHub Actions + FlareSolverr — [`.github/workflows/fie-ghana-scrape.yml`](../../.github/workflows/fie-ghana-scrape.yml) (fully automatic, free)
 
 ## Supabase setup
 

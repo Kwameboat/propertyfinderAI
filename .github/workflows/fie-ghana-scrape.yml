@@ -1,0 +1,89 @@
+# Free Jiji (+ GPC) scrape → Supabase using FlareSolverr on GitHub Actions.
+# Secrets required: SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY
+# Optional: JIJI_CF_CLEARANCE, JIJI_USER_AGENT (skips FlareSolverr for Jiji)
+
+name: FIE Ghana scrape → Supabase
+
+on:
+  schedule:
+    # Every 6 hours
+    - cron: "15 */6 * * *"
+  workflow_dispatch:
+    inputs:
+      source:
+        description: "Portal (jiji | ghanapropertycentre | meqasa | all)"
+        required: false
+        default: "all"
+      city:
+        description: "City"
+        required: false
+        default: "Accra"
+      type:
+        description: "rent or sale"
+        required: false
+        default: "rent"
+
+jobs:
+  scrape:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    services:
+      flaresolverr:
+        image: ghcr.io/flaresolverr/flaresolverr:latest
+        ports:
+          - 8191:8191
+        options: >-
+          --health-cmd "curl -f http://127.0.0.1:8191/health || exit 1"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 12
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Wait for FlareSolverr
+        run: |
+          for i in $(seq 1 30); do
+            if curl -fsS http://127.0.0.1:8191/health; then
+              echo "FlareSolverr ready"
+              exit 0
+            fi
+            sleep 2
+          done
+          echo "FlareSolverr failed to become healthy" >&2
+          exit 1
+
+      - name: Scrape into Supabase
+        working-directory: apps/fie-ai
+        env:
+          JAB_RE_MARKET: GH
+          JAB_FIE_STANDALONE: "1"
+          JAB_RE_SCRAPE_DELAY_MS: "1200"
+          FLARESOLVERR_URL: http://127.0.0.1:8191
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          JIJI_CF_CLEARANCE: ${{ secrets.JIJI_CF_CLEARANCE }}
+          JIJI_USER_AGENT: ${{ secrets.JIJI_USER_AGENT }}
+          JIJI_COOKIE: ${{ secrets.JIJI_COOKIE }}
+        run: |
+          set -euo pipefail
+          if [ -z "${SUPABASE_URL:-}" ] || [ -z "${SUPABASE_SERVICE_ROLE_KEY:-}" ]; then
+            echo "Missing SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY secrets" >&2
+            exit 1
+          fi
+          SOURCE="${{ github.event.inputs.source || 'all' }}"
+          CITY="${{ github.event.inputs.city || 'Accra' }}"
+          TYPE="${{ github.event.inputs.type || 'rent' }}"
+          if [ "$SOURCE" = "all" ]; then
+            for src in ghanapropertycentre jiji meqasa; do
+              echo "::group::scrape $src $CITY $TYPE"
+              node scripts/scrape-to-supabase.mjs --source="$src" --city="$CITY" --type="$TYPE" --pages=1 || true
+              echo "::endgroup::"
+            done
+          else
+            node scripts/scrape-to-supabase.mjs --source="$SOURCE" --city="$CITY" --type="$TYPE" --pages=1
+          fi

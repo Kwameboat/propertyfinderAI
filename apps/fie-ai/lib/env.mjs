@@ -20,6 +20,10 @@ export function applyFieStandaloneEnv() {
   if (!process.env.JAB_RE_SCRAPE_EMIRATES) {
     process.env.JAB_RE_SCRAPE_EMIRATES = "Accra,Kumasi,Tema";
   }
+  // Don't assume local FlareSolverr on Vercel; Jiji uses JIJI_CF_CLEARANCE instead.
+  if (process.env.VERCEL && process.env.FLARESOLVERR_URL == null) {
+    process.env.FLARESOLVERR_URL = "off";
+  }
 }
 
 function pathJoinHome(subdir) {
