@@ -64,7 +64,7 @@ async function loadMarketConfig() {
 function applyMarketBranding() {
   const ghana = marketConfig.code === "GH";
   document.body?.classList.toggle("market-gh", ghana);
-  document.title = marketConfig.brand || document.title;
+  document.title = ghana ? "PropertyFinder Gh · Ghana" : marketConfig.brand || document.title;
   if (ghana) {
     BRAND.name = "PropertyFinder Gh";
     BRAND.nameUpper = "PropertyFinder Gh";
@@ -76,6 +76,9 @@ function applyMarketBranding() {
     "content",
     ghana ? "#d80008" : "#0a0a0a"
   );
+  document
+    .querySelector('meta[name="apple-mobile-web-app-status-bar-style"]')
+    ?.setAttribute("content", ghana ? "default" : "black-translucent");
   document.querySelector('meta[name="description"]')?.setAttribute(
     "content",
     ghana
@@ -109,15 +112,44 @@ function applyMarketBranding() {
     pills[1].textContent = "East Legon for sale";
     pills[1].dataset.msg = "Show me houses for sale in East Legon";
   }
+  const qaTitle = document.querySelector("#quick-actions .section-title");
+  if (ghana && qaTitle) qaTitle.textContent = "Popular questions";
   const actions = document.querySelectorAll("#quick-actions .action-card");
   if (ghana && actions.length >= 3) {
-    actions[0].dataset.msg = "What does a self-contain in East Legon usually cost per month?";
-    actions[0].querySelector("span:last-child").textContent = "Accra rents";
-    actions[1].dataset.msg = "I can't pay 2 years rent advance. Who pays the landlord so I can pay monthly?";
-    actions[1].querySelector("span:last-child").textContent = "Pay monthly";
-    actions[2].dataset.msg = "How does the GH₵100 viewing fee and PIN work?";
-    actions[2].querySelector("span:last-child").textContent = "Viewing fee";
+    const icons = [
+      `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M4 19V5"/><path d="M4 19h16"/><path d="M8 15l3-4 3 2 4-6"/></svg>`,
+      `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 10h18"/><path d="M8 15h4"/></svg>`,
+      `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M12 21s-7-4.4-9.2-9.1C1.1 8.2 3.2 5 6.6 5c1.9 0 3.4 1 4.4 2.5C12 6 13.5 5 15.4 5c3.4 0 5.5 3.2 3.8 6.9C19 16.6 12 21 12 21z"/></svg>`
+    ];
+    const copy = [
+      ["Accra rents", "What does a self-contain in East Legon usually cost per month?", "Live asking prices"],
+      ["Pay monthly", "I can't pay 2 years rent advance. Who pays the landlord so I can pay monthly?", "Advance alternatives"],
+      ["Viewing fee", "How does the GH₵100 viewing fee and PIN work?", "PIN & MoMo split"]
+    ];
+    actions.forEach((card, i) => {
+      if (!copy[i]) return;
+      card.dataset.msg = copy[i][1];
+      const icon = card.querySelector(".action-icon");
+      let label = card.querySelector(".action-label");
+      if (!label) {
+        label = [...card.querySelectorAll("span")].find(
+          (el) => !el.classList.contains("action-icon") && !el.classList.contains("action-sub")
+        );
+        if (label) label.classList.add("action-label");
+      }
+      if (icon) icon.innerHTML = icons[i];
+      if (label) label.textContent = copy[i][0];
+      let sub = card.querySelector(".action-sub");
+      if (!sub) {
+        sub = document.createElement("span");
+        sub.className = "action-sub";
+        card.appendChild(sub);
+      }
+      sub.textContent = copy[i][2];
+    });
   }
+  const conciergeNav = document.querySelector('.nav-item[data-tab="concierge"] span');
+  if (ghana && conciergeNav) conciergeNav.textContent = "Ask";
   const exploreDubai = document.querySelector('.explore-filters [data-filter="Dubai"]');
   if (ghana && exploreDubai) {
     exploreDubai.textContent = "Accra";

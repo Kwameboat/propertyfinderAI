@@ -80,6 +80,14 @@ export function rewriteRentHtmlForGhana(html, { buildId } = {}) {
     ['content="Dar Concierge"', 'content="PropertyFinder Gh"'],
     ['content="Dar Concierge AI"', 'content="PropertyFinder Gh"'],
     ['name="theme-color" content="#0a0a0a"', 'name="theme-color" content="#d80008"'],
+    [
+      'name="apple-mobile-web-app-status-bar-style" content="black-translucent"',
+      'name="apple-mobile-web-app-status-bar-style" content="default"'
+    ],
+    [
+      "family=Inter:wght@400;500;600;700&display=swap",
+      "family=Outfit:wght@500;600;700&family=Source+Sans+3:wght@400;500;600;700&display=swap"
+    ],
     [">Dar Concierge AI · KeyFinder AI</title>", ">PropertyFinder Gh · Ghana</title>"],
     [
       "Dar Concierge AI — Your UAE AI Property Assistant. Powered by KeyFinder AI. Rent, buy, off-plan across the emirates.",
