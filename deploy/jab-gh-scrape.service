@@ -1,5 +1,5 @@
 [Unit]
-Description=FIE AI Ghana portal listings scrape (one-shot)
+Description=PropertyFinder Gh portal listings scrape (one-shot)
 After=network-online.target keyfinder-ghana.service
 
 [Service]

@@ -112,14 +112,14 @@ export function buildGhanaInventoryChart(facts) {
   return {
     type: "area_compare",
     title: `Live Ghana rents · ${loc}`,
-    subtitle: "Median asking rent from FIE inventory (GH₵ / month)",
+    subtitle: "Median asking rent from PropertyFinder Gh inventory (GH₵ / month)",
     badge: `LIVE · ${new Date().toISOString().slice(0, 10)}`,
     unit: "GH₵/mo",
     bars,
     dataSource: "ghana_inventory",
     trendNote: facts.match?.sample
       ? `Based on ${facts.match.sample} live listings matching this chat — asking prices, not closed deals.`
-      : "Based on live FIE inventory asking prices, not closed deals.",
+      : "Based on live PropertyFinder Gh inventory asking prices, not closed deals.",
     stats: {
       asOf: new Date().toISOString().slice(0, 10),
       sample: facts.match?.priced || facts.allRent?.priced || 0,
@@ -137,7 +137,7 @@ export function formatGhanaLiveFactsBlock(facts) {
     const src = Object.entries(facts.status.sources || {})
       .map(([k, v]) => `${k} ${v}`)
       .join(", ");
-    lines.push(`- FIE live stock: ${facts.status.listings} active Ghana listings${src ? ` (${src})` : ""}.`);
+    lines.push(`- PropertyFinder Gh live stock: ${facts.status.listings} active Ghana listings${src ? ` (${src})` : ""}.`);
   }
   const paint = (label, stats) => {
     if (!stats?.sample) {
@@ -169,7 +169,7 @@ export function formatGhanaLiveFactsBlock(facts) {
     paint("Wider Accra/Ghana rent sample", facts.allRent);
   }
   lines.push(
-    "- These are asking prices from Ghana Property Centre, Jiji, Meqasa and FIE direct listings — not Land Valuation or closed contracts.",
+    "- These are asking prices from Ghana Property Centre, Jiji, Meqasa and PropertyFinder Gh direct listings — not Land Valuation or closed contracts.",
     "- If sample < 5, say the sample is thin and speak in ranges, not fake precision."
   );
   return lines.join("\n");
@@ -178,7 +178,7 @@ export function formatGhanaLiveFactsBlock(facts) {
 export function formatGhanaChartBlockForPrompt(chart) {
   if (!chart?.bars?.length) return "";
   const lines = [
-    `CHART DATA (FIE live Ghana inventory · ${chart.stats?.asOf || ""}):`,
+    `CHART DATA (PropertyFinder Gh live Ghana inventory · ${chart.stats?.asOf || ""}):`,
     `Chart: ${chart.title}`,
     chart.subtitle || ""
   ];

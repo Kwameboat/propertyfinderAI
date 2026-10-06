@@ -1,5 +1,5 @@
 /**
- * Ghana FIE AI PWA lives on Dar Concierge's HTTPS host at /gh so Chrome
+ * Ghana PropertyFinder Gh PWA lives on Dar Concierge's HTTPS host at /gh so Chrome
  * will install it (secure context) without colliding with UAE /rent, /sw.js,
  * or /api/rent on the same origin.
  */
@@ -77,16 +77,16 @@ export function rewriteRentHtmlForGhana(html, { buildId } = {}) {
     ['src="/rent.js', `src="${prefix}/rent.js`],
     ['src="/dar-concierge-logo.png"', `src="${prefix}/fie-ai-logo.webp"`],
     ['href="/rent"', `href="${prefix}"`],
-    ['content="Dar Concierge"', 'content="FIE AI"'],
-    ['content="Dar Concierge AI"', 'content="FIE AI"'],
-    [">Dar Concierge AI · KeyFinder AI</title>", ">FIE AI · Ghana</title>"],
+    ['content="Dar Concierge"', 'content="PropertyFinder Gh"'],
+    ['content="Dar Concierge AI"', 'content="PropertyFinder Gh"'],
+    [">Dar Concierge AI · KeyFinder AI</title>", ">PropertyFinder Gh · Ghana</title>"],
     [
       "Dar Concierge AI — Your UAE AI Property Assistant. Powered by KeyFinder AI. Rent, buy, off-plan across the emirates.",
-      "FIE AI — your AI real estate agent in Ghana. Rent or buy rooms, self-contains, apartments, and houses."
+      "PropertyFinder Gh — your AI real estate agent in Ghana. Rent or buy rooms, self-contains, apartments, and houses."
     ],
-    ["Dar Concierge opens like an app.", "FIE AI opens like an app."],
+    ["Dar Concierge opens like an app.", "PropertyFinder Gh opens like an app."],
     ["<body>", '<body class="market-gh">'],
-    ['id="header-avatar">DC</span>', 'id="header-avatar">FI</span>'],
+    ['id="header-avatar">DC</span>', 'id="header-avatar">PF</span>'],
     [
       "Welcome. Looking for a 4BR in Ajman or a villa in Dubai today?",
       "Welcome. Looking for a self-contain in East Legon or a chamber and hall in Osu?"
@@ -100,11 +100,11 @@ export function rewriteRentHtmlForGhana(html, { buildId } = {}) {
       'data-msg="I\'m looking for a villa to rent in JVC, 3 bed">JVC Villas',
       'data-msg="Show me houses for sale in East Legon">East Legon for sale'
     ],
-    ['placeholder="Ask Dar Concierge AI…"', 'placeholder="Ask FIE AI — type or tap the mic"'],
-    ["<strong>Install Dar Concierge</strong>", "<strong>Install FIE AI</strong>"],
+    ['placeholder="Ask Dar Concierge AI…"', 'placeholder="Ask PropertyFinder Gh — type or tap the mic"'],
+    ["<strong>Install Dar Concierge</strong>", "<strong>Install PropertyFinder Gh</strong>"],
     [
       "Use Dar Concierge like a native app — home screen icon, offline shell, no browser chrome.",
-      "Use FIE AI like a native app — home screen icon, and it updates itself when you open it."
+      "Use PropertyFinder Gh like a native app — home screen icon, and it updates itself when you open it."
     ],
     ['class="pill gh-only hidden"', 'class="pill gh-only"'],
     ['id="gh-pay-monthly-pill" hidden', 'id="gh-pay-monthly-pill"'],
@@ -170,9 +170,9 @@ export function rewriteHubHtmlForGhana(html) {
     ['href="/agent-login"', `href="${prefix}/agent-login"`],
     ['href="/admin/re"', `href="${prefix}/admin/re"`],
     ['fetch("/api/', `fetch("${prefix}/api/`],
-    ["JAB Hub — Login", "FIE AI — Agency login"],
-    ["JAB HUB", "FIE AI"],
-    ["Manage per-client contacts and WhatsApp campaigns.", "Manage FIE AI listings, viewings, and Ghana ingest."]
+    ["JAB Hub — Login", "PropertyFinder Gh — Agency login"],
+    ["JAB HUB", "PropertyFinder Gh"],
+    ["Manage per-client contacts and WhatsApp campaigns.", "Manage PropertyFinder Gh listings, viewings, and Ghana ingest."]
   ];
   for (const [from, to] of swaps) out = out.split(from).join(to);
   return out;

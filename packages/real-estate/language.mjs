@@ -210,7 +210,7 @@ export const UI_STRINGS = {
     bookTitle: "Book a Viewing"
   },
   tw: {
-    placeholder: "Bisa FIE AI…",
+    placeholder: "Bisa PropertyFinder Gh…",
     transcribing: "Yɛrekyerɛw wo nne…",
     recording: "Yɛrekyere… mia mic na fa kɔ",
     micDenied: "Browser no ammɛn wo microphone. Ma ho kwan wɔ settings mu.",
@@ -219,7 +219,7 @@ export const UI_STRINGS = {
     bookTitle: "Tua kɔhwɛ"
   },
   ee: {
-    placeholder: "Bia FIE AI…",
+    placeholder: "Bia PropertyFinder Gh…",
     transcribing: "Miele gbe ŋlɔm…",
     recording: "Miele mɔ̃ ɖem… zi mic ɖe ɖoɖo",
     micDenied: "Browser me de mɔ̃ ɖe microphone ŋu o.",
@@ -228,7 +228,7 @@ export const UI_STRINGS = {
     bookTitle: "Dɔ kpɔkpɔ"
   },
   gaa: {
-    placeholder: "Bii FIE AI…",
+    placeholder: "Bii PropertyFinder Gh…",
     transcribing: "Wɔŋmɛɔ dzee…",
     recording: "Wɔŋmɛɔ… shi mic kɛha",
     micDenied: "Browser ekɛ microphone lɛ shwie.",
@@ -237,7 +237,7 @@ export const UI_STRINGS = {
     bookTitle: "Naakpɛɛ"
   },
   fat: {
-    placeholder: "Bisa FIE AI…",
+    placeholder: "Bisa PropertyFinder Gh…",
     transcribing: "Yɛrekyerɛw wo ndze…",
     recording: "Yɛrekyerɛ… mia mic",
     micDenied: "Browser no ammɛn microphone.",
@@ -246,7 +246,7 @@ export const UI_STRINGS = {
     bookTitle: "Tua kɔhwɛ"
   },
   dag: {
-    placeholder: "Bɔhi FIE AI…",
+    placeholder: "Bɔhi PropertyFinder Gh…",
     transcribing: "Ti yɛri a yɛltɔɣa…",
     recording: "Ti yɛri… n-ŋme mic",
     micDenied: "Browser bi ti microphone.",
@@ -255,7 +255,7 @@ export const UI_STRINGS = {
     bookTitle: "Labi nya"
   },
   ha: {
-    placeholder: "Tambayi FIE AI…",
+    placeholder: "Tambayi PropertyFinder Gh…",
     transcribing: "Muna rubuta murya…",
     recording: "Ana ɗauka… taɓa mic",
     micDenied: "Browser ya hana microphone.",
@@ -264,7 +264,7 @@ export const UI_STRINGS = {
     bookTitle: "Biyan duba"
   },
   pidgin: {
-    placeholder: "Ask FIE AI…",
+    placeholder: "Ask PropertyFinder Gh…",
     transcribing: "I dey write di voice…",
     recording: "I dey record… tap mic send",
     micDenied: "Browser no gree microphone.",

@@ -1,10 +1,10 @@
-# FIE AI (Ghana)
+# PropertyFinder Gh (Ghana)
 
-Ghana housing PWA on the same Dar Concierge engine. **Does not replace the live UAE product.** Default market stays `AE`. Brand: **FIE AI** — your AI real estate agent in Ghana.
+Ghana housing PWA on the same Dar Concierge engine. **Does not replace the live UAE product.** Default market stays `AE`. Brand: **PropertyFinder Gh** — your AI real estate agent in Ghana.
 
 ## Standalone on Vercel (preferred public app)
 
-FIE AI also ships as a **standalone PWA** under [`apps/fie-ai`](apps/fie-ai/README.md):
+PropertyFinder Gh also ships as a **standalone PWA** under [`apps/fie-ai`](apps/fie-ai/README.md):
 
 - Root Directory in Vercel: `apps/fie-ai`
 - PWA at `/` (not `/gh`)
@@ -47,7 +47,7 @@ Scrape Ghana portals into the listing store (SQLite + Supabase when configured).
 node scripts/scrape-ghana-listings.mjs --sources=meqasa,jiji,ghanapropertycentre
 ```
 
-n8n on the VPS (`:5678`) now runs **FIE AI Ghana** workflows against Hub `:3001` with `types: ["rent","sale"]`. Dar Concierge UAE scrape workflows are deactivated. Hourly UAE systemd scrape timers stay disabled.
+n8n on the VPS (`:5678`) now runs **PropertyFinder Gh Ghana** workflows against Hub `:3001` with `types: ["rent","sale"]`. Dar Concierge UAE scrape workflows are deactivated. Hourly UAE systemd scrape timers stay disabled.
 
 Live Ghana inventory: Ghana Property Centre HTML/JSON-LD is the main public source (for-rent and for-sale). **Jiji** is scraped through FlareSolverr (`FLARESOLVERR_URL=http://127.0.0.1:8191`) because jiji.com.gh Cloudflare-blocks datacenter IPs. Meqasa is still attempted each run.
 
@@ -58,14 +58,14 @@ docker compose -f deploy/flaresolverr/docker-compose.yml up -d
 
 Landlords and agents can also publish from the PWA: tap **List your property** on `/gh` (also in the menu and Profile). Direct listings use source `fie_direct` and show in Explore Rent/Buy alongside portal rows.
 
-## Chat (FIE AI agent)
+## Chat (PropertyFinder Gh agent)
 
 Ghana chat (`/gh`) answers as a professional Ghanaian agent:
 
-- Live asking prices and counts from FIE inventory (Ghana Property Centre, Jiji, Meqasa, direct listings)
+- Live asking prices and counts from PropertyFinder Gh inventory (Ghana Property Centre, Jiji, Meqasa, direct listings)
 - Ghana knowledge: property types, Accra/Kumasi/Tema areas, Rent Act advance cap, ECG / Ghana Water, viewing PIN
-- If someone cannot pay 1–2 years advance, FIE names **real** rent-to-monthly partners with official links: [NRAS](https://www.nras.gov.gh/), [Rent Masters](https://www.rent-masters.com/), [Renmo](https://listings.renmo.homes/), [ArchieRent](https://archielands.com/ArchieRent/index.php), [RENTBRiG](https://www.rentbrig.com/)
-- Voice notes: tap the mic on `/gh` (or send a WhatsApp voice note). FIE transcribes Twi, Fante, Ewe, Ga, Dagbani, Hausa, Ghanaian Pidgin, and Ghanaian English, then replies in the same language.
+- If someone cannot pay 1–2 years advance, PropertyFinder Gh names **real** rent-to-monthly partners with official links: [NRAS](https://www.nras.gov.gh/), [Rent Masters](https://www.rent-masters.com/), [Renmo](https://listings.renmo.homes/), [ArchieRent](https://archielands.com/ArchieRent/index.php), [RENTBRiG](https://www.rentbrig.com/)
+- Voice notes: tap the mic on `/gh` (or send a WhatsApp voice note). PropertyFinder Gh transcribes Twi, Fante, Ewe, Ga, Dagbani, Hausa, Ghanaian Pidgin, and Ghanaian English, then replies in the same language.
 
 UAE `/rent` chat is unchanged (`JAB_RE_MARKET` unset).
 
@@ -102,15 +102,15 @@ Agency dashboard: **Viewings** tab at `/admin/re` — PIN status, MoMo, and reco
 
 Leave `JAB_RE_MARKET` unset on the UAE VPS.
 
-## WhatsApp (FIE chat number)
+## WhatsApp (PropertyFinder Gh chat number)
 
-Ghanaians will message WhatsApp before they open the PWA. FIE needs its **own +233 number** — do not scan the UAE `dar-concierge-wa` or **JAB Agent Number** lines.
+Ghanaians will message WhatsApp before they open the PWA. PropertyFinder Gh needs its **own +233 number** — do not scan the UAE `dar-concierge-wa` or **JAB Agent Number** lines.
 
 How it is wired on this VPS:
 
 1. Evolution already runs at `:8080`. The global webhook goes to `jab-hub-bridge` (`:8787`).
 2. Create a **new** Evolution instance named `fie-ghana-wa` (Baileys QR is the fast path).
-3. On the phone that will be FIE: WhatsApp → Linked devices → Link a device → scan the QR.
+3. On the phone that will be PropertyFinder Gh: WhatsApp → Linked devices → Link a device → scan the QR.
 4. Ghana Hub (`/opt/keyfinder-ghana/.env`) must have `JAB_RE_WA_INSTANCE=fie-ghana-wa`.
 5. UAE Hub / bridge (`/opt/jab-hub/.env`) must have:
    - `JAB_RE_WA_INSTANCE=dar-concierge-wa` (unchanged)
@@ -143,21 +143,21 @@ Do **not** run `deploy/get-qr.sh dar-concierge-wa` — that logs out the live UA
 
 Official Meta Cloud API (harder, more ban-resistant) is in `deploy/META-WHATSAPP.md`. Same instance name `fie-ghana-wa`, integration **WhatsApp Business** instead of Baileys.
 
-Inbound path: WhatsApp → Evolution → `jab-hub-bridge` → `http://127.0.0.1:3001/api/rent/whatsapp/inbound` → FIE listings (not Dar Concierge).
+Inbound path: WhatsApp → Evolution → `jab-hub-bridge` → `http://127.0.0.1:3001/api/rent/whatsapp/inbound` → PropertyFinder Gh listings (not Dar Concierge).
 
 ## Live test (Contabo)
 
-FIE AI runs as a **second** Hub on the same VPS. Dar Concierge on `:3000` is untouched.
+PropertyFinder Gh runs as a **second** Hub on the same VPS. Dar Concierge on `:3000` is untouched.
 
 | App | URL |
 |-----|-----|
-| FIE AI PWA | https://wa.jabdigitalhub.com/gh |
+| PropertyFinder Gh PWA | https://wa.jabdigitalhub.com/gh |
 | Agency login | https://wa.jabdigitalhub.com/gh/login |
-| FIE listing dashboard | https://wa.jabdigitalhub.com/gh/admin/re |
+| PropertyFinder Gh listing dashboard | https://wa.jabdigitalhub.com/gh/admin/re |
 | Agent PIN confirm | https://wa.jabdigitalhub.com/gh/agent |
 | Dar Concierge (UAE, unchanged) | https://wa.jabdigitalhub.com/rent |
 
-Installed home-screen FIE AI checks for a new service worker on open, focus, and refresh, then reloads once — same as a native app update. Re-adding the icon is not required.
+Installed home-screen PropertyFinder Gh checks for a new service worker on open, focus, and refresh, then reloads once — same as a native app update. Re-adding the icon is not required.
 
 HTTP `http://169.58.81.179:3001/gh` redirects to the HTTPS PWA.
 

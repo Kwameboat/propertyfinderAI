@@ -1,5 +1,5 @@
 /**
- * Build FIE AI static PWA into apps/fie-ai/public (root-scoped, not /gh).
+ * Build PropertyFinder Gh static PWA into apps/fie-ai/public (root-scoped, not /gh).
  */
 import { cpSync, mkdirSync, readFileSync, writeFileSync, existsSync } from "node:fs";
 import path from "node:path";
@@ -44,7 +44,7 @@ if (existsSync(mediaDir)) {
   cpSync(mediaDir, path.join(PUBLIC, "media"), { recursive: true });
 }
 
-/** Rewrite /gh-hosted HTML to root-hosted standalone FIE AI. */
+/** Rewrite /gh-hosted HTML to root-hosted standalone PropertyFinder Gh. */
 function toStandaloneHtml(ghanaHtml) {
   let html = String(ghanaHtml);
   const rootBoot = `<script>
@@ -98,7 +98,7 @@ agent = agent
 writeFileSync(path.join(PUBLIC, "agent.html"), agent);
 
 const sw = `/**
- * FIE AI standalone PWA service worker — network-first app shell.
+ * PropertyFinder Gh standalone PWA service worker — network-first app shell.
  */
 const BUILD = ${JSON.stringify(buildId)};
 const CACHE = \`fie-ai-\${BUILD}\`;
@@ -198,8 +198,8 @@ writeFileSync(path.join(PUBLIC, "sw.js"), sw);
 
 const manifest = {
   id: "/",
-  name: "FIE AI",
-  short_name: "FIE AI",
+  name: "PropertyFinder Gh",
+  short_name: "PF Gh",
   description:
     "Your AI real estate agent in Ghana — rent or buy rooms, self-contains, apartments, and houses.",
   start_url: "/",
@@ -226,4 +226,4 @@ const manifest = {
 };
 writeFileSync(path.join(PUBLIC, "manifest.webmanifest"), JSON.stringify(manifest, null, 2));
 
-console.log(`Built FIE AI public/ (build ${buildId})`);
+console.log(`Built PropertyFinder Gh public/ (build ${buildId})`);

@@ -1,5 +1,5 @@
 [Unit]
-Description=Hourly FIE AI Ghana listings scrape
+Description=Hourly PropertyFinder Gh listings scrape
 
 [Timer]
 OnBootSec=12min

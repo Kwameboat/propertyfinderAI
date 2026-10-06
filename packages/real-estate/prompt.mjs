@@ -389,7 +389,7 @@ export function buildLeadDraftMessage({ lead, listing, criteria = {} }) {
   return [
 
     isGhanaMarket()
-      ? "Hi, I have a qualified lead from FIE AI:"
+      ? "Hi, I have a qualified lead from PropertyFinder Gh:"
       : "Hi, I have a qualified lead from Dar Concierge AI (KeyFinder AI):",
 
     "",

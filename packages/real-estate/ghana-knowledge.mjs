@@ -1,5 +1,5 @@
 /**
- * Curated Ghana real-estate facts for FIE AI chat.
+ * Curated Ghana real-estate facts for PropertyFinder Gh chat.
  * Partners and legal notes are from public sources — never invent extra firms.
  */
 
@@ -80,7 +80,7 @@ export const GHANA_KNOWLEDGE_DOCS = [
         return `- ${p.name} (${p.kind}): ${p.summary} ${p.notes} Link: ${p.url}${contact ? ` · ${contact}` : ""}`;
       }),
       "",
-      "Tell them FIE AI is not NRAS or these firms. We find the room; they apply with the partner. Eligibility is the partner's call (income proof, IDs, sometimes a processing fee). Do not promise approval."
+      "Tell them PropertyFinder Gh is not NRAS or these firms. We find the room; they apply with the partner. Eligibility is the partner's call (income proof, IDs, sometimes a processing fee). Do not promise approval."
     ].join("\n")
   },
   {
@@ -97,14 +97,14 @@ export const GHANA_KNOWLEDGE_DOCS = [
   },
   {
     slug: "fie-viewing",
-    title: "FIE AI viewing fee, PIN, and close",
+    title: "PropertyFinder Gh viewing fee, PIN, and close",
     category: "process",
     tags: "viewing fee pin 100 cedis momo commission 10 percent",
     body: [
       "To book a viewing the client pays GH₵100 first. GH₵50 is the platform fee now; GH₵50 is held for the listing agent until the client visits.",
       "After pay, the client gets a 6-digit PIN on WhatsApp. They give that PIN to the listing agent at the property. The agent confirms on /gh/agent with their MoMo number. Do not tell anyone they can view for free.",
-      "If the client takes the room, commission is 10% of the agreed amount, split 50/50 between FIE AI and the listing agent.",
-      "Landlords and agents can list rent or sale from the FIE AI app (List your property)."
+      "If the client takes the room, commission is 10% of the agreed amount, split 50/50 between PropertyFinder Gh and the listing agent.",
+      "Landlords and agents can list rent or sale from the PropertyFinder Gh app (List your property)."
     ].join("\n")
   },
   {
@@ -147,11 +147,11 @@ export const GHANA_KNOWLEDGE_DOCS = [
     tags: "inspection tenancy agreement rent card lands commission agent fee",
     body: [
       "1. Agree area, type (self-contain vs chamber and hall vs apartment), monthly rent, and how many months advance the landlord wants.",
-      "2. Inspect in person. FIE charges GH₵100 to book that viewing (PIN at the gate).",
+      "2. Inspect in person. PropertyFinder Gh charges GH₵100 to book that viewing (PIN at the gate).",
       "3. Confirm who owns it — ask for ID, site plan / indenture if buying, and never pay a 'reservation' to a random MoMo without a receipt.",
       "4. Written tenancy: parties, rent, advance paid, duration, who pays ECG/water, notice period. Get a Rent Card.",
       "5. Utilities: ECG prepaid meter is common; Ghana Water may be prepaid or shared. There is no DEWA in Ghana. Data is MTN / Telecel / AT, not Du/Etisalat.",
-      "6. Agency fees vary; FIE's close fee is 10% of the agreed amount if they take the room through us.",
+      "6. Agency fees vary; PropertyFinder Gh's close fee is 10% of the agreed amount if they take the room through us.",
       "7. If advance is more than six months, point them to Rent Control and to NRAS / private monthly-pay partners."
     ].join("\n")
   },
@@ -162,7 +162,7 @@ export const GHANA_KNOWLEDGE_DOCS = [
     tags: "lands commission indenture plot house sale freehold leasehold",
     body: [
       "Most urban land is stool/skin or state leasehold, not a UAE-style freehold apartment with RERA. Title due diligence at Lands Commission matters more than a pretty listing photo.",
-      "Ask for: site plan, indenture or lease, consent if needed, and a lawyer. FIE can show live sale listings (Ghana Property Centre, Jiji, Meqasa, direct FIE listings) but is not a conveyancer.",
+      "Ask for: site plan, indenture or lease, consent if needed, and a lawyer. PropertyFinder Gh can show live sale listings (Ghana Property Centre, Jiji, Meqasa, direct PropertyFinder Gh listings) but is not a conveyancer.",
       "Quote prices in GH₵ total. Do not talk DLD fees, Ejari, or golden visa."
     ].join("\n")
   },
@@ -270,7 +270,7 @@ export function formatGhanaPartnersForPrompt(partners = GHANA_RENT_MONTHLY_PARTN
 
 export function ghanaAgentSystemPrompt() {
   return [
-    "You are FIE AI — a professional Ghanaian real estate agent. Accra, Kumasi, Tema, Takoradi, Cape Coast, Tamale are your market. You talk like a sharp agent who actually walks East Legon, Osu, Spintex and Ahodwo: warm, direct, no corporate filler.",
+    "You are PropertyFinder Gh — a professional Ghanaian real estate agent. Accra, Kumasi, Tema, Takoradi, Cape Coast, Tamale are your market. You talk like a sharp agent who actually walks East Legon, Osu, Spintex and Ahodwo: warm, direct, no corporate filler.",
     "You hear voice notes and you reply in the client's language: Ghanaian English, Twi (Akan), Fante, Ewe, Ga, Dagbani, Hausa, or Ghanaian Pidgin — including mixed messages. Do not force Pidgin or Twi unless they used it.",
     "Currency is GH₵ only. Rent is quoted per month; sale is a GH₵ total. Never say AED, emirate, RERA, Ejari, DEWA, chiller, cheques, DLD, or golden visa.",
     "Know the ground: self-contain, chamber and hall, compound house, single room, apartment, house. Landlords often want 1–2 years advance even though the Rent Act caps legal advance at six months for longer tenancies — say both things honestly.",

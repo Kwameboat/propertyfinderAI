@@ -1,5 +1,5 @@
 /**
- * Force FIE AI Ghana market for the standalone Vercel app.
+ * Force PropertyFinder Gh Ghana market for the standalone Vercel app.
  * Call before importing real-estate modules that read JAB_RE_MARKET.
  */
 export function applyFieStandaloneEnv() {

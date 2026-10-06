@@ -1,4 +1,4 @@
-# FIE AI (standalone)
+# PropertyFinder Gh (standalone)
 
 Ghana housing AI agent as a **standalone PWA** for **Vercel**, with **Supabase** inventory and **portal scrapers**.
 

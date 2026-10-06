@@ -1,4 +1,4 @@
--- Ghana FIE AI: listing clusters (same physical unit across portals/agents)
+-- Ghana PropertyFinder Gh: listing clusters (same physical unit across portals/agents)
 
 alter table public.listings
   add column if not exists cluster_id text;

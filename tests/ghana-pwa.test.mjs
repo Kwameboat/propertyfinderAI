@@ -35,18 +35,18 @@ test("Ghana HTML rewrite points the PWA at /gh assets and injects API base", () 
   assert.match(out, /href="\/gh\/rent\.css\?v=99"/);
   assert.match(out, /src="\/gh\/rent\.js\?v=99"/);
   assert.match(out, /src="\/gh\/fie-ai-logo\.webp"/);
-  assert.match(out, /<title>FIE AI · Ghana<\/title>/);
+  assert.match(out, /<title>PropertyFinder Gh · Ghana<\/title>/);
   assert.match(out, /<body class="market-gh">/);
   assert.equal(out.includes('href="/rent.css'), false);
 });
 
-test("Ghana rewrite of rent.html is FIE on first paint", async () => {
+test("Ghana rewrite of rent.html is PropertyFinder Gh on first paint", async () => {
   const { readFile } = await import("node:fs/promises");
   const html = await readFile(new URL("../apps/hub/public/rent.html", import.meta.url), "utf8");
   const out = rewriteRentHtmlForGhana(html, { buildId: "1" });
   assert.match(out, /East Legon self-contain/);
   assert.match(out, /self-contain in East Legon/);
-  assert.match(out, /Install FIE AI/);
+  assert.match(out, /Install PropertyFinder Gh/);
   assert.equal(out.includes("Marina Penthouses"), false);
   assert.equal(out.includes("Looking for a 4BR in Ajman"), false);
 });
@@ -68,7 +68,7 @@ test("Ghana Hub HTML rewrite prefixes login API and dashboard assets", () => {
   assert.match(out, /window\.__HUB_BASE="\/gh"/);
   assert.match(out, /href="\/gh\/styles\.css"/);
   assert.match(out, /fetch\("\/gh\/api\/login"/);
-  assert.match(out, /FIE AI — Agency login/);
+  assert.match(out, /PropertyFinder Gh — Agency login/);
 });
 
 test("Ghana service worker receives the deploy build id", () => {

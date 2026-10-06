@@ -27,7 +27,7 @@ test("Jiji 300px CDN URLs decode as small and go through the sharpener", () => {
   assert.match(src, /jijistatic/);
 });
 
-test("local FIE media is not proxied", () => {
+test("local PropertyFinder Gh media is not proxied", () => {
   assert.equal(listingPhotoSrc("/gh-media/osu.svg"), "/gh-media/osu.svg");
   assert.equal(
     listingPhotoSrc("/uploads/owner-listings/a/b.jpg"),

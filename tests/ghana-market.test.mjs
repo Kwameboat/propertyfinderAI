@@ -24,7 +24,7 @@ function withMarket(code, fn) {
     });
 }
 
-test("standalone FIE AI hosts the PWA at origin root", async () => {
+test("standalone PropertyFinder Gh hosts the PWA at origin root", async () => {
   const prevStand = process.env.JAB_FIE_STANDALONE;
   process.env.JAB_FIE_STANDALONE = "1";
   try {

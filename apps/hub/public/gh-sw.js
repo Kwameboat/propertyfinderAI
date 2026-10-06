@@ -1,5 +1,5 @@
 /**
- * FIE AI PWA service worker — network-first app shell, auto-activate updates.
+ * PropertyFinder Gh PWA service worker — network-first app shell, auto-activate updates.
  * __PWA_BUILD__ is replaced at serve time so every deploy gets a new cache.
  */
 const BUILD = "__PWA_BUILD__";

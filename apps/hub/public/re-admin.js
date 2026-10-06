@@ -171,16 +171,16 @@ function applyDashboardMarket(market, data) {
     el.hidden = ghana;
   });
   if (!ghana) return;
-  document.title = "FIE AI — Listing Dashboard";
+  document.title = "PropertyFinder Gh — Listing Dashboard";
   const logo = document.getElementById("dash-logo");
   if (logo) {
     logo.src = hubPath(market.logo || "/fie-ai-logo.webp");
-    logo.alt = "FIE AI";
+    logo.alt = "PropertyFinder Gh";
   }
   const sub = document.querySelector(".ld-brand-sub");
-  if (sub) sub.textContent = "FIE AI listing dashboard";
+  if (sub) sub.textContent = "PropertyFinder Gh listing dashboard";
   const eye = document.getElementById("dash-eyebrow");
-  if (eye) eye.textContent = "FIE AI · Ghana";
+  if (eye) eye.textContent = "PropertyFinder Gh · Ghana";
   const pfLabel = document.getElementById("kpi-pf-label");
   if (pfLabel) pfLabel.textContent = "Ghana Property Centre";
   document.getElementById("kpi-pf").textContent = data.sources?.ghanapropertycentre ?? "0";

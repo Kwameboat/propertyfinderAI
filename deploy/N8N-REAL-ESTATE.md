@@ -1,6 +1,6 @@
 # n8n — listing scrape → Supabase
 
-**Live target is FIE AI Ghana** (`:3001`, workflows in `deploy/n8n/gh-*.json`).
+**Live target is PropertyFinder Gh** (`:3001`, workflows in `deploy/n8n/gh-*.json`).
 Dar Concierge UAE scrape workflows in `deploy/n8n/re-*.json` are **disabled**.
 
 Scheduled ingest: **Ghana Property Centre · Meqasa · Jiji** → **Supabase** → Hub `/gh` chat.

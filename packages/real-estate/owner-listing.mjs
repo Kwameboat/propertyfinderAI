@@ -1,5 +1,5 @@
 /**
- * Direct landlord/agent listings from the FIE AI Ghana PWA.
+ * Direct landlord/agent listings from the PropertyFinder Gh Ghana PWA.
  * Source `fie_direct` is searchable with Ghana portals but is not scraped or stale-cleaned.
  */
 
@@ -100,7 +100,7 @@ function truthyConsent(value) {
 
 export function buildOwnerListing(input = {}) {
   if (!isGhanaMarket()) {
-    return { ok: false, error: "Direct listing is available on FIE AI Ghana only" };
+    return { ok: false, error: "Direct listing is available on PropertyFinder Gh Ghana only" };
   }
   if (!truthyConsent(input.consent)) {
     return { ok: false, error: "Please confirm you have the right to list this property" };

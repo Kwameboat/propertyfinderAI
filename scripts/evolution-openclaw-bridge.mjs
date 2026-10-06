@@ -2465,7 +2465,7 @@ async function handleEvolutionPayload(payload) {
   const pushName = data.pushName || payload.pushName || "WhatsApp contact";
   const store = hubStore();
 
-  // Dedicated FIE Ghana WhatsApp instance — same chat engine as /gh, Ghana listing store.
+  // Dedicated PropertyFinder Gh WhatsApp instance — same chat engine as /gh, Ghana listing store.
   if (isGhanaReWhatsAppInstance(instance)) {
     try {
       const reResult = await proxyGhanaReWhatsAppInbound({
@@ -2496,7 +2496,7 @@ async function handleEvolutionPayload(payload) {
           apiKey,
           instance,
           number: replyJid,
-          text: "Sorry — FIE property search hit a snag. Try again in a moment.",
+          text: "Sorry — PropertyFinder Gh property search hit a snag. Try again in a moment.",
           isAgency: true
         });
       } catch {

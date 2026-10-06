@@ -30,7 +30,7 @@ env["JAB_RE_ZERO_COST_MODE"] = "1"
 env["JAB_RE_N8N_SOURCES"] = "meqasa,jiji,ghanapropertycentre,tonaton"
 env["JAB_RE_SCRAPE_EMIRATES"] = "Accra,Kumasi,Tema"
 env["N8N_LIVE_SEARCH_WEBHOOK"] = "http://127.0.0.1:5678/webhook/gh-live-search"
-# Dedicated FIE WhatsApp — never reuse the UAE dar-concierge-wa instance.
+# Dedicated PropertyFinder Gh WhatsApp — never reuse the UAE dar-concierge-wa instance.
 env["JAB_RE_WA_INSTANCE"] = "fie-ghana-wa"
 # Keep Supabase keys from the live Hub copy so Ghana listings land in the same project.
 # Do not inherit UAE live-search webhook or Apify portal scrape lists.

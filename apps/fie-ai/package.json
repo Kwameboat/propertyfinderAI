@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "private": true,
   "type": "module",
-  "description": "FIE AI — standalone Ghana real-estate PWA for Vercel",
+  "description": "PropertyFinder Gh — standalone Ghana real-estate PWA for Vercel",
   "scripts": {
     "build": "node scripts/build-public.mjs",
     "predev": "npm run build",

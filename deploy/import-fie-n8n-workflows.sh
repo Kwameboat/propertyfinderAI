@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Import FIE AI n8n workflows and deactivate Dar Concierge (UAE) scrape workflows.
+# Import PropertyFinder Gh n8n workflows and deactivate Dar Concierge (UAE) scrape workflows.
 set -euo pipefail
 ROOT="${1:-/opt/keyfinder-ghana}"
 ENV_FILE="${2:-/opt/keyfinder-ghana/.env}"
@@ -45,5 +45,5 @@ docker exec jabhub_n8n n8n update:workflow --id=c3d4e5f6-a7b8-9012-cdef-12345678
 docker exec jabhub_n8n n8n update:workflow --id=d4e5f6a7-b8c9-0123-defa-234567890123 --active=true || true
 docker exec jabhub_n8n n8n update:workflow --id=e5f6a7b8-c9d0-1234-efab-345678901234 --active=true || true
 docker exec jabhub_n8n n8n update:workflow --id=f6a7b8c9-d0e1-2345-fabc-456789012345 --active=true || true
-echo "n8n workflows imported (UAE scrape disabled, FIE AI Ghana active)"
+echo "n8n workflows imported (UAE scrape disabled, PropertyFinder Gh active)"
 docker exec jabhub_n8n n8n list:workflow

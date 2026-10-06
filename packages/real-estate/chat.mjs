@@ -588,7 +588,7 @@ export async function submitRentLead(db, { sessionId, listingId, renterName, ren
       notes
     });
     const confirmText = listingTitle
-      ? `Pay GH₵100 to confirm your viewing for ${listingTitle}. GH₵50 stays with FIE AI; GH₵50 is paid to the listing agent after you visit and they send your PIN.`
+      ? `Pay GH₵100 to confirm your viewing for ${listingTitle}. GH₵50 stays with PropertyFinder Gh; GH₵50 is paid to the listing agent after you visit and they send your PIN.`
       : `Pay GH₵100 to confirm this viewing. You will get a PIN on WhatsApp after payment.`;
     updateSession(db, sessionId, {
       status: "awaiting_payment",

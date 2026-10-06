@@ -1,4 +1,4 @@
--- FIE AI (Ghana) — paste into Supabase SQL editor (one shot).
+-- PropertyFinder Gh (Ghana) — paste into Supabase SQL editor (one shot).
 -- Safe to re-run. Creates listings + scrape_runs + Ghana cluster_id.
 
 create extension if not exists "pgcrypto";

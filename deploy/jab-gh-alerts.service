@@ -1,5 +1,5 @@
 [Unit]
-Description=FIE AI Ghana — saved-search WhatsApp alerts
+Description=PropertyFinder Gh — saved-search WhatsApp alerts
 After=network.target keyfinder-ghana.service
 
 [Service]

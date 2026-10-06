@@ -139,7 +139,7 @@ async function sendViewingPinWhatsApp(phone, pin, viewing) {
   const env = getEvolutionConfig();
   const { token } = await resolveEvolutionInstanceToken(env.evoApiUrl, env.globalKey, instance);
   const text = [
-    `FIE AI — viewing PIN`,
+    `PropertyFinder Gh — viewing PIN`,
     ``,
     `Your PIN is ${pin}.`,
     `Give this PIN only to the listing agent when you see the room.`,

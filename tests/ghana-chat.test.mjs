@@ -73,7 +73,7 @@ test("Ghana system prompt is GH₵ and names real partners, not UAE rules", asyn
       answerMode: "rent_finance",
       knowledgeBlock: "NRAS https://www.nras.gov.gh/"
     });
-    assert.match(prompt, /FIE AI/);
+    assert.match(prompt, /PropertyFinder Gh/);
     assert.match(prompt, /GH₵/);
     assert.match(prompt, /NRAS/);
     assert.doesNotMatch(prompt, /RERA-aware/);

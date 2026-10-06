@@ -1,5 +1,5 @@
 [Unit]
-Description=Run FIE Ghana saved-search alerts every 6 hours
+Description=Run PropertyFinder Gh saved-search alerts every 6 hours
 
 [Timer]
 OnBootSec=25min

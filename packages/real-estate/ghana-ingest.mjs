@@ -1,5 +1,5 @@
 /**
- * Ghana listing ingest for FIE AI on Vercel.
+ * Ghana listing ingest for PropertyFinder Gh on Vercel.
  * Scrapes public portals → Supabase. Designed as short cron "ticks"
  * so each invocation fits serverless time limits.
  */

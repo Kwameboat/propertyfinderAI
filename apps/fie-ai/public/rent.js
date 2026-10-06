@@ -66,16 +66,16 @@ function applyMarketBranding() {
   document.body?.classList.toggle("market-gh", ghana);
   document.title = marketConfig.brand || document.title;
   if (ghana) {
-    BRAND.name = "FIE AI";
-    BRAND.nameUpper = "FIE AI";
+    BRAND.name = "PropertyFinder Gh";
+    BRAND.nameUpper = "PropertyFinder Gh";
     BRAND.tagline = "Your AI real estate agent in Ghana";
-    BRAND.poweredBy = "FIE AI";
+    BRAND.poweredBy = "PropertyFinder Gh";
     BRAND.poweredLine = "Your AI real estate agent in Ghana";
   }
   document.querySelector('meta[name="description"]')?.setAttribute(
     "content",
     ghana
-      ? "FIE AI — your AI real estate agent in Ghana. Rent or buy rooms, self-contains, apartments, and houses. Landlords and agents can list directly. Pay GH₵100 to view."
+      ? "PropertyFinder Gh — your AI real estate agent in Ghana. Rent or buy rooms, self-contains, apartments, and houses. Landlords and agents can list directly. Pay GH₵100 to view."
       : "Dar Concierge AI — Your UAE AI Property Assistant. Powered by KeyFinder AI."
   );
   document.querySelectorAll(".logo-link").forEach((a) => {
@@ -86,10 +86,10 @@ function applyMarketBranding() {
     const logo = assetUrl(marketConfig.logo || "/fie-ai-logo.webp");
     document.querySelectorAll(".brand-logo").forEach((img) => {
       img.src = logo;
-      img.alt = "FIE AI";
+      img.alt = "PropertyFinder Gh";
     });
     const iosLast = document.querySelector("#pwa-ios-dialog li:last-child");
-    if (iosLast) iosLast.innerHTML = "Tap <strong>Add</strong> — FIE AI opens like an app.";
+    if (iosLast) iosLast.innerHTML = "Tap <strong>Add</strong> — PropertyFinder Gh opens like an app.";
   }
   if (heroGreeting) {
     heroGreeting.textContent = ghana
@@ -128,15 +128,15 @@ function applyMarketBranding() {
   const disclaimer = document.querySelector(".profile-card .disclaimer");
   if (disclaimer && ghana) {
     disclaimer.textContent =
-      "FIE AI connects you with listing agents in Ghana. Pay GH₵100 to view. We are not a landlord.";
+      "PropertyFinder Gh connects you with listing agents in Ghana. Pay GH₵100 to view. We are not a landlord.";
   }
   const pwaCopy = document.querySelector(".pwa-install-copy strong");
-  if (pwaCopy && ghana) pwaCopy.textContent = "Install FIE AI";
+  if (pwaCopy && ghana) pwaCopy.textContent = "Install PropertyFinder Gh";
   const pwaSpan = document.querySelector(".pwa-install-copy span");
-  if (pwaSpan && ghana) pwaSpan.textContent = "Add FIE AI to your home screen.";
+  if (pwaSpan && ghana) pwaSpan.textContent = "Add PropertyFinder Gh to your home screen.";
   const menuPowered = document.querySelectorAll(".side-menu-powered, .side-menu-foot-brand");
   menuPowered.forEach((el) => {
-    if (ghana) el.textContent = "FIE AI · Ghana";
+    if (ghana) el.textContent = "PropertyFinder Gh · Ghana";
   });
   const phoneInput = leadForm?.querySelector('input[name="phone"]');
   const phoneLabel = phoneInput?.closest("label");
@@ -153,7 +153,7 @@ function applyMarketBranding() {
   }
   const muted = document.querySelector("#lead-form > p.muted");
   if (muted && marketConfig.payToView) {
-    muted.textContent = `Pay GH₵${marketConfig.viewingFeeGhs || 100} to book. GH₵50 for FIE AI, GH₵50 held for the agent until you view.`;
+    muted.textContent = `Pay GH₵${marketConfig.viewingFeeGhs || 100} to book. GH₵50 for PropertyFinder Gh, GH₵50 held for the agent until you view.`;
   }
   if (marketConfig.payToView) {
     const btn = document.getElementById("lead-submit");
@@ -170,7 +170,7 @@ function applyMarketBranding() {
     waBtn.classList.toggle("hidden", !showWa);
     waBtn.hidden = !showWa;
     if (showWa) {
-      waBtn.href = `https://wa.me/${waDigits}?text=${encodeURIComponent("Hi FIE, I need a room")}`;
+      waBtn.href = `https://wa.me/${waDigits}?text=${encodeURIComponent("Hi PropertyFinder Gh, I need a room")}`;
     }
   }
   fillOwnerListingCities();
@@ -187,7 +187,7 @@ function applyMarketBranding() {
     const wa = document.createElement("a");
     wa.id = "gh-whatsapp-link";
     wa.className = "side-menu-link";
-    wa.href = `https://wa.me/${waDigits}?text=${encodeURIComponent("Hi FIE, I need a room")}`;
+    wa.href = `https://wa.me/${waDigits}?text=${encodeURIComponent("Hi PropertyFinder Gh, I need a room")}`;
     wa.target = "_blank";
     wa.rel = "noopener noreferrer";
     wa.textContent = "Chat on WhatsApp";
@@ -365,7 +365,7 @@ const RENT_UI = {
     errorGeneric: "May problema — subukan muli."
   },
   pidgin: {
-      placeholder: "Ask FIE AI…",
+      placeholder: "Ask PropertyFinder Gh…",
       transcribing: "I dey write di voice…",
       recording: "I dey record… tap mic send",
       micDenied: "Browser no gree microphone.",
@@ -377,7 +377,7 @@ const RENT_UI = {
       aiDisclaimer: "This one be AI. AI fit miss."
     },
     tw: {
-      placeholder: "Bisa FIE AI…",
+      placeholder: "Bisa PropertyFinder Gh…",
       transcribing: "Yɛrekyerɛw wo nne…",
       recording: "Yɛrekyere… mia mic na fa kɔ",
       micDenied: "Browser no ammɛn wo microphone. Ma ho kwan wɔ settings mu.",
@@ -389,7 +389,7 @@ const RENT_UI = {
       aiDisclaimer: "Wei yɛ AI. AI betumi ayɛ mfomso."
     },
     ee: {
-      placeholder: "Bia FIE AI…",
+      placeholder: "Bia PropertyFinder Gh…",
       transcribing: "Miele gbe ŋlɔm…",
       recording: "Miele mɔ̃ ɖem… zi mic ɖe ɖoɖo",
       micDenied: "Browser me de mɔ̃ ɖe microphone ŋu o.",
@@ -401,7 +401,7 @@ const RENT_UI = {
       aiDisclaimer: "Esia nye AI. AI ate ŋu awɔ vodada."
     },
     gaa: {
-      placeholder: "Bii FIE AI…",
+      placeholder: "Bii PropertyFinder Gh…",
       transcribing: "Wɔŋmɛɔ dzee…",
       recording: "Wɔŋmɛɔ… shi mic kɛha",
       micDenied: "Browser ekɛ microphone lɛ shwie.",
@@ -413,7 +413,7 @@ const RENT_UI = {
       aiDisclaimer: "Nɛkɛ ji AI. AI nyɛɔ fee flɛɛ."
     },
     fat: {
-      placeholder: "Bisa FIE AI…",
+      placeholder: "Bisa PropertyFinder Gh…",
       transcribing: "Yɛrekyerɛw wo ndze…",
       recording: "Yɛrekyerɛ… mia mic",
       micDenied: "Browser no ammɛn microphone.",
@@ -425,7 +425,7 @@ const RENT_UI = {
       aiDisclaimer: "Iyi yɛ AI. AI botum ayɛ mfomso."
     },
     dag: {
-      placeholder: "Bɔhi FIE AI…",
+      placeholder: "Bɔhi PropertyFinder Gh…",
       transcribing: "Ti yɛri a yɛltɔɣa…",
       recording: "Ti yɛri… n-ŋme mic",
       micDenied: "Browser bi ti microphone.",
@@ -437,7 +437,7 @@ const RENT_UI = {
       aiDisclaimer: "Ŋun nyɛ AI. AI tooi niŋ taɣibu."
     },
     ha: {
-      placeholder: "Tambayi FIE AI…",
+      placeholder: "Tambayi PropertyFinder Gh…",
       transcribing: "Muna rubuta murya…",
       recording: "Ana ɗauka… taɓa mic",
       micDenied: "Browser ya hana microphone.",
@@ -467,11 +467,11 @@ function isGhanaMarket() {
 function composerPlaceholder() {
   if (!isGhanaMarket()) return uiText("placeholder");
   if (RENT_UI[userLanguage]?.placeholder && userLanguage !== "en") return RENT_UI[userLanguage].placeholder;
-  return "Ask FIE AI — type or tap the mic";
+  return "Ask PropertyFinder Gh — type or tap the mic";
 }
 
 function defaultInitials() {
-  return isGhanaMarket() ? "FI" : "DC";
+  return isGhanaMarket() ? "PF" : "DC";
 }
 
 function fillOwnerListingCities() {

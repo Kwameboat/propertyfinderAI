@@ -39,7 +39,7 @@ export function isReWhatsAppInstance(instance = "") {
   return Boolean(target && instance === target);
 }
 
-/** Dedicated FIE Ghana Evolution instance — routed by the UAE bridge to Hub :3001. */
+/** Dedicated PropertyFinder Gh Evolution instance — routed by the UAE bridge to Hub :3001. */
 export function ghanaReWhatsAppInstanceName() {
   return String(process.env.JAB_RE_GH_WA_INSTANCE || "").trim();
 }
@@ -285,7 +285,7 @@ async function handleWaCommands(db, { userPhone, inboundText, session, pushName,
       if (isGhanaMarket()) {
         return {
           handled: true,
-          text: `To book a viewing, pay GH₵100 in the FIE AI app (https://wa.jabdigitalhub.com/gh). After payment your PIN comes on this WhatsApp. Give that PIN to the listing agent only when you see the room.`
+          text: `To book a viewing, pay GH₵100 in the PropertyFinder Gh app (https://wa.jabdigitalhub.com/gh). After payment your PIN comes on this WhatsApp. Give that PIN to the listing agent only when you see the room.`
         };
       }
       return {
@@ -348,7 +348,7 @@ export async function handleReWhatsAppInbound({
   let replyText = stripMarkdown(result.text || "");
   if (result.leadReady) {
     replyText += isGhanaMarket()
-      ? "\n\nReply YES to start a viewing. You will pay GH₵100 in the FIE app, then get a PIN here."
+      ? "\n\nReply YES to start a viewing. You will pay GH₵100 in the PropertyFinder Gh app, then get a PIN here."
       : "\n\nReply YES to book a viewing — we'll call you before contacting the agent.";
   }
   if (result.showListings && (result.listings || []).length) {

@@ -2,7 +2,7 @@
 
 Jiji sits behind Cloudflare’s **Managed Challenge**. Plain `fetch` from Vercel/GitHub datacenter IPs gets `403 Just a moment…`.
 
-FIE supports **two free paths**:
+PropertyFinder Gh supports **two free paths**:
 
 ## 1) Browser cookie (best for Vercel)
 

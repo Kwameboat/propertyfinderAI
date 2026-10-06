@@ -19,8 +19,8 @@ This repository is **separate from** [`Kwameboat/jab-hub`](https://github.com/Kw
 | Hub API | `apps/hub/server.mjs` |
 | Listing DB helpers | `packages/hub-db/real-estate.mjs` |
 | Seed + scrape | `scripts/seed-uae-real-estate.mjs`, `scripts/scrape-uae-listings.mjs` |
-| Ghana PWA — FIE AI (opt-in) | `/gh` when `JAB_RE_MARKET=GH` — see [GHANA.md](GHANA.md) |
-| FIE AI standalone (Vercel) | `apps/fie-ai` — see [apps/fie-ai/README.md](apps/fie-ai/README.md) |
+| Ghana PWA — PropertyFinder Gh (opt-in) | `/gh` when `JAB_RE_MARKET=GH` — see [GHANA.md](GHANA.md) |
+| PropertyFinder Gh standalone (Vercel) | `apps/fie-ai` — see [apps/fie-ai/README.md](apps/fie-ai/README.md) |
 
 The tree still contains the agency WhatsApp Hub (Evolution + OpenClaw bridge, contacts, campaigns) because that is how the VPS is deployed. The UAE concierge is the `/rent` + `/admin/re` layer on top.
 
