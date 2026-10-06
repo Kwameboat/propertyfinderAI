@@ -94,6 +94,7 @@ export function rewriteRentHtmlForGhana(html, { buildId } = {}) {
       "PropertyFinder Gh — your AI real estate agent in Ghana. Rent or buy rooms, self-contains, apartments, and houses."
     ],
     ["Dar Concierge opens like an app.", "PropertyFinder Gh opens like an app."],
+    ["<html lang=\"en\">", '<html lang="en" class="market-gh">'],
     ["<body>", '<body class="market-gh">'],
     ['id="header-avatar">DC</span>', 'id="header-avatar">PF</span>'],
     [

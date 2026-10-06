@@ -63,6 +63,7 @@ async function loadMarketConfig() {
 
 function applyMarketBranding() {
   const ghana = marketConfig.code === "GH";
+  document.documentElement?.classList.toggle("market-gh", ghana);
   document.body?.classList.toggle("market-gh", ghana);
   document.title = ghana ? "PropertyFinder Gh · Ghana" : marketConfig.brand || document.title;
   if (ghana) {

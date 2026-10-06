@@ -101,6 +101,23 @@ html, body {
 }
 
 /* PropertyFinder Gh — logo red (#d80008) on warm white */
+html:has(body.market-gh),
+html.market-gh,
+body.market-gh {
+  --bg: #fff8f6;
+  --surface: #ffffff;
+  --surface2: #f7ecea;
+  --line: #edd5d5;
+  --text: #1a1212;
+  --muted: #7a6666;
+  --gold: #d80008;
+  --gold-dim: rgba(216, 0, 8, 0.12);
+  --teal: #0f766e;
+  --teal-dim: rgba(15, 118, 110, 0.12);
+  background: #fff8f6;
+  color-scheme: light;
+}
+
 .market-gh {
   --bg: #fff8f6;
   --surface: #ffffff;
@@ -116,6 +133,7 @@ html, body {
   --display: "Outfit", "Segoe UI", sans-serif;
   --radius: 18px;
   color-scheme: light;
+  background: #fff8f6;
 }
 
 .market-gh,
@@ -129,6 +147,7 @@ html, body {
   background:
     radial-gradient(120% 70% at 50% -8%, rgba(216, 0, 8, 0.14), transparent 52%),
     linear-gradient(180deg, #fff8f6 0%, #fff4f1 42%, #fff8f6 100%);
+  min-height: 100dvh;
 }
 
 .market-gh .elite-header {
@@ -353,10 +372,6 @@ html, body {
   color: var(--muted);
 }
 
-.market-gh .composer-wrap {
-  background: linear-gradient(180deg, transparent, rgba(255, 248, 246, 0.95) 28%);
-}
-
 .market-gh .composer {
   background: #fff;
   border: 1px solid rgba(216, 0, 8, 0.14);
@@ -374,9 +389,41 @@ html, body {
 }
 
 .market-gh .bottom-nav {
-  background: rgba(255, 255, 255, 0.92);
+  left: 0;
+  right: 0;
+  transform: none;
+  width: 100%;
+  max-width: none;
+  justify-content: center;
+  gap: 0;
+  background: #ffffff;
   border-top: 1px solid rgba(216, 0, 8, 0.1);
   backdrop-filter: blur(14px);
+  box-shadow: 0 -8px 24px rgba(80, 20, 20, 0.04);
+}
+
+.market-gh .bottom-nav .nav-item {
+  flex: 0 1 120px;
+  max-width: 120px;
+}
+
+.market-gh .composer-wrap {
+  left: 0;
+  right: 0;
+  transform: none;
+  width: 100%;
+  max-width: none;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  background: linear-gradient(180deg, transparent, #fff8f6 36%);
+}
+
+.market-gh .composer-wrap .composer-ai-note,
+.market-gh .composer-wrap .recording-bar,
+.market-gh .composer-wrap .composer {
+  width: 100%;
+  max-width: 448px;
 }
 
 .market-gh .nav-item {
