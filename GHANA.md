@@ -12,7 +12,8 @@ FIE AI also ships as a **standalone PWA** under [`apps/fie-ai`](apps/fie-ai/READ
 - Set `JAB_FIE_STANDALONE=1` + `JAB_RE_MARKET=GH`
 - **Supabase** is the listing store (`SUPABASE_URL` + service role key)
 - **Vercel Cron** `/api/cron/scrape` every 2h scrapes Ghana Property Centre / Meqasa into Supabase
-- Jiji needs FlareSolverr (optional); Evolution WhatsApp still Contabo-side
+- **Jiji (free):** browser `JIJI_CF_CLEARANCE` on Vercel, or GitHub Actions + FlareSolverr (`.github/workflows/fie-ghana-scrape.yml`) — see `apps/fie-ai/JIJI.md`
+- Evolution WhatsApp still Contabo-side
 
 The Contabo dual-hub layout below remains valid for VPS testing.
 
