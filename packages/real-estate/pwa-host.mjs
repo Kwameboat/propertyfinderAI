@@ -79,6 +79,7 @@ export function rewriteRentHtmlForGhana(html, { buildId } = {}) {
     ['href="/rent"', `href="${prefix}"`],
     ['content="Dar Concierge"', 'content="PropertyFinder Gh"'],
     ['content="Dar Concierge AI"', 'content="PropertyFinder Gh"'],
+    ['name="theme-color" content="#0a0a0a"', 'name="theme-color" content="#d80008"'],
     [">Dar Concierge AI · KeyFinder AI</title>", ">PropertyFinder Gh · Ghana</title>"],
     [
       "Dar Concierge AI — Your UAE AI Property Assistant. Powered by KeyFinder AI. Rent, buy, off-plan across the emirates.",

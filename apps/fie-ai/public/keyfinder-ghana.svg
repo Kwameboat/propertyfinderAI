@@ -1,5 +1,5 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="560" height="160" viewBox="0 0 560 160">
-  <rect width="560" height="160" rx="16" fill="#0a0a0a"/>
-  <text x="28" y="70" fill="#c9a227" font-family="Georgia, serif" font-size="42" font-weight="700">KeyFinder</text>
+  <rect width="560" height="160" rx="16" fill="#fff8f6"/>
+  <text x="28" y="70" fill="#d80008" font-family="Georgia, serif" font-size="42" font-weight="700">KeyFinder</text>
   <text x="28" y="118" fill="#f5e6c8" font-family="Inter, system-ui, sans-serif" font-size="22" letter-spacing="4">GHANA</text>
 </svg>

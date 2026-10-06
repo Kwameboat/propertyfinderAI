@@ -72,6 +72,10 @@ function applyMarketBranding() {
     BRAND.poweredBy = "PropertyFinder Gh";
     BRAND.poweredLine = "Your AI real estate agent in Ghana";
   }
+  document.querySelector('meta[name="theme-color"]')?.setAttribute(
+    "content",
+    ghana ? "#d80008" : "#0a0a0a"
+  );
   document.querySelector('meta[name="description"]')?.setAttribute(
     "content",
     ghana

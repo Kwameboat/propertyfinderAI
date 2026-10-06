@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="800" height="520" viewBox="0 0 800 520">
-  <rect width="800" height="520" fill="#141008"/>
-  <rect x="40" y="40" width="720" height="440" rx="24" fill="none" stroke="#c9a227" stroke-width="3"/>
-  <text x="400" y="230" text-anchor="middle" fill="#c9a227" font-family="Georgia, serif" font-size="42" font-weight="700">Ahodwo</text>
-  <text x="400" y="290" text-anchor="middle" fill="#f5e6c8" font-family="Inter, system-ui, sans-serif" font-size="24">2-bed · Kumasi</text>
+  <rect width="800" height="520" fill="#fff8f6"/>
+  <rect x="40" y="40" width="720" height="440" rx="24" fill="none" stroke="#d80008" stroke-width="3"/>
+  <text x="400" y="230" text-anchor="middle" fill="#d80008" font-family="Georgia, serif" font-size="42" font-weight="700">Ahodwo</text>
+  <text x="400" y="290" text-anchor="middle" fill="#7a6666" font-family="Inter, system-ui, sans-serif" font-size="24">2-bed Â· Kumasi</text>
 </svg>

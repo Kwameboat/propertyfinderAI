@@ -426,11 +426,11 @@ app.get("/thanks", (_req, res) => {
   res.type("html").send(`<!DOCTYPE html>
 <html lang="en"><head><meta charset="utf-8"/><meta name="viewport" content="width=device-width, initial-scale=1"/>
 <title>PropertyFinder Gh</title></head>
-<body style="font-family:system-ui;padding:2rem;max-width:32rem;margin:auto;background:#0a0a0a;color:#f5f5f5">
+<body style="font-family:system-ui;padding:2rem;max-width:32rem;margin:auto;background:#fff8f6;color:#1a1212">
 <h1>Payment received</h1>
 <p>If GH₵100 went through, your viewing PIN is on its way. Give that PIN to the listing agent only when you see the room.</p>
-<p><a href="/agent" style="color:#c9a227">Listing agent: enter PIN + MoMo</a></p>
-<p><a href="/" style="color:#c9a227">Back to PropertyFinder Gh</a></p>
+<p><a href="/agent" style="color:#d80008">Listing agent: enter PIN + MoMo</a></p>
+<p><a href="/" style="color:#d80008">Back to PropertyFinder Gh</a></p>
 <script>
 const q = new URLSearchParams(location.search);
 const viewingId = q.get("viewing");

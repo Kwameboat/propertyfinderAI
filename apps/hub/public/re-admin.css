@@ -54,9 +54,22 @@ html, body {
   height: auto;
 }
 
+.market-gh {
+  --bg: #fff8f6;
+  --surface: #ffffff;
+  --surface2: #f7ecea;
+  --line: #edd5d5;
+  --text: #1a1212;
+  --muted: #7a6666;
+  --gold: #d80008;
+  --gold-dim: rgba(216, 0, 8, 0.12);
+  --teal: #0f766e;
+}
+
 .market-gh .ld-logo {
-  max-width: 72px;
-  border-radius: 12px;
+  max-width: 120px;
+  border-radius: 16px;
+  background: #fff;
 }
 
 .ld-gh-only[hidden],
