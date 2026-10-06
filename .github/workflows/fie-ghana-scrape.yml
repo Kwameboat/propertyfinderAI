@@ -1,13 +1,14 @@
-# Free Jiji (+ GPC) scrape → Supabase using FlareSolverr on GitHub Actions.
+# Free Jiji (+ GPC + Meqasa) scrape → Supabase using FlareSolverr on GitHub Actions.
 # Secrets required: SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY
 # Optional: JIJI_CF_CLEARANCE, JIJI_USER_AGENT (skips FlareSolverr for Jiji)
+# Schedule: every 2 hours
 
 name: FIE Ghana scrape → Supabase
 
 on:
   schedule:
-    # Every 6 hours
-    - cron: "15 */6 * * *"
+    # Every 2 hours (Jiji + other Ghana portals → Supabase)
+    - cron: "15 */2 * * *"
   workflow_dispatch:
     inputs:
       source:
@@ -19,9 +20,9 @@ on:
         required: false
         default: "Accra"
       type:
-        description: "rent or sale"
+        description: "rent | sale | land | all (Jiji sale includes land plots)"
         required: false
-        default: "rent"
+        default: "all"
 
 jobs:
   scrape:
@@ -77,13 +78,31 @@ jobs:
           fi
           SOURCE="${{ github.event.inputs.source || 'all' }}"
           CITY="${{ github.event.inputs.city || 'Accra' }}"
-          TYPE="${{ github.event.inputs.type || 'rent' }}"
+          TYPE="${{ github.event.inputs.type || 'all' }}"
           if [ "$SOURCE" = "all" ]; then
             for src in ghanapropertycentre jiji meqasa; do
               echo "::group::scrape $src $CITY $TYPE"
-              node scripts/scrape-to-supabase.mjs --source="$src" --city="$CITY" --type="$TYPE" --pages=1 || true
+              if [ "$TYPE" = "all" ]; then
+                for t in rent sale; do
+                  node scripts/scrape-to-supabase.mjs --source="$src" --city="$CITY" --type="$t" --pages=1 || true
+                done
+                if [ "$src" = "jiji" ]; then
+                  node scripts/scrape-to-supabase.mjs --source=jiji --city="$CITY" --type=land --pages=1 || true
+                fi
+              else
+                node scripts/scrape-to-supabase.mjs --source="$src" --city="$CITY" --type="$TYPE" --pages=1 || true
+              fi
               echo "::endgroup::"
             done
           else
-            node scripts/scrape-to-supabase.mjs --source="$SOURCE" --city="$CITY" --type="$TYPE" --pages=1
+            if [ "$TYPE" = "all" ]; then
+              for t in rent sale; do
+                node scripts/scrape-to-supabase.mjs --source="$SOURCE" --city="$CITY" --type="$t" --pages=1
+              done
+              if [ "$SOURCE" = "jiji" ]; then
+                node scripts/scrape-to-supabase.mjs --source=jiji --city="$CITY" --type=land --pages=1
+              fi
+            else
+              node scripts/scrape-to-supabase.mjs --source="$SOURCE" --city="$CITY" --type="$TYPE" --pages=1
+            fi
           fi
