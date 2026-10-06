@@ -1,7 +1,7 @@
 /**
  * PropertyFinder Gh standalone PWA service worker — network-first app shell.
  */
-const BUILD = "1791246812554";
+const BUILD = "1791247090851";
 const CACHE = `fie-ai-${BUILD}`;
 const PRECACHE = [
   "/",

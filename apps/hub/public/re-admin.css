@@ -67,9 +67,9 @@ html, body {
 }
 
 .market-gh .ld-logo {
-  max-width: 120px;
-  border-radius: 16px;
-  background: #fff;
+  max-width: 88px;
+  border-radius: 0;
+  background: transparent;
 }
 
 .ld-gh-only[hidden],

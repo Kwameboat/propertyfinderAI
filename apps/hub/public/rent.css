@@ -138,30 +138,35 @@ html, body {
 }
 
 .market-gh .brand-logo--header {
-  height: 48px;
-  max-width: min(168px, 54vw);
+  height: 28px;
+  max-width: min(96px, 36vw);
   object-fit: contain;
   object-position: center;
+  background: transparent;
+  filter: none;
+  border-radius: 0;
 }
 
 .market-gh .brand-logo--hero {
   width: auto;
   height: auto;
-  max-width: 168px;
-  max-height: 168px;
-  margin: 0 auto 12px;
-  border-radius: 20px;
+  max-width: 88px;
+  max-height: 88px;
+  margin: 0 auto 8px;
+  border-radius: 0;
   object-fit: contain;
   object-position: center;
-  filter: drop-shadow(0 10px 24px rgba(216, 0, 8, 0.16));
-  background: #fff;
+  filter: none;
+  background: transparent;
+  box-shadow: none;
 }
 
 .market-gh .brand-logo--chat {
   object-fit: contain;
   object-position: center;
-  border-radius: 8px;
-  background: #fff;
+  border-radius: 0;
+  background: transparent;
+  filter: none;
 }
 
 .market-gh .avatar {
@@ -272,10 +277,11 @@ html, body {
 }
 
 .market-gh .brand-logo--menu {
-  max-width: 160px;
-  max-height: 160px;
-  border-radius: 16px;
-  background: #fff;
+  max-width: 112px;
+  max-height: 112px;
+  border-radius: 0;
+  background: transparent;
+  filter: none;
 }
 
 .market-gh .gold-btn,
@@ -460,9 +466,9 @@ html, body {
 
 @media (max-height: 720px) {
   .market-gh .brand-logo--hero {
-    max-width: 112px;
-    max-height: 112px;
-    margin-bottom: 6px;
+    max-width: 72px;
+    max-height: 72px;
+    margin-bottom: 4px;
   }
 
   .market-gh .hero-greeting {
